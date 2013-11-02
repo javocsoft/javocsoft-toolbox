@@ -92,17 +92,25 @@ public class CMTShortNumberInformation {
 			
 			 if(number.length()==5 || number.length()==6){
 			 
-				 String id3digits = number.substring(0, 2);
-				 String id2digits = number.substring(0, 1);
+				 String id3digits = number.substring(0, 3);
+				 String id2digits = number.substring(0, 2);
 				 
 				 try{
-					 valueOf(id3digits);
-					 res = true;
+					 for (CMTSMSMMSShortNumberIdentifier item : CMTSMSMMSShortNumberIdentifier.values()) {
+						  if(item.getValue()==Integer.valueOf(id3digits)){
+							  res = true;
+							  break;
+						  }
+					 }					 
 				 }catch(Exception e){}
 				 
 				 try{
-					 valueOf(id2digits);
-					 res = true;
+					 for (CMTSMSMMSShortNumberIdentifier item : CMTSMSMMSShortNumberIdentifier.values()) {
+						  if(item.getValue()==Integer.valueOf(id2digits)){
+							  res = true;
+							  break;
+						  }
+					 }					 
 				 }catch(Exception e){}
 			 }				 
 			 
