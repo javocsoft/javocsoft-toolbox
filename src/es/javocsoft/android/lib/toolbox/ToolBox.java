@@ -55,6 +55,7 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.pm.ResolveInfo;
+import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -83,6 +84,7 @@ import android.view.Display;
 import android.view.Gravity;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.ViewConfiguration;
 import android.view.Window;
 import android.view.WindowManager;
 import android.webkit.WebView;
@@ -2213,7 +2215,106 @@ public final class ToolBox {
 	public static String device_getOSVersion() {
 		return String.valueOf(Build.VERSION.SDK_INT);
 	}
-		
+			
+	/**
+	 * Returns TRUE if a specified hardware feature is present.
+	 * 
+	 * Use PackageManager.FEATURE_[feature] to specify the feature
+	 * to query.
+	 * 
+	 * @param context
+	 * @param hardwareFeature	Use PackageManager.FEATURE_[feature] to specify the feature to query.
+	 * @return
+	 */
+	public static boolean device_isHardwareFeatureAvailable(Context context, String hardwareFeature){
+		return context.getPackageManager().hasSystemFeature(hardwareFeature);
+	}
+	
+	/**
+	 * Return TRUE if there is a hardware keyboard present.
+	 * 
+	 * @param context
+	 * @return
+	 */
+	public static boolean device_isHardwareKeyboard(Context context){
+		//You can also get some of the features which are not testable by the PackageManager via the Configuration, e.g. the DPAD.
+        Configuration c = context.getResources().getConfiguration();
+        if(c.keyboard != Configuration.KEYBOARD_NOKEYS){
+            return true;
+        }else{
+        	return false;
+        }
+	}
+	
+	/**
+	 * Return TRUE if there is a hardware DPAD navigation button.
+	 * 
+	 * @param context
+	 * @return
+	 */
+	public static boolean device_isHardwareDPAD(Context context){
+		//You can also get some of the features which are not testable by the PackageManager via the Configuration, e.g. the DPAD.
+        Configuration c = context.getResources().getConfiguration();
+        if(c.navigation == Configuration.NAVIGATION_DPAD){
+        	return true;
+        }else{
+        	return false;
+        }
+	}
+	
+	/**
+	 * Return TRUE if there is a hardware keyboard and is being made hidden.
+	 *  
+	 * @param context
+	 * @return
+	 */
+	public static boolean device_isHardwareKeyboardHidden(Context context){
+		//You can also get some of the features which are not testable by the PackageManager via the Configuration, e.g. the DPAD.
+        Configuration c = context.getResources().getConfiguration();
+        if(c.hardKeyboardHidden != Configuration.HARDKEYBOARDHIDDEN_UNDEFINED && 
+           c.hardKeyboardHidden == Configuration.HARDKEYBOARDHIDDEN_YES){
+        	return true;
+        }else{
+        	return false;
+        }
+	}
+	
+	/**
+	 * Return TRUE if there is a hardware keyboard and is being made visible.
+	 * 
+	 * @param context
+	 * @return
+	 */
+	public static boolean device_isHardwareKeyboardVisible(Context context){
+		//You can also get some of the features which are not testable by the PackageManager via the Configuration, e.g. the DPAD.
+        Configuration c = context.getResources().getConfiguration();
+        if(c.hardKeyboardHidden != Configuration.HARDKEYBOARDHIDDEN_UNDEFINED && 
+           c.hardKeyboardHidden == Configuration.HARDKEYBOARDHIDDEN_NO){
+        	return true;
+        }else{
+        	return false;
+        }
+	}
+	
+	/**
+	 * Returns true if the menu hardware menu is present on the device
+	 * 
+	 * This function requires API Level 14.
+	 * 
+	 * @param context
+	 * @return
+	 */
+	@SuppressLint("NewApi")
+	public static boolean device_isHardwareMenuButtonPresent(Context context){
+		if(device_getAPILevel()>=14){
+			//This requires API Level 14
+			return ViewConfiguration.get(context).hasPermanentMenuKey();
+		}else{
+			return false;
+		}
+	}
+	
+	
 	//-------------------- CRYPTO ------------------------------------------------------------------------
  	 
 	 public static String crypto_getHASH(byte[] data, HASH_TYPE hashType){
