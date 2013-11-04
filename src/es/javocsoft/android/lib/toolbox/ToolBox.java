@@ -68,6 +68,7 @@ import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.media.RingtoneManager;
+import android.media.AudioManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
@@ -643,8 +644,9 @@ public final class ToolBox {
 	 *    
 	 * @param context				Context.
 	 * @param notSound				Enable or disable the sound
-	 * @param notSoundPath			Custom sound path. If enabled and not set 
-	 * 								default notification sound will be used.
+	 * @param notSoundRawId			Custom raw sound id. If enabled and not set 
+	 * 								default notification sound will be used. Set to -1 to 
+	 * 								default system notification.
 	 * @param multipleNot			Setting to True allows showing multiple notifications.
 	 * @param groupMultipleNotKey	If is set, multiple notifications can be grupped by this key.
 	 * @param notAction				Action for this notification
@@ -655,7 +657,7 @@ public final class ToolBox {
 	 * 
 	 */
     public static void notification_generate(Context context, 
-    		boolean notSound, String notSoundPath, 
+    		boolean notSound, int notSoundRawId, 
     		boolean multipleNot, String groupMultipleNotKey, 
     		String notAction, 
     		String notTitle, String notMessage, 
@@ -671,18 +673,19 @@ public final class ToolBox {
 	        // Hide the notification after its selected
 	        notification.flags |= Notification.FLAG_AUTO_CANCEL;  
 	        
-	        if(notSound){
-	        	notification.defaults |= Notification.DEFAULT_SOUND;	        
-	        	if(notSoundPath!=null){
-	        		try {
-	        			notification.sound = Uri.parse(notSoundPath);
+	        if(notSound){   
+	        	if(notSoundRawId>0 ){
+	        		try {					 
+	        			notification.sound = Uri.parse("android.resource://" + context.getApplicationContext().getPackageName() + "/" + notSoundRawId);
 	        		}catch(Exception e){
 	        			if(LOG_ENABLE){
-	        				Log.w(TAG, "Custom sound could not be found in [" + notSoundPath + "]");
+	        				Log.w(TAG, "Custom sound " + notSoundRawId + "could not be found. Using default.");
 	        			}
+	        			notification.defaults |= Notification.DEFAULT_SOUND;
 	        			notification.sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
 	        		}
 	        	}else{
+	        		notification.defaults |= Notification.DEFAULT_SOUND;
 	        		notification.sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
 	        	}
 	        }
@@ -730,7 +733,24 @@ public final class ToolBox {
 	        }
 	        
 	        NotificationManager notificationManager = (NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
+	        
+	        //We check if the sound is disabled to enable just for a moment
+	        AudioManager amanager = (AudioManager)context.getSystemService(Context.AUDIO_SERVICE);
+	        int previousAudioMode = amanager.getRingerMode();;
+	        if(notSound && previousAudioMode!=AudioManager.RINGER_MODE_NORMAL){	        	
+	        	amanager.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
+	        }
+	        
 	        notificationManager.notify(REQUEST_UNIQUE_ID, notification);
+	        
+	        //We restore the sound setting
+	        if(previousAudioMode!=AudioManager.RINGER_MODE_NORMAL){
+	        	//We wait a little so sound is played
+	        	try{
+		        	Thread.sleep(3000);
+		        }catch(Exception e){}		        
+	        }
+	        amanager.setRingerMode(previousAudioMode);
 			
 	        Log.d(TAG, "Notification created for the recieve PUSH message.");
 	        
