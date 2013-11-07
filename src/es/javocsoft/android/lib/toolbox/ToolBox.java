@@ -25,7 +25,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
+import java.util.Scanner;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -160,10 +162,75 @@ public final class ToolBox {
 	
 	private static Random random = null;
 	
+	private static Set<String> systemAppsList = null;
 	
 	private ToolBox(){}
 	
 	
+	
+	//--------------- SYSTEM ---------------------------------------------------------------------------
+	
+	/**
+	 * Gets the list of system applications.
+	 * 
+	 * @return	The list. If error the list will be empty.
+	 */
+	public static Set<String> system_getSystemApplicationList() {
+		Set<String> systemApps = new HashSet<String>();
+		Scanner scanner = null;
+		Process process = null;
+		
+		try {
+			ProcessBuilder builder = new ProcessBuilder("pm", "list", "packages", "-s");
+			process = builder.start();
+	
+			InputStream in = process.getInputStream();
+			scanner = new Scanner(in);
+			Pattern pattern = Pattern.compile("^package:.+");
+			int skip = "package:".length();
+			
+			while (scanner.hasNext(pattern)) {
+			    String pckg = scanner.next().substring(skip);
+			    systemApps.add(pckg);
+			}			
+			
+		}catch(Exception e){
+			if(LOG_ENABLE){
+				Log.e(TAG, "Error getting system application list [" + e.getMessage() + "]", e);
+			}
+		}finally{
+			if(scanner!=null){
+				scanner.close();
+			}			
+			if(process!=null){
+				process.destroy();
+			}
+		}
+		
+		return systemApps;
+	}
+	
+	/**
+	 * Checks if an application is a system application.
+	 * 
+	 * @param appPackage
+	 * @return
+	 */
+	public static boolean system_isSystemApplication(String appPackage) {
+		boolean res = false;
+		
+		if(systemAppsList==null){
+			systemAppsList = system_getSystemApplicationList();
+		}		 
+		for(String sysAppPackage:systemAppsList){
+			if(appPackage.equals(sysAppPackage)){
+				res = true;
+				break;
+			}
+		}
+		
+		return res;
+	}
 	
 	//--------------- ADDMOB ---------------------------------------------------------------------------
 	
