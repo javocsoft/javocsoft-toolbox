@@ -175,35 +175,22 @@ public final class ToolBox {
 	 * 
 	 * @return	The list. If error the list will be empty.
 	 */
-	public static Set<String> system_getSystemApplicationList() {
+	public static Set<String> system_getSystemApplicationList(Context context) {
 		Set<String> systemApps = new HashSet<String>();
-		Scanner scanner = null;
-		Process process = null;
+		
 		
 		try {
-			ProcessBuilder builder = new ProcessBuilder("pm", "list", "packages", "-s");
-			process = builder.start();
-	
-			InputStream in = process.getInputStream();
-			scanner = new Scanner(in);
-			Pattern pattern = Pattern.compile("^package:.+");
-			int skip = "package:".length();
-			
-			while (scanner.hasNext(pattern)) {
-			    String pckg = scanner.next().substring(skip);
-			    systemApps.add(pckg);
-			}			
+			final PackageManager pm = context.getPackageManager();
+			final List<ApplicationInfo> installedApps = pm.getInstalledApplications(PackageManager.GET_META_DATA);			
+			for ( ApplicationInfo app : installedApps ) {
+				if(system_isSystemPackage(app)){
+					systemApps.add(app.packageName);
+				}
+			}		
 			
 		}catch(Exception e){
 			if(LOG_ENABLE){
 				Log.e(TAG, "Error getting system application list [" + e.getMessage() + "]", e);
-			}
-		}finally{
-			if(scanner!=null){
-				scanner.close();
-			}			
-			if(process!=null){
-				process.destroy();
 			}
 		}
 		
@@ -216,11 +203,11 @@ public final class ToolBox {
 	 * @param appPackage
 	 * @return
 	 */
-	public static boolean system_isSystemApplication(String appPackage) {
+	public static boolean system_isSystemApplication(Context context, String appPackage) {
 		boolean res = false;
 		
 		if(systemAppsList==null){
-			systemAppsList = system_getSystemApplicationList();
+			systemAppsList = system_getSystemApplicationList(context);
 		}		 
 		for(String sysAppPackage:systemAppsList){
 			if(appPackage.equals(sysAppPackage)){
@@ -230,6 +217,17 @@ public final class ToolBox {
 		}
 		
 		return res;
+	}
+	
+	/**
+	 * Return whether the given PackgeInfo represents a system package or not.
+	 * User-installed packages should not be denoted as system packages.
+	 * 
+	 * @param pkgInfo
+	 * @return
+	 */
+	public static boolean system_isSystemPackage(ApplicationInfo appInfo) {
+	    return ((appInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0) ? true : false;
 	}
 	
 	//--------------- ADDMOB ---------------------------------------------------------------------------
