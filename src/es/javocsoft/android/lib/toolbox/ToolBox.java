@@ -898,6 +898,8 @@ public final class ToolBox {
     
     /*
      * Makes the device to wake-up. yeah!
+     * 
+     * Requires the permission android.permission.WAKE_LOCK
      *  
      * @param ctx
      */
@@ -908,7 +910,7 @@ public final class ToolBox {
         PowerManager pm = (PowerManager) ctx.getSystemService(Context.POWER_SERVICE);
         wakeLock = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK |
                 PowerManager.ACQUIRE_CAUSES_WAKEUP |
-                PowerManager.ON_AFTER_RELEASE, "malcom_library_wakeup");
+                PowerManager.ON_AFTER_RELEASE, "javocsoft_library_wakeup");
         wakeLock.acquire();
     }
     
