@@ -18,16 +18,16 @@ import java.net.SocketTimeoutException;
 import java.net.URL;
 import java.security.MessageDigest;
 import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
-import java.util.Scanner;
 import java.util.Set;
-import java.util.regex.Pattern;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -57,6 +57,7 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.pm.ResolveInfo;
+import android.content.res.AssetFileDescriptor;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -64,13 +65,17 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
-import android.media.RingtoneManager;
 import android.media.AudioManager;
+import android.media.ExifInterface;
+import android.media.MediaPlayer;
+import android.media.Ringtone;
+import android.media.RingtoneManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
@@ -164,6 +169,7 @@ public final class ToolBox {
 	
 	private static Set<String> systemAppsList = null;
 	
+	
 	private ToolBox(){}
 	
 	
@@ -230,6 +236,24 @@ public final class ToolBox {
 	    return ((appInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0) ? true : false;
 	}
 	
+	
+	/**
+	 * This function allows to know if there is an application that responds to
+	 * the specified action.
+	 * 
+	 * @param context
+	 * @param action	Action that requires an application.
+	 * @return
+	 */
+	public static boolean system_isIntentAvailable(Context context, String action) {
+	    final PackageManager packageManager = context.getPackageManager();
+	    final Intent intent = new Intent(action);
+	    List<ResolveInfo> list =
+	            packageManager.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY);
+	    return list.size() > 0;
+	}
+	
+	
 	//--------------- ADDMOB ---------------------------------------------------------------------------
 	
 	/**
@@ -262,8 +286,32 @@ public final class ToolBox {
 	            adLayout.setVisibility(View.VISIBLE);
 	            
 				AdRequest adRequest = new AdRequest();
+			    adRequest.addTestDevice(AdRequest.TEST_EMULATOR);			    
+			    adLayout.loadAd(adRequest);
+	        }
+	    });
+	}
+	
+	/**
+	 * This enables again the AdMob ads.
+	 * 
+	 * @param activity
+	 * @param adLayout
+	 * @param excludedDevices
+	 */
+	public static void adMob_showAds(Activity activity, final AdView adLayout, final List<String> excludedDevices) {
+	    activity.runOnUiThread(new Runnable() {
+	        @Override
+	        public void run() {
+	            adLayout.setEnabled(true);
+	            adLayout.setVisibility(View.VISIBLE);
+	            
+				AdRequest adRequest = new AdRequest();
 			    adRequest.addTestDevice(AdRequest.TEST_EMULATOR);
-			    //Add your test devices here...
+			    
+			    for(String dev:excludedDevices){
+			    	adRequest.addTestDevice(dev);
+			    }
 			    
 			    adLayout.loadAd(adRequest);
 	        }
@@ -1032,7 +1080,7 @@ public final class ToolBox {
 	 
 	 
 	 /**
-	  * This method returns the application private folder. All the stuff
+	  * This method returns the application external folder. All the stuff
 	  * saved in this folder is deleted when the application is uninstalled.
 	  * 
 	  * If the SD folder is not mounted null is returned.
@@ -1064,17 +1112,17 @@ public final class ToolBox {
       *
 	  * @return
 	  */
-	 public static File storage_getFolder(String folder){
+	 public static File storage_getExternalFolder(String folderType){
 		 File res=null;
 		 if (android.os.Environment.getExternalStorageState().equals(android.os.Environment.MEDIA_MOUNTED)){
-			  res=new File(android.os.Environment.getExternalStorageDirectory(),folder);
+			  res=new File(android.os.Environment.getExternalStorageDirectory(),folderType);
 		 }
 		 return res;
 	 }
 	 	 
 	 /**
 	  * This function returns a File object pointing to a public folder of the the specified 
-	  * type.
+	  * type in the external drive.
 	  * 
 	  * User media is saved here. Be carefull.
 	  * 	  
@@ -1083,19 +1131,31 @@ public final class ToolBox {
 	  * @param folderType	The type of files directory to return. Use one of the avaliable
 	  * 					Environment.DIRECTORY_ values.
 	  * @param folder		An specific folder in the public folder. May be null to get 
-	  * 					the root of the public folder type.  
+	  * 					the root of the public folder type.
+	  * @param createFolder	Set to TRUE to create the folder if it does not exists.  
 	  * 					
 	  * @return
 	  */
-	 public static File storage_getPublicFolder(String folderType, String folder){
+	 public static File storage_getExternalPublicFolder(String folderType, String folder, boolean createFolder){
 		 File res=null;
 		 if (android.os.Environment.getExternalStorageState().equals(android.os.Environment.MEDIA_MOUNTED)){
 			  res=new File(android.os.Environment.getExternalStoragePublicDirectory(folderType),folder);
+			  
+			  if(!res.exists()){
+				  //We create the folder if is desired.
+				  if(folder!=null && folder.length()>0 && createFolder){
+					 if(!res.mkdir()){
+						 res = null;
+					 }
+				  }else{
+					  res = null;
+				  }
+			  }
 		 }
 		 return res;
 	 }
-	
-	
+	  
+	 
     /**
      * Saves the content of the specified input stream into the outputFile.
      * 
@@ -1378,6 +1438,16 @@ public final class ToolBox {
 		return res;
 	}
 	
+	/**
+	 * 
+	 * @param context
+	 * @param dataUrl
+	 * @param bufferSize
+	 * @param watermark
+	 * @param watermark_underlined
+	 * @return
+	 * @throws Exception
+	 */
 	public static String storage_saveImageUrlToInternalAddingWatermark(Context context, String dataUrl, int bufferSize, String watermark, boolean watermark_underlined) throws Exception{
 		String res = null;
 		
@@ -1429,6 +1499,27 @@ public final class ToolBox {
 		
 		return res;
 	}
+	
+	/**
+	 * Return a temporal empty file.
+	 * 
+	 * @param filePrefix
+	 * @param fileSuffix
+	 * @param outputDirectory
+	 * @return
+	 * @throws IOException
+	 */
+	public static File storage_createUniqueFileName(String filePrefix, String fileSuffix, File outputDirectory) throws IOException {
+	    String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+	    String fileName = filePrefix + timeStamp;
+	    File filePath = File.createTempFile(fileName, fileSuffix, outputDirectory);
+	    if(filePath.exists()){
+	    	return filePath;
+	    }else{
+	    	return null;
+	    }	    
+	}
+	
 	
 	//--------------- PREFS ---------------------------------------------------------------------------
 	
@@ -1819,7 +1910,63 @@ public final class ToolBox {
  
  
      // Media Related -----------------------------------------------------------------------------------------------------------------------------
- 
+ 	
+	/**
+	 * Corrects the orientation of a Bitmap. Orientation, depending of the device
+	 * , is not correctly set in the EXIF data of the taken image when it is saved
+	 * into disk.
+	 * 
+	 * Explanation:
+	 * 	Camera orientation is not working ok (as is when capturing an image) because 
+	 *  OEMs do not adhere to the standard. So, each company does this following their 
+	 *  own way.
+	 * 
+	 * @param imagePath	path to the file
+	 * @return
+	 */
+	public static Bitmap media_correctImageOrientation (String imagePath){
+		Bitmap res = null;
+		
+		try {
+	        File f = new File(imagePath);
+	        ExifInterface exif = new ExifInterface(f.getPath());
+	        int orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
+
+	        int angle = 0;
+
+	        if (orientation == ExifInterface.ORIENTATION_ROTATE_90) {
+	            angle = 90;
+	        } 
+	        else if (orientation == ExifInterface.ORIENTATION_ROTATE_180) {
+	            angle = 180;
+	        } 
+	        else if (orientation == ExifInterface.ORIENTATION_ROTATE_270) {
+	            angle = 270;
+	        }
+
+	        Matrix mat = new Matrix();
+	        mat.postRotate(angle);
+	        BitmapFactory.Options options = new BitmapFactory.Options();
+	        options.inSampleSize = 2;
+	        
+	        Bitmap bmp = BitmapFactory.decodeStream(new FileInputStream(f), null, options);
+	        res = Bitmap.createBitmap(bmp, 0, 0, bmp.getWidth(),
+	                bmp.getHeight(), mat, true);
+	        
+	    }catch(OutOfMemoryError e) {
+	    	if(LOG_ENABLE)
+        		Log.e(TAG,"media_correctImageOrientation() [OutOfMemory!]: "+ e.getMessage(),e);
+	    }catch (Exception e) {
+	    	if(LOG_ENABLE)
+        		Log.e(TAG,"media_correctImageOrientation(): "+e.getMessage(),e);
+	    }catch(Throwable e){
+	    	if(LOG_ENABLE)
+        		Log.e(TAG,"media_correctImageOrientation(): "+e.getMessage(),e);
+	    }
+	    
+		
+		return res;
+	}
 	
 	/**
 	 * Converts an image file to Base64 string.
@@ -2071,6 +2218,67 @@ public final class ToolBox {
 		return bmpGrayscale;
 	 }
 	 
+	 
+	 /**
+	  * Plays the specified ringtone from the application raw folder.
+	  * 
+	  * @param appPackage			Application package. (you can get it by using: 
+	  * 							AppVigilant.thiz.getApplicationContext().getPackageName())
+	  * @param soundResourceId		Sound resource id
+	  */
+	 public static void media_soundPlayFromRawFolder(Context context, String appPackage, int soundResourceId){
+		try {
+			Uri soundUri = Uri.parse("android.resource://" + appPackage + "/" + soundResourceId);
+	        Ringtone r = RingtoneManager.getRingtone(context, soundUri);	        
+	        r.play();
+		
+	    } catch (Exception e) {
+	    	if(LOG_ENABLE){
+	    		Log.e(TAG, "Error playing sound with resource id: '" + soundResourceId + "' (" + e.getMessage() + ")", e);
+	    	}
+	    }
+	 }
+	 
+	 /**
+	  * Plays the default system notification ringtone.
+	  * 
+	  * @param context
+	  */
+	 public static void media_soundPlayNotificationDefault(Context context){
+		try {
+			Uri soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+	        Ringtone r = RingtoneManager.getRingtone(context, soundUri);
+	        r.play();
+	        
+	    } catch (Exception e) {
+	    	if(LOG_ENABLE){
+	    		Log.e(TAG, "Error playing default notification sound (" + e.getMessage() + ")", e);
+	    	}
+	    }
+	 }
+	 
+	 /**
+	  * Plays the specified sound from the application asset folder.
+	  * 
+	  * @param context
+	  * @param assetSoundPath	Path to the sound in the assets folder.
+	  */
+	 public static void media_soundPlayFromAssetFolder(Context context, String assetSoundPath){
+		try {
+			AssetFileDescriptor afd = context.getAssets().openFd(assetSoundPath);
+			
+	        MediaPlayer player = new MediaPlayer();
+	        player.setDataSource(afd.getFileDescriptor(),afd.getStartOffset(),afd.getLength());
+	        player.prepare();
+	        player.start();
+	        
+	    } catch (Exception e) {
+	    	if(LOG_ENABLE){
+	    		Log.e(TAG, "Error playing sound: '" + assetSoundPath + "' (" + e.getMessage() + ")", e);
+	    	}
+	    }
+	 }
+	 
 	 // Device Related -----------------------------------------------------------------------------------------------------------------------------
 	 
 	 /**
@@ -2300,7 +2508,7 @@ public final class ToolBox {
 	public static String device_getOSVersion() {
 		return String.valueOf(Build.VERSION.SDK_INT);
 	}
-			
+	
 	/**
 	 * Returns TRUE if a specified hardware feature is present.
 	 * 
