@@ -31,8 +31,9 @@ import es.javocsoft.android.lib.toolbox.gcm.core.GCMIntentService.OnRegistration
  */
 public class NotificationModule {
 
-	public static final boolean LOG_ENABLE = false;
-	public static final String TAG = "NotificationModule";
+	/** Enables or disables the log. */
+	public static boolean LOG_ENABLE = true;
+	public static final String TAG = "javocsoft-toolbox: NotificationModule";
 
 	private static NotificationModule instance = null;
 	
@@ -224,7 +225,8 @@ public class NotificationModule {
 	 */
 	public void gcmCheckForNotificationReceival(Context context, Intent intent){
 		
-		if(intent.getAction().equals(NotificationModule.NOTIFICATION_ACTIVITY_TO_CALL.getName()+"."+NotificationModule.NOTIFICATION_ACTION_KEY)){
+		if(intent!=null && intent.getAction()!=null && 
+			intent.getAction().equals(NotificationModule.NOTIFICATION_ACTIVITY_TO_CALL.getName()+"."+NotificationModule.NOTIFICATION_ACTION_KEY)){
 			//The event is a PUSH notification from GCM
 			if(LOG_ENABLE)
 				Log.d(NotificationModule.TAG,"Notification received. Sending show order to broadcast.");

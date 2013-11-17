@@ -117,12 +117,13 @@ import es.javocsoft.android.lib.toolbox.io.IOUtils;
  */
 public final class ToolBox {
 	
-	private static final boolean LOG_ENABLE = false;
+	/** Enables or disables log */
+	public static boolean LOG_ENABLE = true;
 	
 	/** Http Method type for a request. */
 	public static enum HTTP_METHOD{POST,DELETE,GET};
 	
-	private static final String TAG = "Android ToolBox";
+	private static final String TAG = "javocsoft-toolbox: ToolBox";
 	
 	private static final int CONNECTION_DEFAULT_TIMEOUT = 5000; // 5 sgs.
 	private static final int CONNECTION_DEFAULT_DATA_RECEIVAL_TIMEOUT = 10000; // 10 sgs.
