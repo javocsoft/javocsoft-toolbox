@@ -155,6 +155,15 @@ public class GCMIntentService extends GCMBaseIntentService {
 			else
 				return null;
 		}
+		
+		/**
+		 * Gets the context.
+		 * 
+		 * @return
+		 */
+		protected Context getContext(){
+			return context;
+		}
 	}
 	
 	/**
@@ -184,6 +193,15 @@ public class GCMIntentService extends GCMBaseIntentService {
 		 */
 		protected void setNotRegisteredOnServersideFlag(){
 			GCMRegistrar.setRegisteredOnServer(context, false);
+		}
+		
+		/**
+		 * Gets the context.
+		 * 
+		 * @return
+		 */
+		protected Context getContext(){
+			return context;
 		}
 	}
 }

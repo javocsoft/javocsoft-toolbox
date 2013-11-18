@@ -18,6 +18,7 @@ import es.javocsoft.android.lib.toolbox.gcm.NotificationModule;
 public class CustomNotificationReceiver extends BroadcastReceiver {
 
 	private static Bundle notificationbundle;
+	private static Context context;
 	
 	@Override
 	public void onReceive(Context context, Intent intent) {
@@ -27,6 +28,7 @@ public class CustomNotificationReceiver extends BroadcastReceiver {
 				Log.d(NotificationModule.TAG,"CustomNotificationReceiver. A received notification is going to be shown.");
 			
 			notificationbundle = intent.getExtras();
+			CustomNotificationReceiver.context = context;
 			
 			if(NotificationModule.doWhenNotificationRunnable!=null &&
 			   !NotificationModule.doWhenNotificationRunnable.isAlive()){
@@ -78,6 +80,15 @@ public class CustomNotificationReceiver extends BroadcastReceiver {
 		protected Bundle getExtras() {
 			return notificationbundle;
 		}
+		
+		/**
+		 * Gets the context.
+		 * 
+		 * @return
+		 */
+		protected Context getContext(){
+			return context;
+		}
 	}
 	
 	/**
@@ -108,6 +119,15 @@ public class CustomNotificationReceiver extends BroadcastReceiver {
 		 */
 		protected Bundle getExtras() {
 			return notificationbundle;
+		}
+		
+		/**
+		 * Gets the context.
+		 * 
+		 * @return
+		 */
+		protected Context getContext(){
+			return context;
 		}
 	}
 }
