@@ -866,7 +866,7 @@ public final class ToolBox {
 	        }
 	        amanager.setRingerMode(previousAudioMode);
 			
-	        Log.d(TAG, "Notification created for the recieve PUSH message.");
+	        Log.d(TAG, "Android Notification created.");
 	        
 		} catch (Exception e) {
 			if(LOG_ENABLE)
