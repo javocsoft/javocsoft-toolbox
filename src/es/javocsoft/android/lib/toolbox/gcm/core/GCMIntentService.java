@@ -13,13 +13,17 @@ import es.javocsoft.android.lib.toolbox.gcm.NotificationModule;
 /**
  * Service responsible for handling GCM messages.
  * 
+ * See:
+ *  http://developer.android.com/reference/com/google/android/gcm/server/package-summary.html
+ * 	http://developer.android.com/reference/com/google/android/gcm/GCMRegistrar.html
+ * 
  * @author JavocSoft 2013
  * @since  2013
  */
 public class GCMIntentService extends GCMBaseIntentService {
 
     private static Context context;
-	
+    
     public GCMIntentService() {
         super(NotificationModule.SENDER_ID);        
     }
@@ -31,8 +35,10 @@ public class GCMIntentService extends GCMBaseIntentService {
     	
     	GCMIntentService.context = context;
     	
-    	if(NotificationModule.registerRunnable!=null){
-			NotificationModule.registerRunnable.start();				
+    	if(NotificationModule.registerRunnable!=null &&
+    	   !NotificationModule.registerRunnable.isAlive()){    		
+    		Thread t = new Thread(NotificationModule.registerRunnable);
+    		t.start();
 		}
     }
 
@@ -42,9 +48,10 @@ public class GCMIntentService extends GCMBaseIntentService {
     		Log.i(NotificationModule.TAG, "Device unregistered");
     	
         if (GCMRegistrar.isRegisteredOnServer(context)) {        	
-        	if(NotificationModule.unregisterRunnable!=null){
+        	if(NotificationModule.unregisterRunnable!=null &&
+        	   !NotificationModule.unregisterRunnable.isAlive()){        		
     			Thread t = new Thread(NotificationModule.unregisterRunnable);
-    	        t.start();				
+    	        t.start();
     		}
         }
     }
@@ -121,11 +128,21 @@ public class GCMIntentService extends GCMBaseIntentService {
 			pre_task();
 			task();
 			post_task();
+			
 		}
 		    	
 		protected abstract void pre_task();
 		protected abstract void task();
 		protected abstract void post_task();
+		
+		
+		/**
+		 * Allows to tell the GCM that this application has been 
+		 * successfully registered with your server-side back-end.
+		 */
+		protected void setRegisteredOnServersideFlag(){
+			GCMRegistrar.setRegisteredOnServer(context, true);
+		}
 		
 		/**
 		 * Gets the GCM registration token.
@@ -137,6 +154,36 @@ public class GCMIntentService extends GCMBaseIntentService {
 				return GCMRegistrar.getRegistrationId(context);
 			else
 				return null;
+		}
+	}
+	
+	/**
+	 * This class allows to do something when unregistration is done.
+	 * 
+	 * @author JavocSoft 2013.
+	 * @since 2013
+	 */
+	public static abstract class OnUnregistrationRunnableTask extends Thread implements Runnable {
+		
+		protected OnUnregistrationRunnableTask() {}
+		
+		@Override
+		public void run() {
+			pre_task();
+			task();
+			post_task();
+		}
+		    	
+		protected abstract void pre_task();
+		protected abstract void task();
+		protected abstract void post_task();
+		
+		/**
+		 * Allows to tell the GCM that this application has been successfully 
+		 * unregistered from your server-side back-end.
+		 */
+		protected void setNotRegisteredOnServersideFlag(){
+			GCMRegistrar.setRegisteredOnServer(context, false);
 		}
 	}
 }

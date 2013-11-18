@@ -10,6 +10,7 @@ import es.javocsoft.android.lib.toolbox.ToolBox;
 import es.javocsoft.android.lib.toolbox.gcm.core.CustomNotificationReceiver.OnAckRunnableTask;
 import es.javocsoft.android.lib.toolbox.gcm.core.CustomNotificationReceiver.OnNewNotificationRunnableTask;
 import es.javocsoft.android.lib.toolbox.gcm.core.GCMIntentService.OnRegistrationRunnableTask;
+import es.javocsoft.android.lib.toolbox.gcm.core.GCMIntentService.OnUnregistrationRunnableTask;
 
 
 /**
@@ -62,7 +63,7 @@ public class NotificationModule {
     public static final String NOTIFICATION_ACTION_KEY = "NotificationActionKey";
     public static OnAckRunnableTask ackRunnable;
     public static OnRegistrationRunnableTask registerRunnable;
-    public static Runnable unregisterRunnable;
+    public static OnUnregistrationRunnableTask unregisterRunnable;
     public static OnNewNotificationRunnableTask doWhenNotificationRunnable;
     
     public static boolean multipleNot;
@@ -70,7 +71,7 @@ public class NotificationModule {
     
     
     protected NotificationModule(Context context, EnvironmentType environmentType, String appSenderId,  
-    		OnRegistrationRunnableTask registerRunnable, OnAckRunnableTask ackRunnable, Runnable unregisterRunnable,
+    		OnRegistrationRunnableTask registerRunnable, OnAckRunnableTask ackRunnable, OnUnregistrationRunnableTask unregisterRunnable,
 			OnNewNotificationRunnableTask doWhenNotificationRunnable,
 			boolean multipleNot, String groupMultipleNotKey) {
 		APPLICATION_CONTEXT = context;
@@ -108,7 +109,7 @@ public class NotificationModule {
      * @return
      */
 	public static NotificationModule getInstance(Context context, EnvironmentType environmentType, String appSenderId,  
-			OnRegistrationRunnableTask registerRunnable, OnAckRunnableTask ackRunnable, Runnable unregisterRunnable,
+			OnRegistrationRunnableTask registerRunnable, OnAckRunnableTask ackRunnable, OnUnregistrationRunnableTask unregisterRunnable,
 			OnNewNotificationRunnableTask doWhenNotificationRunnable,
 			boolean multipleNot, String groupMultipleNotKey) {
 
@@ -205,16 +206,12 @@ public class NotificationModule {
 	 * 
 	 * @param context
 	 */
-	public void gcmUnregisterDevice(Context context, Runnable runnable){
+	public void gcmUnregisterDevice(Context context){
 		if(GCMRegistrar.isRegistered(context)){
-			if(runnable!=null){
-				Thread t = new Thread(NotificationModule.unregisterRunnable);
-		        t.start();				
-			}
-			
 			//Un-register the device from GCM.
 			GCMRegistrar.unregister(context);
 		}
+		GCMRegistrar.onDestroy(context);
 	}
 	
 	/**

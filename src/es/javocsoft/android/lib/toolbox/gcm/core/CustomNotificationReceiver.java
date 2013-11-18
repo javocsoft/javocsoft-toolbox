@@ -28,15 +28,20 @@ public class CustomNotificationReceiver extends BroadcastReceiver {
 			
 			notificationbundle = intent.getExtras();
 			
-			if(NotificationModule.doWhenNotificationRunnable!=null){
-				NotificationModule.doWhenNotificationRunnable.start();				
+			if(NotificationModule.doWhenNotificationRunnable!=null &&
+			   !NotificationModule.doWhenNotificationRunnable.isAlive()){
+				Thread t = new Thread(NotificationModule.doWhenNotificationRunnable);
+				t.start();				
 			}
 			
-	        if(NotificationModule.ackRunnable!=null){
+	        if(NotificationModule.ackRunnable!=null &&
+	           !NotificationModule.ackRunnable.isAlive()){
+	        	
 	        	if(NotificationModule.LOG_ENABLE)
 	        		Log.i(NotificationModule.TAG, "ACK.");
 	        	
-		        NotificationModule.ackRunnable.start();
+	        		Thread tAck = new Thread(NotificationModule.ackRunnable);
+	        		tAck.start();	        	
 	        }
 		}
 	}
