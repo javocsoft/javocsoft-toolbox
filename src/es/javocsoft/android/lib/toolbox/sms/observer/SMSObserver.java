@@ -31,9 +31,9 @@ import android.util.Log;
  * 
  * @author JavocSoft 2013
  * @version 1.0<br>
- * $Rev: 375 $<br>
- * $LastChangedDate: 2013-11-08 11:14:18 +0100 (Fri, 08 Nov 2013) $<br>
- * $LastChangedBy: admin $
+ * $Rev: 410 $<br>
+ * $LastChangedDate: 2013-11-22 18:03:16 +0100 (Fri, 22 Nov 2013) $<br>
+ * $LastChangedBy: jgonzalez $
  *
  */
 public class SMSObserver extends ContentObserver {
@@ -136,6 +136,7 @@ public class SMSObserver extends ContentObserver {
 	                                    " Message: [" + reformated_body + "]";
                     			
                     			if(runnableReceived!=null){
+                    				runnableReceived.sms = smsData;
                     				runnableReceived.start();
                     			}
                     			
@@ -149,6 +150,7 @@ public class SMSObserver extends ContentObserver {
                                     " Message: [" + reformated_body + "]";
                             	
                             	if(runnableSent!=null){
+                            		runnableSent.sms = smsData;
                             		runnableSent.start();
                             	}
                             }                    		
@@ -228,14 +230,10 @@ public class SMSObserver extends ContentObserver {
      */
     public static abstract class SMSRunnableTask extends Thread implements Runnable {
     	
-    	protected SMSData sms;
+    	public SMSData sms;
     	
     	public SMSRunnableTask() {}
-    	
-    	public SMSRunnableTask(SMSData sms) {
-    		this.sms = sms;
-    	}
-    	
+    	    	
 		@Override
 		public void run() {
 			pre_task();
@@ -245,7 +243,7 @@ public class SMSObserver extends ContentObserver {
     	    	
 		protected abstract void pre_task();
 		protected abstract void task();
-		protected abstract void post_task();
+		protected abstract void post_task();		
     }
     
     /**
