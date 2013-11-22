@@ -17,7 +17,7 @@ We have the ToolBox.java main class but also there are other utility classes and
 * The class "SMSObserver.java" to be able to be aware of sent/received SMS in the mobile.
 * The class "CMTShortNumberInformation.java" that allows to recognize if a short number is one of the CMT recognized additional tarification number (like SMS Premium).
 * The class "HttpOperations.java" that allows to make HTTP POST/GET request easily.
-* A Google Cloud Messaging (GCM) module. very easy and fast to use and integrate in your project to allow receiving push notifications from your application.
+* A Google Cloud Messaging (GCM) module. very easy and fast to use and integrate in your project to allow receiving/sending push notifications from your application.
 
 This library is under development because i use it for all my projects so i am all time adding new features :).
 
