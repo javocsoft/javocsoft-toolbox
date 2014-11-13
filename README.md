@@ -23,15 +23,6 @@ We have the ToolBox.java main class but also there are other utility classes and
 * <i>Google Play Services</i>. An Ads module for <b>AdMob</b>. Easy to integrate in your project.
 * <i>Google Play Services</i>. Google <b>Analytics</b> v4 helper classes to have working the tracking of your app. Also with a <b>Custom Campaign Receiver</b> to be able to measure your ads campaigns (allowing also getting the campaign info giving the opportunity to do something when is received).
 
-The library needs some libraries to work, import them to Eclipse:
-
-* <u>Gogle Play Services</u>. Located in the Android SDK under the path "extras/google/google_play_services/libproject/google-play-services_lib".
-* <u>Facebook SDK</u>. Download it and add the facebook project folder name "facebook".
-* <u>Support Library v7</u> project. Located in the Android SDK under the path "extras/android/support/v7/appcompat".
-
-...and each one to the project as a library.
-
-
 This library is under development because i use it for all my projects so i am all time adding new features :).
 
 
@@ -42,10 +33,12 @@ Greetings and i hope it will save time in your projects as it does for me.
 This is an Eclipse Android Library project. To integrate in your project do the following:  
 
 1. Clone this project and import into your Eclipse workspace.
-2. Android-Toolbox requires some external libraries to work, import them as a linrary in the project.  
+2. Android-Toolbox requires some external libraries to work, import them as a library in the project.  
   1. <u>Gogle Play Services</u>. Located in the Android SDK under the path  "extras/google/google_play_services/libproject/google-play-services_lib".
   2. <u>Facebook SDK</u>. Download it and add the facebook project folder name "facebook".
   3. <u>Support Library v7</u> project. Located in the Android SDK under the path "extras/android/support/v7/appcompat".
+
+Internally it also uses some other libraries like GSON, json_simple, commons-codec and android-support-v4. These are included in the libs folder. 
 
 ##LICENSE##
 
