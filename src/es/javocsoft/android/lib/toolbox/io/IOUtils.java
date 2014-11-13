@@ -1,3 +1,24 @@
+/*
+ * Copyright (C) 2010-2014 - JavocSoft - Javier Gonzalez Serrano
+ * http://javocsoft.es/proyectos/code-libs/android/javocsoft-toolbox-android-library
+ * 
+ * This file is part of JavocSoft Android Toolbox library.
+ *
+ * JavocSoft Android Toolbox library is free software: you can redistribute it 
+ * and/or modify it under the terms of the GNU General Public License as 
+ * published by the Free Software Foundation, either version 3 of the License, 
+ * or (at your option) any later version.
+ *
+ * JavocSoft Android Toolbox library is distributed in the hope that it will be 
+ * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General 
+ * Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with JavocSoft Android Toolbox library.  If not, see 
+ * <http://www.gnu.org/licenses/>.
+ * 
+ */
 package es.javocsoft.android.lib.toolbox.io;
 
 import java.io.BufferedReader;
@@ -10,13 +31,10 @@ import java.io.Reader;
 import java.util.Arrays;
 
 /**
- * 
- * @author JavocSoft Team 2013
- * @version 1.0<br>
- * $Rev: 327 $<br>
- * $LastChangedDate: 2013-10-31 15:05:05 +0100 (Thu, 31 Oct 2013) $<br>
- * $LastChangedBy: admin $
+ * Some useful IO operations.
  *
+ * @author JavocSoft Team 2013
+ * @version 1.0
  */
 public class IOUtils
 {
@@ -73,7 +91,7 @@ public class IOUtils
 	 * @param input2
 	 *            the second stream
 	 * @return true if the streams contain the same content, or false otherwise
-	 * @throws IOException
+	 * @throws java.io.IOException
 	 * @throws IllegalArgumentException
 	 *             if the stream is null
 	 */
@@ -134,14 +152,14 @@ public class IOUtils
 	}
 
 	/**
-	 * Read and return the entire contents of the supplied {@link InputStream
+	 * Read and return the entire contents of the supplied {@link java.io.InputStream
 	 * stream}. This method always closes the stream when finished reading.
 	 * 
 	 * @param stream
 	 *            the stream to the contents; may be null
 	 * @return the contents, or an empty byte array if the supplied reader is
 	 *         null
-	 * @throws IOException
+	 * @throws java.io.IOException
 	 *             if there is an error reading the content
 	 */
 	public static byte[] readBytes(InputStream stream) throws IOException
@@ -185,13 +203,13 @@ public class IOUtils
 	}
 
 	/**
-	 * Read and return the entire contents of the supplied {@link InputStream}.
+	 * Read and return the entire contents of the supplied {@link java.io.InputStream}.
 	 * This method always closes the stream when finished reading.
 	 * 
 	 * @param stream
 	 *            the streamed contents; may be null
 	 * @return the contents, or an empty string if the supplied stream is null
-	 * @throws IOException
+	 * @throws java.io.IOException
 	 *             if there is an error reading the content
 	 */
 	public static String read(InputStream stream) throws IOException
@@ -200,13 +218,13 @@ public class IOUtils
 	}
 
 	/**
-	 * Read and return the entire contents of the supplied {@link Reader}. This
+	 * Read and return the entire contents of the supplied {@link java.io.Reader}. This
 	 * method always closes the reader when finished reading.
 	 * 
 	 * @param reader
 	 *            the reader of the contents; may be null
 	 * @return the contents, or an empty string if the supplied reader is null
-	 * @throws IOException
+	 * @throws java.io.IOException
 	 *             if there is an error reading the content
 	 */
 	public static String read(Reader reader) throws IOException

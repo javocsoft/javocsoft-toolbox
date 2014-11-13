@@ -19,17 +19,43 @@
  * <http://www.gnu.org/licenses/>.
  * 
  */
-package es.javocsoft.android.lib.toolbox.gcm;
+package es.javocsoft.android.lib.toolbox.gcm.core.beans;
+
+import java.util.List;
+import java.util.Map;
 
 /**
- * Class used for device registration in your backend system.
+ * This class contains a GCM message required
+ * fields in order to get a valid JSON for a
+ * delivery request.<br><br>
+ * 
+ * A message for a GCM delivery request has 
+ * the format:<br><br>
+ * 
+ * <pre>
+ * { "collapse_key": "score_update",
+ *   "time_to_live": 108,
+ *   "delay_while_idle": true,
+ *   "data": {
+ *     "score": "4x8",
+ *     "time": "15:16.2342"
+ *   },
+ *   "registration_ids":["4", "8", "15", "16", "23", "42"]
+ * }
+ * </pre>
  * 
  * @author JavocSoft 2014
- * @since  2014
+ * @version 1.0
  *
  */
-public enum EnvironmentType {
+public class GCMMessage {
 	
-	PRODUCTION, SANDBOX
+	public String collapse_key;
+	public Long time_to_live;
+	public Boolean delay_while_idle;
+	
+	public Map<String,String> data;
+	
+	public List<String> registration_ids;
 	
 }

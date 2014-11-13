@@ -30,7 +30,7 @@ public class FileHelper
 	 *            file which should be moved.
 	 * @param to
 	 *            desired destination of the file.
-	 * @throws IOException
+	 * @throws java.io.IOException
 	 *             if an error occurs.
 	 * 
 	 * @since ostermillerutils 1.00.00
@@ -51,7 +51,7 @@ public class FileHelper
 	 * @param overwrite
 	 *            If false, an exception will be thrown rather than overwrite a
 	 *            file.
-	 * @throws IOException
+	 * @throws java.io.IOException
 	 *             if an error occurs.
 	 * 
 	 * @since ostermillerutils 1.00.00
@@ -124,7 +124,7 @@ public class FileHelper
 	 *            data source
 	 * @param out
 	 *            data destination
-	 * @throws IOException
+	 * @throws java.io.IOException
 	 *             in an input or output error occurs
 	 * 
 	 * @since ostermillerutils 1.00.00

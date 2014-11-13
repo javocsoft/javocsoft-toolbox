@@ -1,3 +1,24 @@
+/*
+ * Copyright (C) 2010-2014 - JavocSoft - Javier Gonzalez Serrano
+ * http://javocsoft.es/proyectos/code-libs/android/javocsoft-toolbox-android-library
+ * 
+ * This file is part of JavocSoft Android Toolbox library.
+ *
+ * JavocSoft Android Toolbox library is free software: you can redistribute it 
+ * and/or modify it under the terms of the GNU General Public License as 
+ * published by the Free Software Foundation, either version 3 of the License, 
+ * or (at your option) any later version.
+ *
+ * JavocSoft Android Toolbox library is distributed in the hope that it will be 
+ * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General 
+ * Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with JavocSoft Android Toolbox library.  If not, see 
+ * <http://www.gnu.org/licenses/>.
+ * 
+ */
 package es.javocsoft.android.lib.toolbox.sms.observer;
 
 
@@ -24,17 +45,16 @@ import android.util.Log;
  * 
  * Usage:
  * 
- * Handler smsHandler = new Handler();
- * smsObserver = new SMSObserver(smsHandler, getApplicationContext());
- * ContentResolver mContentResolver = getContentResolver();
- * mContentResolver.registerContentObserver(Uri.parse("content://sms/"),true, smsObserver);
+ * 	Handler smsHandler = new Handler();	
+ *	if(ToolBox.device_isHardwareFeatureAvailable(this, PackageManager.FEATURE_TELEPHONY)){
+ *		smsObserver = new SMSObserver(smsHandler, getApplicationContext(), msgReceivedCallback, msgSentCallback);		
+ *		
+ *		ContentResolver mContentResolver = getContentResolver();
+ * 		mContentResolver.registerContentObserver(Uri.parse("content://sms/"),true, smsObserver);
+ *	}
  * 
  * @author JavocSoft 2013
- * @version 1.0<br>
- * $Rev: 410 $<br>
- * $LastChangedDate: 2013-11-22 18:03:16 +0100 (Fri, 22 Nov 2013) $<br>
- * $LastChangedBy: jgonzalez $
- *
+ * @version 1.0
  */
 public class SMSObserver extends ContentObserver {
 	
@@ -45,8 +65,8 @@ public class SMSObserver extends ContentObserver {
     private static final String TAG = "javocsoft-toolbox: SMSObserver";
     private static final Uri uriSMS = Uri.parse("content://sms/");
     
-    private SMSRunnableTask runnableReceived;
-    private SMSRunnableTask runnableSent;
+    private SMSRunnableTask msgReceivedCallback;
+    private SMSRunnableTask msgSentCallback;
     
     /**
      * This is a general SMS observer. It allows to do something when a SMS is sent
@@ -54,15 +74,15 @@ public class SMSObserver extends ContentObserver {
      * 
      * @param handler
      * @param ctx
-     * @param runnableReceived
-     * @param runnableSent
+     * @param msgReceivedCallback
+     * @param msgSentCallback
      */
-    public SMSObserver(Handler handler, Context ctx, SMSRunnableTask runnableReceived, SMSRunnableTask runnableSent) {
+    public SMSObserver(Handler handler, Context ctx, SMSRunnableTask msgReceivedCallback, SMSRunnableTask msgSentCallback) {
         super(handler);
         
         context = ctx;
-        this.runnableReceived = runnableReceived;
-        this.runnableSent = runnableSent;
+        this.msgReceivedCallback = msgReceivedCallback;
+        this.msgSentCallback = msgSentCallback;
         initialPos = getLastMsgId();        
     }
  
@@ -135,9 +155,10 @@ public class SMSObserver extends ContentObserver {
 	                    				" From: [" + receiver + "]" +
 	                                    " Message: [" + reformated_body + "]";
                     			
-                    			if(runnableReceived!=null){
-                    				runnableReceived.sms = smsData;
-                    				runnableReceived.start();
+                    			if(msgReceivedCallback!=null){
+                    				msgReceivedCallback.setSMSData(smsData);
+                    				msgReceivedCallback.setContext(context);
+                    				msgReceivedCallback.start();
                     			}
                     			
                             }else{
@@ -149,9 +170,10 @@ public class SMSObserver extends ContentObserver {
                     				" Receiver: [" + receiver + "]" +
                                     " Message: [" + reformated_body + "]";
                             	
-                            	if(runnableSent!=null){
-                            		runnableSent.sms = smsData;
-                            		runnableSent.start();
+                            	if(msgSentCallback!=null){
+                            		msgSentCallback.setSMSData(smsData);
+                            		msgSentCallback.setContext(context);
+                            		msgSentCallback.start();
                             	}
                             }                    		
                     		
@@ -230,20 +252,36 @@ public class SMSObserver extends ContentObserver {
      */
     public static abstract class SMSRunnableTask extends Thread implements Runnable {
     	
-    	public SMSData sms;
+    	protected Context context;
+    	protected SMSData sms;
     	
     	public SMSRunnableTask() {}
-    	    	
+    	
+    	
 		@Override
 		public void run() {
 			pre_task();
 			task();
 			post_task();
 		}
-    	    	
+    	
+		/**
+		 * Allows to set the SMS content.
+		 *  
+		 * @param sms
+		 */
+		protected void setSMSData (SMSData sms) {
+			this.sms = sms;
+		}
+		
+		
+		protected void setContext (Context context) {
+			this.context = context;
+		}
+		
 		protected abstract void pre_task();
 		protected abstract void task();
-		protected abstract void post_task();		
+		protected abstract void post_task();
     }
     
     /**

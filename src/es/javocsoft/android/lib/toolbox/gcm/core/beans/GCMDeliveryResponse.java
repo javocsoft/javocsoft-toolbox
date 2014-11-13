@@ -19,17 +19,49 @@
  * <http://www.gnu.org/licenses/>.
  * 
  */
-package es.javocsoft.android.lib.toolbox.gcm;
+package es.javocsoft.android.lib.toolbox.gcm.core.beans;
+
+import java.util.List;
+
 
 /**
- * Class used for device registration in your backend system.
+ * This class conatins an HTTP GCM delivery sesult
+ * response.<br><br>
+ * 
+ * The format of a response is as follows (an example):<br><br>
+ * 
+ * <pre>
+ * { "multicast_id": 216,
+ *	  "success": 3,
+ *	  "failure": 3,
+ *	  "canonical_ids": 1,
+ *	  "results": [
+ *	    { "message_id": "1:0408" },
+ *	    { "error": "Unavailable" },
+ *	    { "error": "InvalidRegistration" },
+ *	    { "message_id": "1:1516" },
+ *	    { "message_id": "1:2342", "registration_id": "32" },
+ *	    { "error": "NotRegistered"}
+ *	  ]
+ *	}
+ * </pre>
+ *
+ * See https://developer.android.com/google/gcm/http.html
  * 
  * @author JavocSoft 2014
- * @since  2014
+ * @version 1.0
  *
  */
-public enum EnvironmentType {
+public class GCMDeliveryResponse {
+
+	public String multicast_id;
 	
-	PRODUCTION, SANDBOX
+	public int success;
+	public int failure;
+	public int canonical_ids;
+	
+	/** The detailed information about each message delivery 
+	 * result. See {@link GCMDeliveryResultItem} */
+	public List<GCMDeliveryResultItem> results;
 	
 }

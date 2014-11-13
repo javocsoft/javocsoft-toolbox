@@ -1,3 +1,24 @@
+/*
+ * Copyright (C) 2010-2014 - JavocSoft - Javier Gonzalez Serrano
+ * http://javocsoft.es/proyectos/code-libs/android/javocsoft-toolbox-android-library
+ * 
+ * This file is part of JavocSoft Android Toolbox library.
+ *
+ * JavocSoft Android Toolbox library is free software: you can redistribute it 
+ * and/or modify it under the terms of the GNU General Public License as 
+ * published by the Free Software Foundation, either version 3 of the License, 
+ * or (at your option) any later version.
+ *
+ * JavocSoft Android Toolbox library is distributed in the hope that it will be 
+ * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General 
+ * Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with JavocSoft Android Toolbox library.  If not, see 
+ * <http://www.gnu.org/licenses/>.
+ * 
+ */
 package es.javocsoft.android.lib.toolbox.gcm.core;
 
 import android.content.BroadcastReceiver;
@@ -11,14 +32,12 @@ import es.javocsoft.android.lib.toolbox.gcm.NotificationModule;
 /**
  * Used to show the notification in the application UI.
  * 
- * @author JavocSoft 2013
- * @since  2013
- *
+ * @author JavocSoft 2014
+ * @since  2014
+ * 
  */
 public class CustomNotificationReceiver extends BroadcastReceiver {
 
-	private static Bundle notificationbundle;
-	private static Context context;
 	
 	@Override
 	public void onReceive(Context context, Intent intent) {
@@ -26,24 +45,17 @@ public class CustomNotificationReceiver extends BroadcastReceiver {
 		if(intent.getAction().equals(NotificationModule.NEW_NOTIFICATION_ACTION)){
 			if(NotificationModule.LOG_ENABLE)
 				Log.d(NotificationModule.TAG,"CustomNotificationReceiver. A received notification is going to be shown.");
-			
-			notificationbundle = intent.getExtras();
-			CustomNotificationReceiver.context = context;
-			
-			if(NotificationModule.doWhenNotificationRunnable!=null &&
-			   !NotificationModule.doWhenNotificationRunnable.isAlive()){
-				Thread t = new Thread(NotificationModule.doWhenNotificationRunnable);
-				t.start();				
-			}
-			
+				
+			//Do something when notification is opened.
 	        if(NotificationModule.ackRunnable!=null &&
 	           !NotificationModule.ackRunnable.isAlive()){
 	        	
 	        	if(NotificationModule.LOG_ENABLE)
 	        		Log.i(NotificationModule.TAG, "ACK.");
-	        	
+	        		//Set the intent extras
+	        		NotificationModule.ackRunnable.setNotificationBundle(intent.getExtras());
 	        		Thread tAck = new Thread(NotificationModule.ackRunnable);
-	        		tAck.start();	        	
+	        		tAck.start();
 	        }
 		}
 	}
@@ -51,45 +63,7 @@ public class CustomNotificationReceiver extends BroadcastReceiver {
 	
 	//AUXILIAR CLASSES
 	
-	/**
-	 * This class allows to do something with the received notification.
-	 * 
-	 * @author JavocSoft 2013.
-	 * @since 2013
-	 */
-	public static abstract class OnNewNotificationRunnableTask extends Thread implements Runnable {
-		
-		public OnNewNotificationRunnableTask() {}
-		
-		@Override
-		public void run() {
-			pre_task();
-			task();
-			post_task();
-		}
-		    	
-		protected abstract void pre_task();
-		protected abstract void task();
-		protected abstract void post_task();
-		
-		/**
-		 * Gets the notification extras.
-		 * 
-		 * @return
-		 */
-		protected Bundle getExtras() {
-			return notificationbundle;
-		}
-		
-		/**
-		 * Gets the context.
-		 * 
-		 * @return
-		 */
-		protected Context getContext(){
-			return context;
-		}
-	}
+	
 	
 	/**
 	 * This class allows to do something when user opens the notification.
@@ -97,9 +71,11 @@ public class CustomNotificationReceiver extends BroadcastReceiver {
 	 * @author JavocSoft 2013.
 	 * @since 2013
 	 */
-	public static abstract class OnAckRunnableTask extends Thread implements Runnable {
+	public static abstract class OnAckCallback extends Thread implements Runnable {
 		
-		public OnAckRunnableTask() {}
+		private Bundle notificationBundle;
+		
+		public OnAckCallback() {}
 		
 		@Override
 		public void run() {
@@ -112,13 +88,17 @@ public class CustomNotificationReceiver extends BroadcastReceiver {
 		protected abstract void task();
 		protected abstract void post_task();
 		
+		public void setNotificationBundle(Bundle notificationBundle) {
+			this.notificationBundle = notificationBundle;
+		}
+		
 		/**
 		 * Gets the notification extras.
 		 * 
 		 * @return
 		 */
 		protected Bundle getExtras() {
-			return notificationbundle;
+			return notificationBundle;
 		}
 		
 		/**
@@ -127,7 +107,7 @@ public class CustomNotificationReceiver extends BroadcastReceiver {
 		 * @return
 		 */
 		protected Context getContext(){
-			return context;
+			return NotificationModule.APPLICATION_CONTEXT;
 		}
 	}
 }

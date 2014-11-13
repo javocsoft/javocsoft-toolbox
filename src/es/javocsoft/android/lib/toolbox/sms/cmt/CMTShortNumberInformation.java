@@ -1,10 +1,32 @@
-package es.javocsoft.android.lib.toolbox.sms;
+/*
+ * Copyright (C) 2010-2014 - JavocSoft - Javier Gonzalez Serrano
+ * http://javocsoft.es/proyectos/code-libs/android/javocsoft-toolbox-android-library
+ * 
+ * This file is part of JavocSoft Android Toolbox library.
+ *
+ * JavocSoft Android Toolbox library is free software: you can redistribute it 
+ * and/or modify it under the terms of the GNU General Public License as 
+ * published by the Free Software Foundation, either version 3 of the License, 
+ * or (at your option) any later version.
+ *
+ * JavocSoft Android Toolbox library is distributed in the hope that it will be 
+ * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General 
+ * Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with JavocSoft Android Toolbox library.  If not, see 
+ * <http://www.gnu.org/licenses/>.
+ * 
+ */
+package es.javocsoft.android.lib.toolbox.sms.cmt;
 
 import java.util.Locale;
 
 
 /**
- * Information.<br><br>
+ * This class allows to get official CMT information about telephony SMS/MMS
+ * short numbers services.<br><br>
  * 
  * See <a href="http://www.cmt.es/descarga-ficheros-numeracion">Descarga de numeraciones</a>
  * 
@@ -12,24 +34,23 @@ import java.util.Locale;
  * See <a href="http://cnmcblog.es/2009/09/01/su-numero-gracias/">More information</a><br>
  * See <a href="http://www.cmt.es/instrucciones">CMT Numeration related information</a><br><br>
  * 
- * Note from CMT web page:
- * "
- *	Servicios SMS/MMS: aquellos servicios basados en mensajes de texto y multimedia, entre los que se incluyen:<br>
- *		Servicios SMS/MMS gratuitos: aquellos códigos numéricos de seis dígitos de que empiezan por 205 y 207.<br>
- *		Servicios SMS/MMS con tarificación normal: aquellos códigos numéricos de seis dígitos de que empiezan por 215 y 217.<br>
- *		Servicios SMS/MMS Premium: aquellos códigos numéricos pertenecientes a los rangos asociados a las siguentes modalidades:<br>
- *			a) Precio inferior o igual a 1,2 euros: Códigos de cinco dígitos que empiezan por 25 y 27 y 280 (este último para campañas benéficas y solidarias).<br>
- *			b) Precio entre 1,2 y 6 euros:Códigos de cinco dígitos que empiezan por 35 y 37.<br>
- *			c) Suscripción con precio inferior o igual a 1,2 euros: Códigos de seis dígitos que empiezan por 795 y 797.<br>
- *			d) Adultos con precio inferior o igual a 6 euros: Códigos de seis dígitos que empiezan por 995 y 997.<br><br>
- * "
+ * Note from CMT web page about SMS/MMS services:<br><br>
+ * 
+ * SMS/MMS services: those services based in text and multimedia messages, types::<br>
+ * <ul>
+ *		<li>Free SMS/MMS: those numerical codes of six digits that start with 205 or 207.</li>
+ *		<li>Normal price SMS/MMS: those codes of six digits that start with 215 or 217.</li>
+ *		<li>Premium SMS/MMS: those numerical codes belonging to the associated ranges of the following modalities:</li>
+ *			<ul>
+ *				<li>a) Price minor or equal to a 1,2 euros: Five digits codes that start with 25, 27 and 280 (the last one for charities and charity campaigns).</li>
+ *				<li>b) Price between 1,2 and 6 euros: Five digits codes that start with 35 or 37.</li>
+ *				<li>c) Subscription with a price minor or equal to 1,2 euros: Six digits codes that start with 795 or 797.</li>
+ *				<li>d) Adults with price minor or equal than 6 euros: Six digits codes that start with 995 or 997.</li>
+ *			</ul>
+ * </ul>
  * 
  * @author JavocSoft 2013
- * @version 1.0<br>
- * $Rev: 349 $<br>
- * $LastChangedDate: 2013-11-02 14:09:43 +0100 (Sat, 02 Nov 2013) $<br>
- * $LastChangedBy: jgonzalez $
- *
+ * @version 1.0
  */
 public class CMTShortNumberInformation {
 	
@@ -92,7 +113,7 @@ public class CMTShortNumberInformation {
 	  * Returns TRUE if the number is recognized by
 	  * the CMT.
 	  * 
-	  * @param number
+	  * @param number Short-number to check
 	  * @return
 	  */
 	 public static boolean isRecognized(String number){
@@ -140,8 +161,9 @@ public class CMTShortNumberInformation {
 	 }
 	 
 	 /**
+	  * Checks if a number is from a SMS/MMS subscription service.
 	  * 
-	  * @param text
+	  * @param number Short-number to check
 	  * @return
 	  */
 	 public static boolean isFromASubscriptionShortNumber(String number){			 
@@ -176,7 +198,7 @@ public class CMTShortNumberInformation {
 	/**
 	 * Gets the tarification type for a given short number.
 	 * 
-	 * @param number
+	 * @param number Short-number to check
 	 * @return	TARIFICATION
 	 */
 	 public static TARIFICATION getTarificationType(String number){
@@ -216,7 +238,7 @@ public class CMTShortNumberInformation {
 	 /**
 	  * Gets the price of the given short premium number.
 	  * 
-	  * @param number
+	  * @param number Short-number to check
 	  * @return PRICE
 	  */
 	 public static PRICE getPremiumPrice(String number) {

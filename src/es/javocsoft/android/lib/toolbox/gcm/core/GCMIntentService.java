@@ -1,117 +1,220 @@
+/*
+ * Copyright (C) 2010-2014 - JavocSoft - Javier Gonzalez Serrano
+ * http://javocsoft.es/proyectos/code-libs/android/javocsoft-toolbox-android-library
+ * 
+ * This file is part of JavocSoft Android Toolbox library.
+ *
+ * JavocSoft Android Toolbox library is free software: you can redistribute it 
+ * and/or modify it under the terms of the GNU General Public License as 
+ * published by the Free Software Foundation, either version 3 of the License, 
+ * or (at your option) any later version.
+ *
+ * JavocSoft Android Toolbox library is distributed in the hope that it will be 
+ * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General 
+ * Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with JavocSoft Android Toolbox library.  If not, see 
+ * <http://www.gnu.org/licenses/>.
+ * 
+ */
 package es.javocsoft.android.lib.toolbox.gcm.core;
 
+import java.lang.reflect.Constructor;
+
+import android.app.IntentService;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Bundle;
+import android.os.SystemClock;
 import android.util.Log;
-
-import com.google.android.gcm.GCMBaseIntentService;
-import com.google.android.gcm.GCMRegistrar;
-
 import es.javocsoft.android.lib.toolbox.ToolBox;
 import es.javocsoft.android.lib.toolbox.gcm.NotificationModule;
 
 /**
  * Service responsible for handling GCM messages.
  * 
- * See:
- *  http://developer.android.com/reference/com/google/android/gcm/server/package-summary.html
- * 	http://developer.android.com/reference/com/google/android/gcm/GCMRegistrar.html
+ * It will process and create a notification in the 
+ * system status bar.
  * 
- * @author JavocSoft 2013
- * @since  2013
+ * 
+ * @author JavocSoft 2014
+ * @since  2014
+ * 
  */
-public class GCMIntentService extends GCMBaseIntentService {
-
-    private static Context context;
-    
-    public GCMIntentService() {
+public class GCMIntentService extends IntentService {
+	
+	
+	public GCMIntentService() {
         super(NotificationModule.SENDER_ID);        
     }
-
-    @Override
-    protected void onRegistered(Context context, String registrationId) {
-    	if(NotificationModule.LOG_ENABLE)
-    		Log.i(NotificationModule.TAG, "Device registered with id = " + registrationId);
-    	
-    	GCMIntentService.context = context;
-    	
-    	if(NotificationModule.registerRunnable!=null &&
-    	   !NotificationModule.registerRunnable.isAlive()){    		
-    		Thread t = new Thread(NotificationModule.registerRunnable);
-    		t.start();
-		}
-    }
-
-    @Override
-    protected void onUnregistered(Context context, String registrationId) {
-    	if(NotificationModule.LOG_ENABLE)
-    		Log.i(NotificationModule.TAG, "Device unregistered");
-    	
-        if (GCMRegistrar.isRegisteredOnServer(context)) {        	
-        	if(NotificationModule.unregisterRunnable!=null &&
-        	   !NotificationModule.unregisterRunnable.isAlive()){        		
-    			Thread t = new Thread(NotificationModule.unregisterRunnable);
-    	        t.start();
-    		}
-        }
-    }
-    
-    @Override
-    protected void onMessage(Context context, Intent intent) {
-    	if(NotificationModule.LOG_ENABLE)
+	
+	
+	
+	
+	@Override
+	protected void onHandleIntent(Intent intent) {		
+		if(NotificationModule.LOG_ENABLE)
     		Log.i(NotificationModule.TAG, "Received a new notification message");
     	
-        generateNotification(context.getApplicationContext(), intent);
-    }
-
-    @Override
-    public void onError(Context context, String errorId) {
-    	if(NotificationModule.LOG_ENABLE)
-    		Log.i(NotificationModule.TAG, "Received error: " + errorId);
-    }
-    
-    /*@Override
-    protected void onDeletedMessages(Context context, int total) {
-        Log.i(TAG, "Received deleted messages notification");
-      
-    }*/
-
-    /*@Override
-    protected boolean onRecoverableError(Context context, String errorId) {
-        // log message
-        Log.i(TAG, "Received recoverable error: " + errorId);        
-        return super.onRecoverableError(context, errorId);
-    }*/
-
+		//1.- Generate the notification in the task bar.
+		generateNotification(super.getApplicationContext().getApplicationContext(), intent);
+        
+		//2.- Run the runnable set for a new notification received event.				
+		launchOnNewNotificationEventRunnable(intent);
+        
+        Log.i("SimpleWakefulReceiver", "Completed service @ " + SystemClock.elapsedRealtime());
+        CustomGCMBroadcastReceiver.completeWakefulIntent(intent);
+	}
     
     
     
     //AUXILIAR
-        
+    
+	/*
+	 * Try to launch the configured runnable (if set) fro the
+	 * GCM OnNewNotification received event.
+	 *  
+	 * @param intent
+	 */
+	private void launchOnNewNotificationEventRunnable(Intent intent) {
+		//2.- Run the runnable set for a new notification received event.				
+		if(NotificationModule.doWhenNotificationRunnable==null) {
+			//...if null, we try to get the runnable from the saved configuration
+			//in the SharedPreferences. This could happen if the app was closed because
+			//the service does not know nothing when is called in this case.
+			String notificationOnNotReceivedThreadToCall = (String)ToolBox.prefs_readPreference(super.getApplicationContext().getApplicationContext(), 
+															NotificationModule.GCM_PREF_NAME, 
+															NotificationModule.GCM_PREF_KEY_APP_NOTIFICATION_ONNOTRECEIVEDTHREAD_TO_CALL, String.class);
+			Log.i(NotificationModule.TAG, "Runnable to run when a new notification is received: " + notificationOnNotReceivedThreadToCall);
+			
+			if(notificationOnNotReceivedThreadToCall!=null) {
+				//Get a new instance from the class with reflection.
+				try{				
+					Class<?> c = Class.forName(notificationOnNotReceivedThreadToCall);
+					Constructor<?> cons = c.getConstructor();
+					Object onNewNotificationRunnableObject = cons.newInstance();
+					NotificationModule.doWhenNotificationRunnable = (OnNewNotificationCallback)onNewNotificationRunnableObject;							
+					
+				}catch(Exception e) {
+					if(NotificationModule.LOG_ENABLE)
+						Log.e(NotificationModule.TAG,"Runnable for a new notification received could not be run. " +
+								"Class could not be found/get (" + e.getMessage() + ").", e);
+				}
+			}else{
+				if(NotificationModule.LOG_ENABLE)
+					Log.i(NotificationModule.TAG,"No Runnable(NULL in SharedPreferences) specified for a new notification received event.");
+			}
+		}
+		
+		//Do something when new notification arrives.
+        if(NotificationModule.doWhenNotificationRunnable!=null &&
+		   !NotificationModule.doWhenNotificationRunnable.isAlive()){
+        	//Set the intent extras
+        	NotificationModule.doWhenNotificationRunnable.setNotificationBundle(intent.getExtras());
+        	//Launch the thread
+			Thread t = new Thread(NotificationModule.doWhenNotificationRunnable);			
+			t.start();	
+		}
+	}
+	
     /*
-     * Creates the Android systen notification to alert the user.
+     * Creates the Android system notification to alert the user.
      *  
      * @param context
      * @param i
      */
-    private static void generateNotification(Context context, Intent i) {
+    private void generateNotification(Context context, Intent i) {
         
     	String message = (String)i.getExtras().get(NotificationModule.ANDROID_MESSAGE_KEY);
     	
-    	ToolBox.notification_generate(context, 
-    			true, -1, 
-    			NotificationModule.multipleNot, NotificationModule.groupMultipleNotKey, 
-    			NotificationModule.NOTIFICATION_ACTION_KEY, 
-    			NotificationModule.NOTIFICATION_TITLE, message, 
-    			NotificationModule.NOTIFICATION_ACTIVITY_TO_CALL, i.getExtras(), 
-    			false);
+    	//This service must be isolated from the possible status of the app to be able to
+    	//do its job even if the app is closed. This is the reason we get the required stuff
+    	//from the previously saved information in SharedPreferences.
+    	String notificationActToCall = (String)ToolBox.prefs_readPreference(context, NotificationModule.GCM_PREF_NAME, 
+    			NotificationModule.GCM_PREF_KEY_APP_NOTIFICATION_ACTIVITY_TO_CALL, String.class);		 
+    	NotificationModule.NOTIFICATION_TITLE = (String)ToolBox.prefs_readPreference(context, NotificationModule.GCM_PREF_NAME, 
+    			NotificationModule.GCM_PREF_KEY_APP_NOTIFICATION_TITLE, String.class);
+    	NotificationModule.multipleNot = (Boolean)ToolBox.prefs_readPreference(context, NotificationModule.GCM_PREF_NAME, 
+    			NotificationModule.GCM_PREF_KEY_APP_NOTIFICATION_MULTIPLENOT, Boolean.class);
+		NotificationModule.groupMultipleNotKey = (String)ToolBox.prefs_readPreference(context, NotificationModule.GCM_PREF_NAME, 
+    			NotificationModule.GCM_PREF_KEY_APP_NOTIFICATION_GROUPMULTIPLENOTKEY, String.class);
     	
-    	if(NotificationModule.LOG_ENABLE)
-    		Log.d(NotificationModule.TAG, "Notification created for the recieve PUSH message.");    	
+    	try{
+    		//Get the Activity class to call when notification is opened.
+			Class<?> clazz = Class.forName(notificationActToCall);			
+			NotificationModule.NOTIFICATION_ACTIVITY_TO_CALL = clazz;
+			
+	    	ToolBox.notification_generate(context, 
+	    			true, -1, 
+	    			NotificationModule.multipleNot, NotificationModule.groupMultipleNotKey, 
+	    			NotificationModule.NOTIFICATION_ACTION_KEY, 
+	    			NotificationModule.NOTIFICATION_TITLE, message, 
+	    			NotificationModule.NOTIFICATION_ACTIVITY_TO_CALL, i.getExtras(), 
+	    			false);
+	    	
+	    	if(NotificationModule.LOG_ENABLE)
+	    		Log.d(NotificationModule.TAG, "Notification created for the recieve PUSH message.");
+	    	
+			
+		}catch(Exception e) {
+			if(NotificationModule.LOG_ENABLE)
+				Log.e(NotificationModule.TAG,"Notification could not be created for the received PUSH message. " +
+						"Notification activity to open class could not be found (" + e.getMessage() + ").", e);
+			
+		}   	
     }
     
     
     //AUXILIAR CLASSES
+    
+    /**
+	 * This class allows to do something with the received notification.
+	 * 
+	 * @author JavocSoft 2013.
+	 * @since 2013
+	 */
+	public static abstract class OnNewNotificationCallback extends Thread implements Runnable {
+		
+		private Bundle notificationBundle;
+		
+		public OnNewNotificationCallback() {}
+		
+		@Override
+		public void run() {
+			pre_task();
+			task();
+			post_task();
+		}
+		    	
+		protected abstract void pre_task();
+		protected abstract void task();
+		protected abstract void post_task();
+		
+		
+		public void setNotificationBundle(Bundle notificationBundle) {
+			this.notificationBundle = notificationBundle;
+		}
+		
+		/**
+		 * Gets the notification extras.
+		 * 
+		 * @return
+		 */
+		protected Bundle getExtras() {
+			return notificationBundle;
+		}
+		
+		/**
+		 * Gets the context.
+		 * 
+		 * @return
+		 */
+		protected Context getContext(){
+			return NotificationModule.APPLICATION_CONTEXT;
+		}
+	}
     
     /**
 	 * This class allows to do something when registration is done.
@@ -119,9 +222,10 @@ public class GCMIntentService extends GCMBaseIntentService {
 	 * @author JavocSoft 2013.
 	 * @since 2013
 	 */
-	public static abstract class OnRegistrationRunnableTask extends Thread implements Runnable {
+	public static abstract class OnRegistrationCallback extends Thread implements Runnable {
 		
-		protected OnRegistrationRunnableTask() {}
+		
+		protected OnRegistrationCallback() {}
 		
 		@Override
 		public void run() {
@@ -137,21 +241,13 @@ public class GCMIntentService extends GCMBaseIntentService {
 		
 		
 		/**
-		 * Allows to tell the GCM that this application has been 
-		 * successfully registered with your server-side back-end.
-		 */
-		protected void setRegisteredOnServersideFlag(){
-			GCMRegistrar.setRegisteredOnServer(context, true);
-		}
-		
-		/**
 		 * Gets the GCM registration token.
 		 * 
 		 * @return
 		 */
 		protected String getGCMRegistrationToken() {
-			if(context!=null)
-				return GCMRegistrar.getRegistrationId(context);
+			if(getContext()!=null)
+				return NotificationModule.getRegistrationId(getContext());
 			else
 				return null;
 		}
@@ -162,7 +258,7 @@ public class GCMIntentService extends GCMBaseIntentService {
 		 * @return
 		 */
 		protected Context getContext(){
-			return context;
+			return NotificationModule.APPLICATION_CONTEXT;
 		}
 	}
 	
@@ -172,9 +268,10 @@ public class GCMIntentService extends GCMBaseIntentService {
 	 * @author JavocSoft 2013.
 	 * @since 2013
 	 */
-	public static abstract class OnUnregistrationRunnableTask extends Thread implements Runnable {
+	public static abstract class OnUnregistrationCallback extends Thread implements Runnable {
 		
-		protected OnUnregistrationRunnableTask() {}
+		
+		protected OnUnregistrationCallback() {}
 		
 		@Override
 		public void run() {
@@ -186,14 +283,7 @@ public class GCMIntentService extends GCMBaseIntentService {
 		protected abstract void pre_task();
 		protected abstract void task();
 		protected abstract void post_task();
-		
-		/**
-		 * Allows to tell the GCM that this application has been successfully 
-		 * unregistered from your server-side back-end.
-		 */
-		protected void setNotRegisteredOnServersideFlag(){
-			GCMRegistrar.setRegisteredOnServer(context, false);
-		}
+			
 		
 		/**
 		 * Gets the context.
@@ -201,7 +291,9 @@ public class GCMIntentService extends GCMBaseIntentService {
 		 * @return
 		 */
 		protected Context getContext(){
-			return context;
+			return NotificationModule.APPLICATION_CONTEXT;
 		}
 	}
+
+	
 }

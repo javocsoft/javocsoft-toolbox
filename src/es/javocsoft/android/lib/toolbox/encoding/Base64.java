@@ -278,7 +278,7 @@ public class Base64
 	 *            The data to encode.
 	 * @param enc
 	 *            Character encoding to use when converting to and from bytes.
-	 * @throws UnsupportedEncodingException
+	 * @throws java.io.UnsupportedEncodingException
 	 *             if the character encoding specified is not supported.
 	 * @return An encoded String.
 	 * 
@@ -390,7 +390,7 @@ public class Base64
 	 * 
 	 * @param fIn
 	 *            File to be encoded (will be overwritten).
-	 * @throws IOException
+	 * @throws java.io.IOException
 	 *             if an input or output error occurs.
 	 * 
 	 * @since ostermillerutils 1.00.00
@@ -408,7 +408,7 @@ public class Base64
 	 * @param lineBreaks
 	 *            Whether to insert line breaks every 76 characters in the
 	 *            output.
-	 * @throws IOException
+	 * @throws java.io.IOException
 	 *             if an input or output error occurs.
 	 * 
 	 * @since ostermillerutils 1.00.00
@@ -427,7 +427,7 @@ public class Base64
 	 * @param fOut
 	 *            File to which the results should be written (may be the same
 	 *            as fIn).
-	 * @throws IOException
+	 * @throws java.io.IOException
 	 *             if an input or output error occurs.
 	 * 
 	 * @since ostermillerutils 1.00.00
@@ -448,7 +448,7 @@ public class Base64
 	 * @param lineBreaks
 	 *            Whether to insert line breaks every 76 characters in the
 	 *            output.
-	 * @throws IOException
+	 * @throws java.io.IOException
 	 *             if an input or output error occurs.
 	 * 
 	 * @since ostermillerutils 1.00.00
@@ -494,7 +494,7 @@ public class Base64
 	 *            Stream from which to read data that needs to be encoded.
 	 * @param out
 	 *            Stream to which to write encoded data.
-	 * @throws IOException
+	 * @throws java.io.IOException
 	 *             if there is a problem reading or writing.
 	 * 
 	 * @since ostermillerutils 1.00.00
@@ -514,7 +514,7 @@ public class Base64
 	 * @param lineBreaks
 	 *            Whether to insert line breaks every 76 characters in the
 	 *            output.
-	 * @throws IOException
+	 * @throws java.io.IOException
 	 *             if there is a problem reading or writing.
 	 * 
 	 * @since ostermillerutils 1.00.00
@@ -615,7 +615,7 @@ public class Base64
 	 *            The data to decode.
 	 * @param enc
 	 *            Character encoding to use when converting to and from bytes.
-	 * @throws UnsupportedEncodingException
+	 * @throws java.io.UnsupportedEncodingException
 	 *             if the character encoding specified is not supported.
 	 * @return A decoded String.
 	 * 
@@ -639,7 +639,7 @@ public class Base64
 	 * @param encOut
 	 *            Character encoding to use when converting decoded bytes to
 	 *            output.
-	 * @throws UnsupportedEncodingException
+	 * @throws java.io.UnsupportedEncodingException
 	 *             if the character encoding specified is not supported.
 	 * @return A decoded String.
 	 * 
@@ -674,7 +674,7 @@ public class Base64
 	 *            The data to decode.
 	 * @param enc
 	 *            Character encoding to use when converting to and from bytes.
-	 * @throws UnsupportedEncodingException
+	 * @throws java.io.UnsupportedEncodingException
 	 *             if the character encoding specified is not supported.
 	 * @return A decoded String.
 	 * 
@@ -698,7 +698,7 @@ public class Base64
 	 * @param encOut
 	 *            Character encoding to use when converting decoded bytes to
 	 *            output.
-	 * @throws UnsupportedEncodingException
+	 * @throws java.io.UnsupportedEncodingException
 	 *             if the character encoding specified is not supported.
 	 * @return A decoded String.
 	 * 
@@ -719,7 +719,7 @@ public class Base64
 	 *            The data to decode.
 	 * @param out
 	 *            Stream to which to write decoded data.
-	 * @throws IOException
+	 * @throws java.io.IOException
 	 *             if an IO error occurs.
 	 * 
 	 * @since ostermillerutils 1.02.16
@@ -739,9 +739,9 @@ public class Base64
 	 *            Character encoding to use when converting to and from bytes.
 	 * @param out
 	 *            Stream to which to write decoded data.
-	 * @throws UnsupportedEncodingException
+	 * @throws java.io.UnsupportedEncodingException
 	 *             if the character encoding specified is not supported.
-	 * @throws IOException
+	 * @throws java.io.IOException
 	 *             if an IO error occurs.
 	 * 
 	 * @since ostermillerutils 1.02.16
@@ -776,7 +776,7 @@ public class Base64
 	 *            The data to decode.
 	 * @param enc
 	 *            Character encoding to use when converting from bytes.
-	 * @throws UnsupportedEncodingException
+	 * @throws java.io.UnsupportedEncodingException
 	 *             if the character encoding specified is not supported.
 	 * @return decoded data.
 	 * 
@@ -811,7 +811,7 @@ public class Base64
 	 *            The data to decode.
 	 * @param enc
 	 *            Character encoding to use when converting to and from bytes.
-	 * @throws UnsupportedEncodingException
+	 * @throws java.io.UnsupportedEncodingException
 	 *             if the character encoding specified is not supported.
 	 * @return A decoded String.
 	 * 
@@ -884,7 +884,7 @@ public class Base64
 	 *            The data to decode.
 	 * @param out
 	 *            Stream to which to write decoded data.
-	 * @throws IOException
+	 * @throws java.io.IOException
 	 *             if an IO error occurs.
 	 * 
 	 * @since ostermillerutils 1.00.00
@@ -903,7 +903,7 @@ public class Base64
 	 *            The data to decode.
 	 * @param out
 	 *            Stream to which to write decoded data.
-	 * @throws IOException
+	 * @throws java.io.IOException
 	 *             if an IO error occurs.
 	 * 
 	 * @since ostermillerutils 1.02.16
@@ -922,9 +922,9 @@ public class Base64
 	 * 
 	 * @param fIn
 	 *            File to be decoded (will be overwritten).
-	 * @throws IOException
+	 * @throws java.io.IOException
 	 *             if an IO error occurs.
-	 * @throws Base64DecodingException
+	 * @throws es.javocsoft.android.lib.toolbox.encoding.Base64DecodingException
 	 *             if unexpected data is encountered.
 	 * 
 	 * @since ostermillerutils 1.00.00
@@ -945,9 +945,9 @@ public class Base64
 	 * @param throwExceptions
 	 *            Whether to throw exceptions when unexpected data is
 	 *            encountered.
-	 * @throws IOException
+	 * @throws java.io.IOException
 	 *             if an IO error occurs.
-	 * @throws Base64DecodingException
+	 * @throws es.javocsoft.android.lib.toolbox.encoding.Base64DecodingException
 	 *             if unexpected data is encountered when throwExceptions is
 	 *             specified.
 	 * 
@@ -969,9 +969,9 @@ public class Base64
 	 * @param fOut
 	 *            File to which the results should be written (may be the same
 	 *            as fIn).
-	 * @throws IOException
+	 * @throws java.io.IOException
 	 *             if an IO error occurs.
-	 * @throws Base64DecodingException
+	 * @throws es.javocsoft.android.lib.toolbox.encoding.Base64DecodingException
 	 *             if unexpected data is encountered.
 	 * 
 	 * @since ostermillerutils 1.00.00
@@ -995,9 +995,9 @@ public class Base64
 	 * @param throwExceptions
 	 *            Whether to throw exceptions when unexpected data is
 	 *            encountered.
-	 * @throws IOException
+	 * @throws java.io.IOException
 	 *             if an IO error occurs.
-	 * @throws Base64DecodingException
+	 * @throws es.javocsoft.android.lib.toolbox.encoding.Base64DecodingException
 	 *             if unexpected data is encountered when throwExceptions is
 	 *             specified.
 	 * 
@@ -1060,9 +1060,9 @@ public class Base64
 	 *            Throw an exception if an unexpected character is encountered.
 	 * @return the next Base64 character from the stream or -1 if there are no
 	 *         more Base64 characters on the stream.
-	 * @throws IOException
+	 * @throws java.io.IOException
 	 *             if an IO Error occurs.
-	 * @throws Base64DecodingException
+	 * @throws es.javocsoft.android.lib.toolbox.encoding.Base64DecodingException
 	 *             if unexpected data is encountered when throwExceptions is
 	 *             specified.
 	 * 
@@ -1099,7 +1099,7 @@ public class Base64
 	 * @param in
 	 *            Stream from which to read data that needs to be decoded.
 	 * @return decoded data.
-	 * @throws IOException
+	 * @throws java.io.IOException
 	 *             if an IO error occurs.
 	 * 
 	 * @since ostermillerutils 1.00.00
@@ -1120,7 +1120,7 @@ public class Base64
 	 * @param in
 	 *            Stream from which to read data that needs to be decoded.
 	 * @return decoded data.
-	 * @throws IOException
+	 * @throws java.io.IOException
 	 *             if an IO error occurs.
 	 * 
 	 * @since ostermillerutils 1.02.16
@@ -1139,9 +1139,9 @@ public class Base64
 	 * @param enc
 	 *            Character encoding to use when converting bytes to characters.
 	 * @return decoded data.
-	 * @throws IOException
+	 * @throws java.io.IOException
 	 *             if an IO error occurs.Throws:
-	 * @throws UnsupportedEncodingException
+	 * @throws java.io.UnsupportedEncodingException
 	 *             if the character encoding specified is not supported.
 	 * 
 	 * @since ostermillerutils 1.02.16
@@ -1161,9 +1161,9 @@ public class Base64
 	 *            Stream from which to read data that needs to be decoded.
 	 * @param out
 	 *            Stream to which to write decoded data.
-	 * @throws IOException
+	 * @throws java.io.IOException
 	 *             if an IO error occurs.
-	 * @throws Base64DecodingException
+	 * @throws es.javocsoft.android.lib.toolbox.encoding.Base64DecodingException
 	 *             if unexpected data is encountered.
 	 * 
 	 * @since ostermillerutils 1.00.00
@@ -1186,9 +1186,9 @@ public class Base64
 	 * @param throwExceptions
 	 *            Whether to throw exceptions when unexpected data is
 	 *            encountered.
-	 * @throws IOException
+	 * @throws java.io.IOException
 	 *             if an IO error occurs.
-	 * @throws Base64DecodingException
+	 * @throws es.javocsoft.android.lib.toolbox.encoding.Base64DecodingException
 	 *             if unexpected data is encountered when throwExceptions is
 	 *             specified.
 	 * 
@@ -1326,7 +1326,7 @@ public class Base64
 	 * @param enc
 	 *            Character encoding to use when converting to bytes.
 	 * @return Best guess as to whether the data is in base64 format.
-	 * @throws UnsupportedEncodingException
+	 * @throws java.io.UnsupportedEncodingException
 	 *             if the character encoding specified is not supported.
 	 */
 	public static boolean isBase64(String string, String enc) throws UnsupportedEncodingException
@@ -1353,7 +1353,7 @@ public class Base64
 	 * @param fIn
 	 *            File that may be in base64 format.
 	 * @return Best guess as to whether the data is in base64 format.
-	 * @throws IOException
+	 * @throws java.io.IOException
 	 *             if an IO error occurs.
 	 * 
 	 * @since ostermillerutils 1.00.00
@@ -1382,7 +1382,7 @@ public class Base64
 	 * @param in
 	 *            Stream from which to read data to be tested.
 	 * @return Best guess as to whether the data is in base64 format.
-	 * @throws IOException
+	 * @throws java.io.IOException
 	 *             if an IO error occurs.
 	 * 
 	 * @since ostermillerutils 1.00.00

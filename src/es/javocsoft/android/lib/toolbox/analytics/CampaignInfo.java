@@ -19,17 +19,32 @@
  * <http://www.gnu.org/licenses/>.
  * 
  */
-package es.javocsoft.android.lib.toolbox.gcm;
+package es.javocsoft.android.lib.toolbox.analytics;
 
 /**
- * Class used for device registration in your backend system.
+ * Google Analytics campaign information
+ * holder.
  * 
  * @author JavocSoft 2014
  * @since  2014
- *
  */
-public enum EnvironmentType {
-	
-	PRODUCTION, SANDBOX
-	
+public class CampaignInfo {
+
+    private String installReferral;
+
+
+    public CampaignInfo() {}
+
+    public CampaignInfo(String installReferral) {
+        this.installReferral = installReferral;
+    }
+
+
+    public String getInstallReferral() {
+        return installReferral;
+    }
+
+    public void setInstallReferral(String installReferral) {
+        this.installReferral = installReferral;
+    }
 }

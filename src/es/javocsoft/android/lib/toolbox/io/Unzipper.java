@@ -1,3 +1,24 @@
+/*
+ * Copyright (C) 2010-2014 - JavocSoft - Javier Gonzalez Serrano
+ * http://javocsoft.es/proyectos/code-libs/android/javocsoft-toolbox-android-library
+ * 
+ * This file is part of JavocSoft Android Toolbox library.
+ *
+ * JavocSoft Android Toolbox library is free software: you can redistribute it 
+ * and/or modify it under the terms of the GNU General Public License as 
+ * published by the Free Software Foundation, either version 3 of the License, 
+ * or (at your option) any later version.
+ *
+ * JavocSoft Android Toolbox library is distributed in the hope that it will be 
+ * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General 
+ * Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with JavocSoft Android Toolbox library.  If not, see 
+ * <http://www.gnu.org/licenses/>.
+ * 
+ */
 package es.javocsoft.android.lib.toolbox.io;
 
 import java.io.File;
@@ -12,20 +33,18 @@ import android.util.Log;
 
 
 /**
- * Class To unzip zipped files.
- * 
- * (See also http://stackoverflow.com/questions/8295496/unzip-file-in-android)
- * 
+ * Class to unzip zipped files.
+ *
  * Example of usage:
  * 
  * 		String zipFile = Environment.getExternalStorageDirectory() + "/files.zip"; 
  *		String unzipLocation = Environment.getExternalStorageDirectory() + "/unzipped/"; 
  *		 
- *		Decompress d = new Decompress(zipFile, unzipLocation); 
+ *		Unzipper d = new Unzipper(zipFile, unzipLocation, true);
  *		d.unzip();
  * 
  * @author JavocSoft 2013
- * 
+ * @version 1.0
  */
 public class Unzipper {
 
@@ -45,7 +64,8 @@ public class Unzipper {
 		this.zipFile = zipFile;
 		this.location = location;
 		this.createFolders = createFolders;
-		this.bufferSize = bufferSize;
+
+        this.bufferSize = bufferSize;
 
 		dirChecker("");
 	}

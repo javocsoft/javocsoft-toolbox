@@ -1,3 +1,24 @@
+/*
+ * Copyright (C) 2010-2014 - JavocSoft - Javier Gonzalez Serrano
+ * http://javocsoft.es/proyectos/code-libs/android/javocsoft-toolbox-android-library
+ * 
+ * This file is part of JavocSoft Android Toolbox library.
+ *
+ * JavocSoft Android Toolbox library is free software: you can redistribute it 
+ * and/or modify it under the terms of the GNU General Public License as 
+ * published by the Free Software Foundation, either version 3 of the License, 
+ * or (at your option) any later version.
+ *
+ * JavocSoft Android Toolbox library is distributed in the hope that it will be 
+ * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General 
+ * Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with JavocSoft Android Toolbox library.  If not, see 
+ * <http://www.gnu.org/licenses/>.
+ * 
+ */
 package es.javocsoft.android.lib.toolbox;
 
 import java.io.BufferedInputStream;
@@ -15,8 +36,10 @@ import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.SocketTimeoutException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -48,6 +71,7 @@ import android.app.Dialog;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -57,6 +81,7 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.pm.ResolveInfo;
+import android.content.pm.Signature;
 import android.content.res.AssetFileDescriptor;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
@@ -85,6 +110,7 @@ import android.os.Environment;
 import android.os.Parcelable;
 import android.os.PowerManager;
 import android.provider.Settings.Secure;
+import android.support.v7.app.ActionBarActivity;
 import android.telephony.TelephonyManager;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -101,8 +127,13 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.ads.AdRequest;
-import com.google.ads.AdView;
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdView;
+import com.google.android.gms.analytics.GoogleAnalytics;
+import com.google.android.gms.analytics.HitBuilders;
+import com.google.android.gms.analytics.HitBuilders.EventBuilder;
+import com.google.android.gms.analytics.Logger.LogLevel;
+import com.google.android.gms.analytics.Tracker;
 
 import es.javocsoft.android.lib.toolbox.encoding.Base64;
 import es.javocsoft.android.lib.toolbox.io.IOUtils;
@@ -113,17 +144,18 @@ import es.javocsoft.android.lib.toolbox.io.IOUtils;
  * 
  * @author JavocSoft 2013
  * @since  2012
- *
  */
 public final class ToolBox {
 	
 	/** Enables or disables log */
 	public static boolean LOG_ENABLE = true;
+	/** Shared Preferences file under some data is saved by the Android Toolbox Library */
+	public static final String PREF_FILE_NAME = "prefs_toolbox";
 	
 	/** Http Method type for a request. */
 	public static enum HTTP_METHOD{POST,DELETE,GET};
 	
-	private static final String TAG = "javocsoft-toolbox: ToolBox";
+	public static final String TAG = "javocsoft-toolbox: ToolBox";
 	
 	private static final int CONNECTION_DEFAULT_TIMEOUT = 5000; // 5 sgs.
 	private static final int CONNECTION_DEFAULT_DATA_RECEIVAL_TIMEOUT = 10000; // 10 sgs.
@@ -174,8 +206,92 @@ public final class ToolBox {
 	private ToolBox(){}
 	
 	
+	//--------------- ANALYTICS ------------------------------------------------------------------------
+	
+	/**
+	 * Gets a new Analytics v4 tracker.
+	 * 
+	 * See: https://developers.google.com/analytics/devguides/collection/android/v4/
+	 * 
+	 * @param context				
+	 * @param analyticsTrackingId
+	 * @param debugMode	If enabled, GA operations will not be sent to Analytics but
+	 * 					are logged.	
+	 * @return
+	 */
+	public static synchronized Tracker analytics_getTracker(Context context, String analyticsTrackingId, boolean debugMode) {
+		GoogleAnalytics analytics = GoogleAnalytics.getInstance(context);
+		
+		if(debugMode) {
+			// When dry run is set, hits will not be dispatched, but will still be logged as
+			// though they were dispatched.
+			analytics.setDryRun(true);
+			//Enable logging for GA.
+			analytics.getLogger().setLogLevel(LogLevel.VERBOSE);
+		}
+			
+		return analytics.newTracker(analyticsTrackingId);
+	}
+	
+	/**
+	 * Sends to Google Analytics an event.
+	 * 
+	 * @param tracker		The analytics tracker to use when sending the 
+	 * 						event.
+	 * @param eventCategory	Category of the event
+	 * @param eventAction	Action of the event
+	 * @param eventlabel	label of the event
+	 */
+	public static void analytics_sendEvent (Tracker tracker, String eventCategory, String eventAction, String eventlabel, Long eventValue) {
+		
+		EventBuilder eBuilder = new HitBuilders.EventBuilder();
+		eBuilder.setCategory(eventCategory)
+				.setAction(eventAction)
+				.setLabel(eventlabel);
+		
+		if(eventValue!=null) {
+			eBuilder.setValue(eventValue);			
+		}
+		
+		tracker.send(eBuilder.build());
+	}
+
+	/**
+	 * Sends to Google Analytics a screen view event.
+	 * 
+	 * @param tracker		The analytics tracker to use when sending the 
+	 * 						event.
+	 * @param screenName	The screen name.
+	 */
+	public static void analytics_sendScreenName (Tracker tracker, String screenName) {
+		tracker.setScreenName(screenName);
+		tracker.send(new HitBuilders.AppViewBuilder().build());
+	}
+	
+	
+	
 	
 	//--------------- SYSTEM ---------------------------------------------------------------------------
+	
+	/**
+	 * Tells if an application is installed or not.
+	 * 
+	 * @param context		Your application context
+	 * @param appPackage	The application package.	
+	 * @return
+	 */
+	public static boolean system_isAppInstalled(Context context, String appPackage) {
+        PackageManager pm = context.getPackageManager();
+        boolean app_installed = false;
+        try {
+            pm.getPackageInfo(appPackage, PackageManager.GET_ACTIVITIES);
+            app_installed = true;
+        }catch (PackageManager.NameNotFoundException e) {
+            app_installed = false;
+        }
+        
+        return app_installed ;
+    }
 	
 	/**
 	 * Gets the list of system applications.
@@ -230,7 +346,7 @@ public final class ToolBox {
 	 * Return whether the given PackgeInfo represents a system package or not.
 	 * User-installed packages should not be denoted as system packages.
 	 * 
-	 * @param pkgInfo
+	 * @param appInfo
 	 * @return
 	 */
 	public static boolean system_isSystemPackage(ApplicationInfo appInfo) {
@@ -285,10 +401,11 @@ public final class ToolBox {
 	        public void run() {
 	            adLayout.setEnabled(true);
 	            adLayout.setVisibility(View.VISIBLE);
-	            
-				AdRequest adRequest = new AdRequest();
-			    adRequest.addTestDevice(AdRequest.TEST_EMULATOR);			    
-			    adLayout.loadAd(adRequest);
+
+                AdRequest.Builder adBuilder = new AdRequest.Builder()
+                        .addTestDevice(AdRequest.DEVICE_ID_EMULATOR);
+
+			    adLayout.loadAd(adBuilder.build());
 	        }
 	    });
 	}
@@ -306,15 +423,15 @@ public final class ToolBox {
 	        public void run() {
 	            adLayout.setEnabled(true);
 	            adLayout.setVisibility(View.VISIBLE);
-	            
-				AdRequest adRequest = new AdRequest();
-			    adRequest.addTestDevice(AdRequest.TEST_EMULATOR);
+
+                AdRequest.Builder adBuilder = new AdRequest.Builder()
+                        .addTestDevice(AdRequest.DEVICE_ID_EMULATOR);
 			    
 			    for(String dev:excludedDevices){
-			    	adRequest.addTestDevice(dev);
+                    adBuilder.addTestDevice(dev);
 			    }
 			    
-			    adLayout.loadAd(adRequest);
+			    adLayout.loadAd(adBuilder.build());
 	        }
 	    });
 	}
@@ -334,7 +451,7 @@ public final class ToolBox {
         ApplicationInfo appInfo = null;
         try{
             appInfo = pm.getApplicationInfo(packageName, PackageManager.GET_META_DATA);
-        }catch (PackageManager.NameNotFoundException e){
+        }catch (NameNotFoundException e){
             return null;
         }
 
@@ -435,9 +552,239 @@ public final class ToolBox {
 		}
 	}
 	
-	
-	//--------------- APPLICATION RELATED -------------------------------------------------------------- 
-	  
+
+    /**
+     * Allows to install a new icon for the application.
+     *
+     * This method need two additional permissions in the application:
+     *
+     * <code>
+     *  <uses-permission android:name="com.android.launcher.permission.INSTALL_SHORTCUT" />
+     * </code>
+     *
+     * @param context       The application context.
+     * @param appMain       The application main class
+     * @param appName       The application name
+     * @param appIcon       The bitmap of the application icon. Can be null. If null, the
+     *                      appIconResId must be provided.
+     * @param appIconResId  Specify this only if no bitmap is set in the call to this method.
+     */
+    public static void application_shortcutAdd(Context context, Class appMain, String appName,
+                                                  Bitmap appIcon, int appIconResId,
+                                                  boolean removeCurrent) {
+
+        // Intent launcher of the application
+        Intent shortcutIntent = new Intent("android.intent.action.MAIN");
+        shortcutIntent.addCategory("android.intent.category.LAUNCHER");
+        shortcutIntent.setClass(context, appMain);
+        shortcutIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+        //Intent to add the new application icon.
+        //
+        // Decorate the shortcut
+        Intent addIntent = new Intent();
+        addIntent.putExtra(Intent.EXTRA_SHORTCUT_INTENT, shortcutIntent);
+        addIntent.putExtra(Intent.EXTRA_SHORTCUT_NAME, appName);
+
+        if(appIcon!=null) {
+            addIntent.putExtra(Intent.EXTRA_SHORTCUT_ICON, appIcon);
+        }else if(appIconResId!=0) {
+            addIntent.putExtra(
+                    Intent.EXTRA_SHORTCUT_ICON_RESOURCE,
+                    Intent.ShortcutIconResource.fromContext
+                            (
+                                    context.getApplicationContext(),
+                                    appIconResId
+                            )
+            );
+        }
+
+        // Inform launcher to create shortcut
+        addIntent.setAction("com.android.launcher.action.INSTALL_SHORTCUT");
+        context.sendBroadcast(addIntent);
+    }
+
+    /**
+     * Deletes a application desktop shortcut icon.
+     *
+     * This method need two additional permissions in the application:
+     *
+     * <code>
+     *  <uses-permission android:name="com.android.launcher.permission.UNINSTALL_SHORTCUT" />
+     * </code>
+     *
+     * @param context   The application context.
+     * @param appClass  Shortcut's  activity class.
+     * @param appName   The shortcut's name
+     */
+    public static void application_shortcutRemove_method1(Context context, Class appClass, String appName) {
+        Intent shortcutIntent = new Intent(context, appClass);
+        shortcutIntent.setAction(Intent.ACTION_MAIN);
+
+        Intent delIntent = new Intent();
+        delIntent.putExtra(Intent.EXTRA_SHORTCUT_INTENT, shortcutIntent);
+        delIntent.putExtra(Intent.EXTRA_SHORTCUT_NAME, appName);
+
+        // Inform launcher to remove shortcut
+        delIntent.setAction("com.android.launcher.action.UNINSTALL_SHORTCUT");
+        context.sendBroadcast(delIntent);
+    }
+
+    /**
+     * Deletes a application desktop shortcut icon.
+     *
+     * Note:
+     *  Manual way.
+     *
+     *  This method need two additional permissions in the application:
+     *
+     * <code>
+     *  <uses-permission android:name="com.android.launcher.permission.UNINSTALL_SHORTCUT" />
+     * </code>
+     *
+     * @param context   The application context.
+     * @param appClass  Shortcut's  activity class.
+     */
+    public static void application_shortcutRemove_method2(Context context, Class appClass, String appName) {
+        Intent intent = new Intent();
+        String oldShortcutUri = "#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;launchFlags=0x10200000;package="+ appClass.getPackage().getName() + ";component=" + appClass.getPackage().getName() + "/." + appClass.getSimpleName() + ";end";
+        try {
+            Intent altShortcutIntent  = Intent.parseUri(oldShortcutUri,0);
+            intent.putExtra(Intent.EXTRA_SHORTCUT_INTENT, altShortcutIntent);
+            intent.putExtra(Intent.EXTRA_SHORTCUT_NAME, appName);
+            //intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            //intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        } catch (URISyntaxException e) {}
+        intent.setAction("com.android.launcher.action.UNINSTALL_SHORTCUT");
+        context.sendBroadcast(intent);
+    }
+
+    /**
+     * Disables the component status of an Activity. If the activity has the
+     * android.intent.category.LAUNCHER intent, it will remove the launcher icon
+     * in the applications menu.
+     *
+     * @param context   The application context
+     * @param appClass  Class of the activity
+     */
+    public static void application_activityDisable (Context context, Class appClass) {
+        application_activityStatusSwitch(context, appClass, PackageManager.COMPONENT_ENABLED_STATE_DISABLED);
+    }
+
+    /**
+     * Enables the component status of an Activity. If the activity has the
+     * android.intent.category.LAUNCHER intent, it will add the launcher icon
+     * in the applications menu.
+     *
+     * @param context   The application context
+     * @param appClass  Class of the activity
+     */
+    public static void application_activityEnable (Context context, Class appClass) {
+        application_activityStatusSwitch(context, appClass, PackageManager.COMPONENT_ENABLED_STATE_ENABLED);
+    }
+
+    /*
+     * Enables or disables an activity component status.
+     *
+     * @param context   The application context
+     * @param appClass  Class of the activity
+     * @param status    The desired status.
+     */
+    private static void application_activityStatusSwitch (Context context, Class appClass, int status) {
+        ComponentName component = new ComponentName(appClass.getPackage().getName(), appClass.getName());
+
+        if(status == PackageManager.COMPONENT_ENABLED_STATE_DISABLED &&
+                (context.getPackageManager().getComponentEnabledSetting(component)==PackageManager.COMPONENT_ENABLED_STATE_ENABLED ||
+                 context.getPackageManager().getComponentEnabledSetting(component)==PackageManager.COMPONENT_ENABLED_STATE_DEFAULT)) {
+            context.getPackageManager().setComponentEnabledSetting(
+                    component,
+                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                    PackageManager.DONT_KILL_APP);
+
+        }else if(status == PackageManager.COMPONENT_ENABLED_STATE_ENABLED &&
+                (context.getPackageManager().getComponentEnabledSetting(component)==PackageManager.COMPONENT_ENABLED_STATE_DISABLED ||
+                 context.getPackageManager().getComponentEnabledSetting(component)==PackageManager.COMPONENT_ENABLED_STATE_DEFAULT)) {
+            context.getPackageManager().setComponentEnabledSetting(
+                    component,
+                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                    PackageManager.DONT_KILL_APP);
+        }
+    }
+
+    /**
+     * Enables the component status of an Activity Alias. If the activity alias points to an
+     * Activity with android.intent.category.LAUNCHER intent, it will add the launcher icon
+     * in the applications menu.
+     *
+     * @param context
+     * @param appClass
+     * @param appLaunchAlias
+     */
+    public static void application_activityAliasEnable (Context context, Class appClass, String appLaunchAlias) {
+        application_activityAliasStatusSwitch(context, appClass, appLaunchAlias, PackageManager.COMPONENT_ENABLED_STATE_ENABLED);
+    }
+
+    /**
+     * Disables the component status of an Activity Alias. If the activity alias points to an
+     * Activity with android.intent.category.LAUNCHER intent, it will remove the launcher icon
+     * in the applications menu.
+     *
+     * @param context           The application context
+     * @param appClass          Class of the activity alias
+     * @param appLaunchAlias    The android:name of the activity-alias entry in the manifest.
+     */
+    public static void application_activityAliasDisable (Context context, Class appClass, String appLaunchAlias) {
+        application_activityAliasStatusSwitch(context, appClass, appLaunchAlias, PackageManager.COMPONENT_ENABLED_STATE_DISABLED);
+    }
+
+    /**
+     * Switches the component status of an Activity Alias. Use this to enable or disable it. If the
+     * activity alias points to an Activity with android.intent.category.LAUNCHER intent, it will
+     * remove/add the launcher icon in the applications menu.
+     *
+     * @param context           The application context
+     * @param appClass          Class of the activity alias
+     * @param appLaunchAlias    The android:name of the activity-alias entry in the manifest.
+     */
+    public static void application_activityAliasSwitchStatus (Context context, Class appClass, String appLaunchAlias) {
+        ComponentName component = new ComponentName(appClass.getPackage().getName(), appClass.getPackage().getName() + "." + appLaunchAlias);
+        if(context.getPackageManager().getComponentEnabledSetting(component)==PackageManager.COMPONENT_ENABLED_STATE_ENABLED) {
+            application_activityAliasStatusSwitch(context, appClass, appLaunchAlias, PackageManager.COMPONENT_ENABLED_STATE_DISABLED);
+        }else if(context.getPackageManager().getComponentEnabledSetting(component)==PackageManager.COMPONENT_ENABLED_STATE_DISABLED){
+            application_activityAliasStatusSwitch(context, appClass, appLaunchAlias, PackageManager.COMPONENT_ENABLED_STATE_ENABLED);
+        }
+    }
+
+    /*
+     * Enables or disables an activity alias component status.
+     *
+     * @param context           The application context
+     * @param appClass          Class of the activity alias
+     * @param appLaunchAlias    The android:name of the activity-alias entry in the manifest.
+     * @param status            The desired status.
+     */
+    private static void application_activityAliasStatusSwitch (Context context, Class appClass,
+                                                               String appLaunchAlias, int status) {
+        ComponentName component = new ComponentName(appClass.getPackage().getName(), appClass.getPackage().getName() + "." + appLaunchAlias);
+
+        if(status == PackageManager.COMPONENT_ENABLED_STATE_DISABLED &&
+                (context.getPackageManager().getComponentEnabledSetting(component)==PackageManager.COMPONENT_ENABLED_STATE_ENABLED ||
+                context.getPackageManager().getComponentEnabledSetting(component)==PackageManager.COMPONENT_ENABLED_STATE_DEFAULT)) {
+            context.getPackageManager().setComponentEnabledSetting(
+                    component,
+                    PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                    PackageManager.DONT_KILL_APP);
+
+        }else if(status == PackageManager.COMPONENT_ENABLED_STATE_ENABLED &&
+                (context.getPackageManager().getComponentEnabledSetting(component)==PackageManager.COMPONENT_ENABLED_STATE_DISABLED ||
+                context.getPackageManager().getComponentEnabledSetting(component)==PackageManager.COMPONENT_ENABLED_STATE_DEFAULT)){
+            context.getPackageManager().setComponentEnabledSetting(
+                    component,
+                    PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                    PackageManager.DONT_KILL_APP);
+        }
+    }
+
 	/**
 	 * This method reads the info form the App. Manifest file.
 	 * 
@@ -508,7 +855,71 @@ public final class ToolBox {
 	    List<ResolveInfo> list = activity.getPackageManager().queryIntentActivities(intent,PackageManager.MATCH_DEFAULT_ONLY);
 	    return list.size() > 0;
 	 }
-	
+
+	 
+	 /**
+	 * Returns a list with the current signatures of the 
+	 * application.
+	 * 
+	 * @param context	Application context
+	 * @param appPackageName	The package name of the application.
+	 * @return	A list or null if no signatures are found or error.
+	 */
+	public static List<String> application_getSignatures (Context context, String appPackageName) {
+		List<String> appSignatures = null;
+		
+		try {
+	        PackageInfo info = context.getPackageManager().getPackageInfo(
+	        		appPackageName, PackageManager.GET_SIGNATURES);
+	        appSignatures = new ArrayList<String>();
+	        String signatureString = null;
+	        for (Signature signature : info.signatures) {
+	            MessageDigest md = MessageDigest.getInstance("SHA");
+	            md.update(signature.toByteArray());
+	            signatureString = android.util.Base64.encodeToString(md.digest(), android.util.Base64.DEFAULT);
+	            Log.d(ToolBox.TAG, "KeyHash (" + appPackageName + "): " + signatureString);
+	            appSignatures.add(signatureString);
+	        }
+	    } catch (NameNotFoundException e) {
+	    	Log.e(ToolBox.TAG, "Error getting application (" + appPackageName + ") signatures. Package not found [" + e.getMessage() + "].", e);
+	    } catch (NoSuchAlgorithmException e) {
+	    	Log.e(ToolBox.TAG, "Error getting application (" + appPackageName + ") signatures. Algorithm SHA not found [" + e.getMessage() + "].", e);
+	    }
+		
+		return appSignatures;
+	}
+
+    //-------------------- ACTIVITY-----------------------------------------------------------------------
+
+    /**
+     * This method changes the ActionBar Icon.
+     *
+     * Requires API level 14 or higher.
+     *
+     * @param context
+     * @param activity  Should be a ActionBarActivity of support compatibility pack.
+     * @param iconResourceId
+     */
+	 public static void activity_actionBar_changeIcon(Context context, ActionBarActivity activity, int iconResourceId){
+        activity.getSupportActionBar().setIcon(iconResourceId);
+	 }
+
+    /**
+     * Converts the ActionBar icon to Back icon mode. Must be used
+     * in the onCreate method.
+     *
+     * Requires API level 14 or higher.
+     *
+     * @param context
+     * @param activity  Should be a ActionBarActivity of support compatibility pack.
+     * @param iconResourceId
+     */
+	 public static void activity_actionBar_enableBackButton(Context context, ActionBarActivity activity, int iconResourceId){
+        activity.getSupportActionBar().setHomeButtonEnabled(true);
+        activity.getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+	 }
+
+
 	//-------------------- DIALOGS ------------------------------------------------------------------------
 	 
 	 /**
@@ -676,7 +1087,7 @@ public final class ToolBox {
 	    
 	    //for dismissing anywhere you touch
 	    View masterView = dialog.findViewById(coachMarkMasterViewId);
-	    masterView.setOnClickListener(new View.OnClickListener() {
+	    masterView.setOnClickListener(new OnClickListener() {
 	        @Override
 	        public void onClick(View view) {
 	            dialog.dismiss();
@@ -870,7 +1281,7 @@ public final class ToolBox {
 	        
 		} catch (Exception e) {
 			if(LOG_ENABLE)
-				Log.e(TAG, "The notification could not be created because it is not possible to locate the application icon.");
+				Log.e(TAG, "The notification could not be created (" +e.getMessage() + ")", e);
 		}        
     }
     
@@ -1097,7 +1508,7 @@ public final class ToolBox {
 	  */
 	 public static File storage_getAppExternalStorageFolder(Application app, String folder){
 		 File res=null;
-		 if (android.os.Environment.getExternalStorageState().equals(android.os.Environment.MEDIA_MOUNTED)){			 
+		 if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)){
 			 res=app.getExternalFilesDir(folder);
 		 }
 		 return res;
@@ -1117,8 +1528,8 @@ public final class ToolBox {
 	  */
 	 public static File storage_getExternalFolder(String folderType){
 		 File res=null;
-		 if (android.os.Environment.getExternalStorageState().equals(android.os.Environment.MEDIA_MOUNTED)){
-			  res=new File(android.os.Environment.getExternalStorageDirectory(),folderType);
+		 if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)){
+			  res=new File(Environment.getExternalStorageDirectory(),folderType);
 		 }
 		 return res;
 	 }
@@ -1141,8 +1552,8 @@ public final class ToolBox {
 	  */
 	 public static File storage_getExternalPublicFolder(String folderType, String folder, boolean createFolder){
 		 File res=null;
-		 if (android.os.Environment.getExternalStorageState().equals(android.os.Environment.MEDIA_MOUNTED)){
-			  res=new File(android.os.Environment.getExternalStoragePublicDirectory(folderType),folder);
+		 if (Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)){
+			  res=new File(Environment.getExternalStoragePublicDirectory(folderType),folder);
 			  
 			  if(!res.exists()){
 				  //We create the folder if is desired.
@@ -1400,7 +1811,6 @@ public final class ToolBox {
 	 * 
 	 * @param context
 	 * @param dataUrl
-	 * @param destinationFolder (can be null)
 	 * @param bufferSize
 	 * @return
 	 * @throws Exception
@@ -1510,7 +1920,7 @@ public final class ToolBox {
 	 * @param fileSuffix
 	 * @param outputDirectory
 	 * @return
-	 * @throws IOException
+	 * @throws java.io.IOException
 	 */
 	public static File storage_createUniqueFileName(String filePrefix, String fileSuffix, File outputDirectory) throws IOException {
 	    String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
@@ -1586,7 +1996,6 @@ public final class ToolBox {
 	 * @param ctx
 	 * @param prefName
 	 * @param key
-	 * @param valueType
 	 * @return
 	 */
 	public static Boolean prefs_existsPref(Context ctx, String prefName, String key){
@@ -1670,14 +2079,14 @@ public final class ToolBox {
 	    
 		Intent res = null;
 		
-	    Intent share = new Intent(android.content.Intent.ACTION_SEND);
+	    Intent share = new Intent(Intent.ACTION_SEND);
 	    share.setType(type);
 	    
 	    List<Intent> targetedShareIntents = new ArrayList<Intent>();
 	    List<ResolveInfo> resInfo = context.getPackageManager().queryIntentActivities(share, 0);
 	    if (!resInfo.isEmpty()){
 	        for (ResolveInfo info : resInfo) {
-	            Intent targetedShare = new Intent(android.content.Intent.ACTION_SEND);
+	            Intent targetedShare = new Intent(Intent.ACTION_SEND);
 	            targetedShare.setType(type);
 
 	            if(title!=null){
@@ -1725,7 +2134,7 @@ public final class ToolBox {
 	   * 
 	   * @param is
 	   * @return
-	   * @throws IOException
+	   * @throws java.io.IOException
 	   */
 	  public static String io_convertStreamToString(InputStream is) throws IOException {
 		  	/*
@@ -1758,7 +2167,7 @@ public final class ToolBox {
 	  * 
 	  * @param input
 	  * @return
-	  * @throws IOException
+	  * @throws java.io.IOException
 	  */
 	 public static byte[] io_inputStreamToByteArray(InputStream input) throws IOException{
 		 byte[] res = null;
@@ -1832,7 +2241,7 @@ public final class ToolBox {
 	 * Gets the current orientation.
 	 * 
 	 * @param context
-	 * @return	{@link ToolBox.SCREEN_ORIENTATION}
+	 * @return	{@link es.javocsoft.android.lib.toolbox.ToolBox.SCREEN_ORIENTATION}
 	 */
 	@SuppressWarnings("deprecation")
 	public static SCREEN_ORIENTATION screen_getOrientation(Context context){
@@ -1993,7 +2402,7 @@ public final class ToolBox {
      * First tries from the cache, if does not exists it tries from the net.
      * 
      * @param storageDir	
-     * @param url
+     * @param urlImage
      * @param cacheExists
      * @return
      */
@@ -2128,7 +2537,7 @@ public final class ToolBox {
 	/**
      * Grabs an image direct from a file into a Drawable without saving a cache
      * 
-     * @param urlImage
+     * @param filePath
      * @return
      * @throws Exception
      */
@@ -2307,7 +2716,7 @@ public final class ToolBox {
 		final Point size = new Point();
 		try{
 			display.getSize(size);
-		} catch (java.lang.NoSuchMethodError ignore) { // Older device
+		} catch (NoSuchMethodError ignore) { // Older device
 			size.x = display.getWidth();
 			size.y = display.getHeight();
 	    }
@@ -2333,7 +2742,7 @@ public final class ToolBox {
 	 * 							inches, using the number of pixels per inch,
 	 * 							instead using density points. Useful for some 
 	 * 							weird non standard devices.
-	 * @return	{@link ToolBox.DEVICE_BY_SCREEN}. 
+	 * @return	{@link es.javocsoft.android.lib.toolbox.ToolBox.DEVICE_BY_SCREEN}.
 	 */
 	public static DEVICE_BY_SCREEN device_getTypeByScreen(Context context, boolean strictlyInInches){
 		DEVICE_BY_SCREEN res = DEVICE_BY_SCREEN.DP320_NORMAL;
@@ -2344,7 +2753,7 @@ public final class ToolBox {
 		int heightPixels = -1;
 		
 		//The width and height in pixels
-	    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.JELLY_BEAN) {
+	    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
 	    	// For JellyBeans and onward
 	        widthPixels = metrics.widthPixels;
 			heightPixels = metrics.heightPixels;
@@ -2357,7 +2766,7 @@ public final class ToolBox {
 	        	heightPixels = (Integer) mGetRawH.invoke(metrics);
 	        } catch (Exception e) {
 	        	if(LOG_ENABLE)
-	        		Log.w("WCTime", "Controlled error getting width and height in pixels [" + e.getMessage() + "]",e);
+	        		Log.w(TAG, "Controlled error getting width and height in pixels [" + e.getMessage() + "]",e);
 	        }
 	    }
 		
@@ -2424,7 +2833,7 @@ public final class ToolBox {
 	 * Returns the device resolution type.
 	 * 
 	 * @param context
-	 * @return	{@link ToolBox.DEVICE_RESOLUTION_TYPE}
+	 * @return	{@link es.javocsoft.android.lib.toolbox.ToolBox.DEVICE_RESOLUTION_TYPE}
 	 */
 	public static DEVICE_RESOLUTION_TYPE device_getResolutionType(Context context) {
 		DEVICE_RESOLUTION_TYPE res = null;
@@ -2487,7 +2896,7 @@ public final class ToolBox {
 	 * @return
 	 */
 	public static int device_getAPILevel(){
-		return android.os.Build.VERSION.SDK_INT;
+		return Build.VERSION.SDK_INT;
 	}
 	
 	/**
