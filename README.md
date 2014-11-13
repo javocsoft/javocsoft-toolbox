@@ -37,6 +37,16 @@ This library is under development because i use it for all my projects so i am a
 
 Greetings and i hope it will save time in your projects as it does for me.
 
+##Project Integration##
+
+This is an Eclipse Android Library project. To integrate in your project do the following:  
+
+1.- Clone this project and import into your Eclipse workspace.
+2.- Android-Toolbox requires some external libraries to work, import them as a linrary in the project.  
+  1.- <u>Gogle Play Services</u>. Located in the Android SDK under the path  "extras/google/google_play_services/libproject/google-play-services_lib".
+  2.- <u>Facebook SDK</u>. Download it and add the facebook project folder name "facebook".
+  3.- <u>Support Library v7</u> project. Located in the Android SDK under the path "extras/android/support/v7/appcompat".
+
 ##LICENSE##
 
 Copyright 2010-2014 JavocSoft.
