@@ -34,11 +34,11 @@ This is an Eclipse Android Library project. To integrate in your project do the 
 
 1. Clone this project and import into your Eclipse workspace.
 2. Android-Toolbox requires some external libraries to work, import them as a library in the project.  
-  1. <u>Gogle Play Services</u>. Located in the Android SDK under the path  "extras/google/google_play_services/libproject/google-play-services_lib".
-  2. <u>Facebook SDK</u>. Download it and add the facebook project folder name "facebook".
-  3. <u>Support Library v7</u> project. Located in the Android SDK under the path "extras/android/support/v7/appcompat".
+  1. <u>Gogle Play Services</u>. Located in the Android SDK under the path  "extras/google/google_play_services/libproject/google-play-services_lib". Use the Android SDK Manager to install it.
+  2. <u>Facebook SDK</u>. Download it and add the facebook project folder name "facebook". Available at  <https://developers.facebook.com/docs/android/>
+  3. <u>Support Library v7</u> project. Located in the Android SDK under the path "extras/android/support/v7/appcompat". Use the Android SDK Manager to install it.
 
-Internally it also uses some other libraries like GSON, json_simple, commons-codec and android-support-v4. These are included in the libs folder. 
+Internally it also uses some other libraries like GSON, json_simple, commons-codec and android-support-v4 (available through  Android SDK Manager). These are included in the libs folder. 
 
 ##LICENSE##
 
