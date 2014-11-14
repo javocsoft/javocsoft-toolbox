@@ -1,7 +1,7 @@
 javocsoft-toolbox
 =================
 
-Android commons utility library.
+It is an Android commons utility library. For <b>HowTo</b> and <b>usage</b> see the [WiKi](https://github.com/javocsoft/javocsoft-toolbox/wiki).
 
 This library contains a set of useful functions, classes and modules ready to use.
 
