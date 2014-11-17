@@ -18,7 +18,7 @@ We have the ToolBox.java main class but also there are other utility classes and
 * <i>SMS</i>. The class "<b>CMTShortNumberInformation</b>.java" that allows to recognize if a short number is one of the CMT recognized additional tarification number (like SMS Premium) having the option to know the price of the message.
 * <i>SMS</i>. The class "<b>CMTInfoHelper</b>.java" that allows to download automatically the CMT short-numbers information. This will give you the possibility of knowing the owner company of a given short-number.
 * <b>HTTP Operations</b>. The class "HttpOperations.java" that allows to make HTTP POST/GET request easily.
-* <b>Facebook</b> Login (SDK v2.1) helper classes to integrate Facebook Login easily in your apps.
+* <b>Facebook</b> Login, Share (SDK v2.1) helper classes to integrate Facebook Login easily in your apps.
 * <i>Google Play Services</i>. A <b>Google Cloud Messaging</b> (GCM) module. very easy and fast to use and integrate in your project to allow receiving/sending push notifications from your application.
 * <i>Google Play Services</i>. An Ads module for <b>AdMob</b>. Easy to integrate in your project.
 * <i>Google Play Services</i>. Google <b>Analytics</b> v4 helper classes to have working the tracking of your app. Also with a <b>Custom Campaign Receiver</b> to be able to measure your ads campaigns (allowing also getting the campaign info giving the opportunity to do something when is received).
