@@ -25,9 +25,9 @@ import java.util.Arrays;
 
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentActivity;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -40,6 +40,8 @@ import com.facebook.widget.LoginButton;
 
 import es.javocsoft.android.lib.toolbox.R;
 import es.javocsoft.android.lib.toolbox.ToolBox;
+import es.javocsoft.android.lib.toolbox.facebook.callback.OnLoginActionCallback;
+import es.javocsoft.android.lib.toolbox.facebook.callback.OnLogoutActionCallback;
 
 /**
  * Facebook Login Button Module. 
@@ -66,13 +68,13 @@ public class FacebookLoginFragment extends Fragment {
 	 *	<br><br>
 	 *  Permissions:<br><br>
 	 *	
-	 *	These permissions do not require a review from	Facebook of your app.<br><br>
+	 *	These permissions do not require a review from Facebook of your app.<br><br>
 	 *  
 	 *	- user_friends<br>
 	 *	- public_profile<br>
 	 *	- email	<br><br>
 	 *
-	 *	Adding others will require a validation from facebook:<br><br>
+	 *	Adding others will require a validation from Facebook:<br><br>
 	 *
 	 *	- user_likes<br>
 	 *  - user_status<br>
@@ -96,6 +98,10 @@ public class FacebookLoginFragment extends Fragment {
 	
 	/** The application context */
 	protected static Context appContext = null;
+	
+	private boolean enableCustomButton = false;
+	private String buttonloginText;
+	private Drawable buttonBackgroundImage;
 	
 	
 	/** Facebook session life-cycle listener. */ 
@@ -121,13 +127,16 @@ public class FacebookLoginFragment extends Fragment {
 	/**
 	 * Initilizes the Fragment.
 	 * 
-	 * @param fbPermissions		A comma separated list of Facebook permissions. 
+	 * @param fbPermissions		A comma separated list of Facebook permissions. default is "public_profile,email,user_friends"
 	 * 							See <a href="https://developers.facebook.com/docs/facebook-login/permissions/v2.1">Permissions in Facebook</a>
 	 * @param onLoginCallback	What to do when a login happens, {@link OnLoginActionCallback}
 	 * @param onLogoutCallback	What to do when a logout happens, {@link OnLogoutActionCallback}
 	 */
 	public void initialize(String fbPermissions, OnLoginActionCallback onLoginCallback,
 							OnLogoutActionCallback onLogoutCallback){
+		if(fbPermissions==null || (fbPermissions!=null && fbPermissions.length()==0))
+			fbPermissions = "public_profile,email,user_friends"; //Defaults.
+				
 		this.fbPermissions = fbPermissions;
 		this.onLoginCallback = onLoginCallback;
 		this.onLogoutCallback = onLogoutCallback;
@@ -160,6 +169,22 @@ public class FacebookLoginFragment extends Fragment {
 	    //activity by default. This two lines allows your activity to send the flow
 	    //to the fragment of Facebook login. 
 	    LoginButton authButton = (LoginButton) view.findViewById(R.id.fbAuthButton);
+	    
+	    //Customization
+	    if(enableCustomButton) {	    	
+	    	if(buttonBackgroundImage!=null || buttonloginText!=null) {
+	    		authButton.setCompoundDrawablesWithIntrinsicBounds(null, null, null, null);
+	    		
+	    		if(buttonBackgroundImage!=null) {
+		    		//authButton.setBackgroundResource(<res_id>);
+		    		authButton.setBackgroundDrawable(buttonBackgroundImage);
+		    	}	    	
+		    	if(buttonloginText!=null && buttonloginText.length()>0) {
+		    		authButton.setText(buttonloginText);	    		
+		    	}
+	    	}
+	    }
+	    
 	    authButton.setFragment(this);
 	    
 	    //Set special permissions.
@@ -190,7 +215,7 @@ public class FacebookLoginFragment extends Fragment {
 	@Override
 	public void onActivityResult(int requestCode, int resultCode, Intent data) {
 	    super.onActivityResult(requestCode, resultCode, data);
-	    uiHelper.onActivityResult(requestCode, resultCode, data);
+	    uiHelper.onActivityResult(requestCode, resultCode, data); 
 	}
 
 	@Override
@@ -211,6 +236,25 @@ public class FacebookLoginFragment extends Fragment {
 	    uiHelper.onSaveInstanceState(outState);
 	}
 	
+	/**
+	 * Allows to customize the login button.
+	 * 
+	 * @param enable
+	 * @param buttonLoginText
+	 * @param buttonBackgroundImage
+	 */
+	public void enableCustomButton(boolean enable, String buttonLoginText, Drawable buttonBackgroundImage ) {
+		this.enableCustomButton = enable;
+		if(enable) {
+			if(buttonLoginText!=null && buttonLoginText.length()>0){
+				this.buttonloginText = buttonLoginText;
+			}
+			if(buttonBackgroundImage!=null) {
+				this.buttonBackgroundImage = buttonBackgroundImage;
+			}
+		}
+	}
+	
 	
 	//AUXILIAR
 	
@@ -225,88 +269,6 @@ public class FacebookLoginFragment extends Fragment {
 	        if(onLogoutCallback!=null)
 	        	onLogoutCallback.start();
 	    }
-	}
-	
-	
-	//AUXILIAR CLASSES
-	
-	/**
-	 * This class allows to do something when FB login is done.
-	 * 
-	 * The application context is available and also the activity
-	 * where the Facebook Login is being shown.
-	 * 
-	 * @author JavocSoft 2013.
-	 * @since 2014
-	 */
-	public static abstract class OnLoginActionCallback extends Thread implements Runnable {
-		
-		protected FragmentActivity activity;
-		
-		protected OnLoginActionCallback(FragmentActivity activity) {
-			this.activity = activity;
-		}
-		
-		@Override
-		public void run() {
-			pre_task();
-			task();
-			post_task();
-		}
-		    	
-		protected abstract void pre_task();
-		protected abstract void task();
-		protected abstract void post_task();
-		
-		
-		/**
-		 * Gets the context.
-		 * 
-		 * @return
-		 */
-		protected Context getContext(){
-			return appContext;
-		}				
-	}
-	
-	/**
-	 * This class allows to do something when FB logout is done.
-	 * 
-	 * The application context is available and also the activity
-	 * where the Facebook Login is being shown.
-	 * 
-	 * @author JavocSoft 2013.
-	 * @since 2014
-	 */
-	public static abstract class OnLogoutActionCallback extends Thread implements Runnable {
-		
-		protected FragmentActivity activity;
-		
-		protected OnLogoutActionCallback(FragmentActivity activity) {
-			this.activity = activity;
-		}
-		
-		@Override
-		public void run() {
-			pre_task();
-			task();
-			post_task();
-		}
-		    	
-		protected abstract void pre_task();
-		protected abstract void task();
-		protected abstract void post_task();
-		
-		
-		/**
-		 * Gets the context.
-		 * 
-		 * @return
-		 */
-		protected Context getContext(){
-			return appContext;
-		}
-		
 	}
 	
 }
