@@ -30,15 +30,22 @@ Greetings and i hope it will save time in your projects as it does for me.
 
 ##Project Integration##
 
-This is an Eclipse Android Library project. To integrate in your project do the following:  
+This is an Eclipse Android Library project. To integrate in your project avoiding any issues with support libraries, follow these steps:  
 
-1. Clone this project and import into your Eclipse workspace.
-2. Android-Toolbox requires some external libraries to work, import them as a library in the project.  
-  1. <u>Gogle Play Services</u>. Located in the Android SDK under the path  "extras/google/google_play_services/libproject/google-play-services_lib". Use the Android SDK Manager to install it.
-  2. <u>Facebook SDK</u>. Download it and add the facebook project folder name "facebook". Available at  <https://developers.facebook.com/docs/android/>
-  3. <u>Support Library v7</u> project. Located in the Android SDK under the path "extras/android/support/v7/appcompat". Use the Android SDK Manager to install it.
+1. Remove, if there is one, the project "appcompat7" that Eclipse creates by default in your workspace.
+2. Open Eclipse and import these projects into your workspace:
+	1. Android v7 support library project (located in "<android_sdk>\extras\android\support\v7". You can install through the Android SDK Manager).
+	2. Android Google Play Services library project (located in "<android_sdk>\extras\google\google_play_services\libproject\google-play-services_lib". You can install through the Android SDK Manager)
+	3. Facebook SDK library project:
+		1. Download it from <a href="https://developers.facebook.com/docs/android/downloads/">Facebook SDK</a>
+		2. Import the library project located in "<fb_sdk_folder>\facebook".
+3. Clone from GitHub "javocsoft_toolbox" library and import into your workspace.
+4. Copy from the Android v7 Android Support library the file "android-support-v4.jar" in the "libs" folder to the lib folder of:
+	1. javocsoft_toolbox library project
+	2. FacebookSDK library project.
+	3. Your project.
 
-Internally it also uses some other libraries like GSON, json_simple, commons-codec and android-support-v4 (available through  Android SDK Manager). These are included in the libs folder. 
+Internally it also uses some other libraries like GSON, json_simple and commons-codec. These are included in the libs folder. 
 
 ##LICENSE##
 
