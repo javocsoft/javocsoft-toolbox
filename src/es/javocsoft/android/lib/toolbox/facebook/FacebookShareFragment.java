@@ -205,6 +205,15 @@ public class FacebookShareFragment extends Fragment {
 			}
 		});
 	    
+	    //Check if there is an active Facebook session.
+	    if(Session.getActiveSession()==null || 
+	    	(Session.getActiveSession()!=null && !Session.getActiveSession().getState().isOpened())) {
+	    	shareButton.setVisibility(View.GONE);
+	    	Log.i(ToolBox.TAG, "Facebook Share Button: No active session. Button will be hidden.");
+	    }else{
+	    	shareButton.setVisibility(View.VISIBLE);
+	    }
+	    
 	    return view;
 	}
 	

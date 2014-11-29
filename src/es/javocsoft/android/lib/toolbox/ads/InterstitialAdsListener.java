@@ -21,6 +21,7 @@
  */
 package es.javocsoft.android.lib.toolbox.ads;
 
+import android.content.Context;
 import android.util.Log;
 
 import com.google.android.gms.ads.AdListener;
@@ -28,6 +29,7 @@ import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.InterstitialAd;
 
 import es.javocsoft.android.lib.toolbox.ToolBox;
+import es.javocsoft.android.lib.toolbox.gcm.NotificationModule;
 
 /**
  * Google AdMob interstitial lifecycle listener.
@@ -38,9 +40,11 @@ import es.javocsoft.android.lib.toolbox.ToolBox;
 public class InterstitialAdsListener extends AdListener {
 
     private InterstitialAd adView;
+    private OnInterstitialClickCallback clickCallback;
 
-    public InterstitialAdsListener(InterstitialAd adView) {
+    public InterstitialAdsListener(InterstitialAd adView, OnInterstitialClickCallback clickCallback) {
         this.adView = adView;
+        this.clickCallback = clickCallback;
     }
 
     /** Called when an ad is loaded. */
@@ -79,6 +83,8 @@ public class InterstitialAdsListener extends AdListener {
      */
     public void onAdLeftApplication() {
         Log.d(ToolBox.TAG, "Ads: The banner was clicked and application is going to be put in background.");
+        if(clickCallback!=null)
+        	clickCallback.start();        
     }
 
 
@@ -103,4 +109,39 @@ public class InterstitialAdsListener extends AdListener {
         }
         return errorReason;
     }
+    
+    
+    /**
+	 * This class allows to do something when an user clicks
+	 * on an interstitial.
+	 * 
+	 * @author JavocSoft 2013.
+	 * @since 2014
+	 */
+	public static abstract class OnInterstitialClickCallback extends Thread implements Runnable {
+		
+		
+		protected OnInterstitialClickCallback() {}
+		
+		@Override
+		public void run() {
+			pre_task();
+			task();
+			post_task();
+		}
+		    	
+		protected abstract void pre_task();
+		protected abstract void task();
+		protected abstract void post_task();
+			
+		
+		/**
+		 * Gets the context.
+		 * 
+		 * @return
+		 */
+		protected Context getContext(){
+			return NotificationModule.APPLICATION_CONTEXT;
+		}
+	}
 }

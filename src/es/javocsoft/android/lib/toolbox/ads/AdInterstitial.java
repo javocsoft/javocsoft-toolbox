@@ -55,9 +55,10 @@ public class AdInterstitial extends AdBase{
      *
      * @param admobAdID    Your AdMob interstitial id.
      * @param activity
+     * @param clickCallback See {@link es.javocsoft.android.lib.toolbox.ads.InterstitialAdsListener.OnInterstitialClickCallback}
      * @return
      */
-    public InterstitialAd requestInterstitial(String admobAdID, Activity activity) {
+    public InterstitialAd requestInterstitial(String admobAdID, Activity activity, InterstitialAdsListener.OnInterstitialClickCallback clickCallback) {
         Log.i(ToolBox.TAG, "Ads: Preparing a new interstitial.");
 
         // Create the interstitial.
@@ -67,7 +68,7 @@ public class AdInterstitial extends AdBase{
         AdRequest adRequest = interstitialAdRequest(interstitial, activity);
         if(adRequest!=null) {
             interstitial.loadAd(adRequest);
-            interstitial.setAdListener(new InterstitialAdsListener(interstitial));
+            interstitial.setAdListener(new InterstitialAdsListener(interstitial, clickCallback));
         }
 
         return interstitial;

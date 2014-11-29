@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -51,6 +52,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.UUID;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -869,17 +871,21 @@ public final class ToolBox {
 		List<String> appSignatures = null;
 		
 		try {
-	        PackageInfo info = context.getPackageManager().getPackageInfo(
-	        		appPackageName, PackageManager.GET_SIGNATURES);
-	        appSignatures = new ArrayList<String>();
-	        String signatureString = null;
-	        for (Signature signature : info.signatures) {
-	            MessageDigest md = MessageDigest.getInstance("SHA");
-	            md.update(signature.toByteArray());
-	            signatureString = android.util.Base64.encodeToString(md.digest(), android.util.Base64.DEFAULT);
-	            Log.d(ToolBox.TAG, "KeyHash (" + appPackageName + "): " + signatureString);
-	            appSignatures.add(signatureString);
-	        }
+			if(appPackageName!=null && appPackageName.length()>0) {
+		        PackageInfo info = context.getPackageManager().getPackageInfo(
+		        		appPackageName, PackageManager.GET_SIGNATURES);
+		        appSignatures = new ArrayList<String>();
+		        String signatureString = null;
+		        for (Signature signature : info.signatures) {
+		            MessageDigest md = MessageDigest.getInstance("SHA");
+		            md.update(signature.toByteArray());
+		            signatureString = android.util.Base64.encodeToString(md.digest(), android.util.Base64.DEFAULT);
+		            Log.d(ToolBox.TAG, "KeyHash (" + appPackageName + "): " + signatureString);
+		            appSignatures.add(signatureString);
+		        }
+			}else{
+				Log.d(ToolBox.TAG, "No package name to get signaturs from.");
+			}
 	    } catch (NameNotFoundException e) {
 	    	Log.e(ToolBox.TAG, "Error getting application (" + appPackageName + ") signatures. Package not found [" + e.getMessage() + "].", e);
 	    } catch (NoSuchAlgorithmException e) {
@@ -2693,15 +2699,88 @@ public final class ToolBox {
 	 
 	 // Device Related -----------------------------------------------------------------------------------------------------------------------------
 	 
-	 /**
-	 * Get the device Id (an Hexadecimal unique value of 64 bit)
-	 * @param context
-	 * @return
+   /**
+	* Returns a unique UUID for the an android device. As with any UUIDs,
+    * this unique ID is "very highly likely" to be unique across all Android
+    * devices. Much more than ANDROID_ID is.
+	* 
+	* It uses as the base the ANDROID_ID only if is not null and not the 
+	* some device manufacturers buggy ID 9774d56d682e549c for 2.2, 2.3 android
+	* version (@see http://code.google.com/p/android/issues/detail?id=10603). 
+	* If is not available or is the buggy one, a unique UUID will be 
+	* generated using the SERIAL property of the device and if not available,
+	* a bunch of device properties will be used to generated a unique UUID string.
+	* 
+	* @param context
+	* @return a UUID that may be used, in most cases, to uniquely identify your 
+	* 		  device for most.
+	*/
+	public static String device_getId(Context context) {
+		 UUID uuid = null;
+		 
+		 String androidId = Secure.getString(context.getContentResolver(), Secure.ANDROID_ID);		 
+		 if(androidId==null) {
+			 uuid = generateUniqueDeviceUUIDId();
+		 }else{
+			//Several devices by several manufacturers are affected by the ANDROID_ID bug in 2.2.
+		   	//All affected devices have the same ANDROID_ID, which is 9774d56d682e549c. Which is 
+		   	//also the same device id reported by the emulator.
+		   	if(!"9774d56d682e549c".equals(androidId)){
+		   		try{
+		   			uuid = UUID.nameUUIDFromBytes(androidId.getBytes("utf8"));
+			   	} catch (UnsupportedEncodingException e) {
+			        Log.e(TAG, "UnsupportedEncodingException (" + e.getMessage() + ").", e);
+			    }
+		   	}else{
+		   		uuid = generateUniqueDeviceUUIDId();		   		
+		   	}
+		 }
+		 
+		 return uuid.toString();
+	 }
+	 
+	/**
+	 * Generates a unique device id using the device 
+	 * "serial" property if is available. If not, a bunch
+	 * of device properties will be used to get a reliable
+	 * unique string key for the device.
+	 * 
+	 * If there is an error in UUID generation null is
+	 * returned.
+	 *    
+	 * @return	The unique UUID or nul in case of error.
 	 */
-	public static String device_getId(Context context){
-		return Secure.getString(context.getContentResolver(),
-                Secure.ANDROID_ID);
-	}
+	private static UUID generateUniqueDeviceUUIDId() {
+		UUID uuid = null;
+   		
+		try{
+			//We generate a unique id
+			String serial = null;
+	   	    if(Build.VERSION.SDK_INT > Build.VERSION_CODES.FROYO) { 
+	   	    	serial = Build.SERIAL;
+	   	    	uuid = UUID.nameUUIDFromBytes(serial.getBytes("utf8"));
+	   	    }else{
+	   	    	//This bunch of data should be enough to "ensure" the 
+	   	    	//uniqueness.
+	   	    	String m_szDevIDAlterbative = "35" + //To look like a valid IMEI
+	   	             Build.BOARD.length()%10+ Build.BRAND.length()%10 +
+	   	             Build.CPU_ABI.length()%10 + Build.DEVICE.length()%10 +
+	   	             Build.DISPLAY.length()%10 + Build.HOST.length()%10 +
+	   	             Build.ID.length()%10 + Build.MANUFACTURER.length()%10 +
+	   	             Build.MODEL.length()%10 + Build.PRODUCT.length()%10 +
+	   	             Build.TAGS.length()%10 + Build.TYPE.length()%10 +
+	   	             Build.USER.length()%10 ; //13 digits
+	   	    	
+	   	    	uuid = UUID.nameUUIDFromBytes(m_szDevIDAlterbative.getBytes("utf8"));
+	   	    }
+   	    
+		} catch (UnsupportedEncodingException e) {
+	        Log.e(TAG, "UnsupportedEncodingException (" + e.getMessage() + ").", e);
+	    }
+   	    
+   	    return uuid;
+	 }
+	
 	
 	/**
 	 * Gets the device screen size in pixels.
