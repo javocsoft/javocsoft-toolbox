@@ -43,6 +43,7 @@ import com.facebook.widget.WebDialog.OnCompleteListener;
 
 import es.javocsoft.android.lib.toolbox.R;
 import es.javocsoft.android.lib.toolbox.ToolBox;
+import es.javocsoft.android.lib.toolbox.ToolBox.TOAST_TYPE;
 import es.javocsoft.android.lib.toolbox.facebook.callback.OnLoginActionCallback;
 import es.javocsoft.android.lib.toolbox.facebook.callback.OnLogoutActionCallback;
 import es.javocsoft.android.lib.toolbox.facebook.callback.OnShareCancelledActionCallback;
@@ -200,7 +201,7 @@ public class FacebookShareFragment extends Fragment {
 					facebookShare();
 				}else{
 					//Alert to the user.
-					ToolBox.dialog_showToastAlert(getActivity(), "You need to be logged to share on Facebook.", false);
+					ToolBox.dialog_showToastAlert(getActivity(), "You need to be logged to share on Facebook.", false, false, TOAST_TYPE.WARNING);
 				}
 			}
 		});

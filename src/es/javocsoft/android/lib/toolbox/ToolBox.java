@@ -56,6 +56,8 @@ import java.util.UUID;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
@@ -63,9 +65,12 @@ import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.conn.ConnectTimeoutException;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.params.CoreConnectionPNames;
+import org.apache.http.protocol.HTTP;
 
 import android.annotation.SuppressLint;
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Application;
@@ -73,6 +78,7 @@ import android.app.Dialog;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.app.Service;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -98,6 +104,8 @@ import android.graphics.Point;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
+import android.location.Address;
+import android.location.Geocoder;
 import android.media.AudioManager;
 import android.media.ExifInterface;
 import android.media.MediaPlayer;
@@ -111,20 +119,26 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Parcelable;
 import android.os.PowerManager;
+import android.provider.Settings;
 import android.provider.Settings.Secure;
+import android.provider.Settings.SettingNotFoundException;
 import android.support.v7.app.ActionBarActivity;
 import android.telephony.TelephonyManager;
+import android.text.TextUtils;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Display;
 import android.view.Gravity;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewConfiguration;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.webkit.WebView;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -196,7 +210,7 @@ public final class ToolBox {
 	public static enum DEVICE_BY_SCREEN {DP320_NORMAL, DP480_TWEENER, DP600_7INCH, DP720_10INCH};
 	
 	/** The type of resolution that is using the device. */
-	public enum DEVICE_RESOLUTION_TYPE {ldpi, mdpi, hdpi, xhdpi, xxhdpi};
+	public enum DEVICE_RESOLUTION_TYPE {ldpi, mdpi, hdpi, xhdpi, xxhdpi, xxxhdpi, unknown};
 	
 	private static PowerManager.WakeLock wakeLock = null;
 	
@@ -267,7 +281,7 @@ public final class ToolBox {
 	 */
 	public static void analytics_sendScreenName (Tracker tracker, String screenName) {
 		tracker.setScreenName(screenName);
-		tracker.send(new HitBuilders.AppViewBuilder().build());
+		tracker.send(new HitBuilders.ScreenViewBuilder().build());
 	}
 	
 	
@@ -587,7 +601,9 @@ public final class ToolBox {
         Intent addIntent = new Intent();
         addIntent.putExtra(Intent.EXTRA_SHORTCUT_INTENT, shortcutIntent);
         addIntent.putExtra(Intent.EXTRA_SHORTCUT_NAME, appName);
-
+        //This avoid the icon to be duplicated if created 
+        //addIntent.putExtra("duplicate", false);
+        
         if(appIcon!=null) {
             addIntent.putExtra(Intent.EXTRA_SHORTCUT_ICON, appIcon);
         }else if(appIconResId!=0) {
@@ -928,17 +944,104 @@ public final class ToolBox {
 
 	//-------------------- DIALOGS ------------------------------------------------------------------------
 	 
+	 /** When was pressed last time the back button. */
+	 public static long mBackPressed = 0l;
+	 
 	 /**
-	  * creates an exit popup dialog.
+     * Ask for double tap to back to exit.
+     * (avoids accidental exits)
+     */
+	 
+	 /**
+	  * Ask for double tap to back to exit.
+     *  (avoids accidental exits)
+     * 
+	  * @param context
+	  * @param backPressTimeInterval
+	  * @param message
+	  * @param defaultToast	If set to TRUE uses the default system toast.
+	  * @param type Toast type {@link TOAST_TYPE} if not using default Toast.
+	  */
+     public static void backPressedAction(Activity context, long backPressTimeInterval, String message, boolean defaultToast, TOAST_TYPE type) {
+        if((mBackPressed + backPressTimeInterval) > System.currentTimeMillis()) {
+        	mBackPressed = 0l;
+        	context.finish();
+        }else{
+        	if(defaultToast) {
+        		Toast.makeText(context.getBaseContext(), message, Toast.LENGTH_SHORT).show();
+        	}else{
+        		toast_createCustomToast(context, message, type, false);        		
+        	}
+        }
+        mBackPressed = System.currentTimeMillis();
+     }
+     
+     /** Custom Toast types */
+     public static enum TOAST_TYPE {INFO, WARNING, ERROR, REMINDER};
+     
+     /**
+      * Creates a custom Toast.
+      * 
+      * @param context	The context
+      * @param message	The message.
+      * @param type		The custom toast type {@link TOAST_TYPE}
+      * @param centerOnScreen	Set to TRUE to center in the middle of 
+      * 						the screen.
+      */
+     public static void toast_createCustomToast(Activity context, String message, TOAST_TYPE type, boolean centerOnScreen) {
+    	 LayoutInflater inflater = (LayoutInflater) context.getSystemService(Service.LAYOUT_INFLATER_SERVICE);
+    	 View linearLayout = inflater.inflate(R.layout.toast_view, (ViewGroup) context.findViewById(R.id.toast_layout_root));
+    	 
+    	 //Customize view of the Toast
+    	 ImageView imageZone = (ImageView) linearLayout.findViewById(R.id.toastImage);    	 
+    	 int imgResourceId = R.drawable.info_tip;
+    	 switch (type) {
+			case INFO:
+				imgResourceId = R.drawable.info_tip;
+				break;
+			case WARNING:
+				imgResourceId = R.drawable.warning4_icon;
+				break;
+			case ERROR:
+				imgResourceId = R.drawable.error2_icon;
+				break;
+			case REMINDER:
+				imgResourceId = R.drawable.reminder2_icon;
+				break;
+			default:
+				break;
+    	 }
+    	 imageZone.setImageResource(imgResourceId);
+    	 
+    	 TextView textZone = (TextView) linearLayout.findViewById(R.id.toastText);
+    	 textZone.setText(message);
+    	 
+    	 //Create and show the toast.
+    	 Toast toast = new Toast(context);
+    	 if(centerOnScreen) {
+    		 toast.setGravity(Gravity.CENTER, toast.getXOffset() / 2, toast.getYOffset() / 2);
+    		//toast.setGravity(Gravity.BOTTOM, 0, 0);
+    	 }
+    	 toast.setDuration(Toast.LENGTH_SHORT);
+    	 toast.setView(linearLayout);
+    	 toast.show();
+     }
+     
+	 /**
+	  * Creates an exit popup dialog.
 	  * 
 	  * @param context
 	  * @param title
 	  * @param message
 	  * @param yesLabel
 	  * @param cancelLabel
+	  * @param moveTaskToBack	Set to TRUE to instead closing the activity move to
+	  * 						background.
 	  */
 	 public static void dialog_showExitConfirmationDialog(final Context context, 
-			 									   int title, int message, int yesLabel, int cancelLabel){
+			 									   int title, int message, 
+			 									   int yesLabel, int cancelLabel,
+			 									   final boolean moveTaskToBack){
 		 new AlertDialog.Builder(context)
 	        .setIcon(android.R.drawable.ic_dialog_alert)
 	        .setTitle(context.getResources().getString(title))
@@ -947,7 +1050,11 @@ public final class ToolBox {
 	    {
 	        
 	        public void onClick(DialogInterface dialog, int which) {
-	        	((Activity)context).finish();    
+	        	if(moveTaskToBack){
+	        		((Activity)context).moveTaskToBack (true); 
+	        	}else{
+	        		((Activity)context).finish();
+	        	}   
 	        }
 
 	    })
@@ -1106,16 +1213,82 @@ public final class ToolBox {
 	 /**
 	  * Shows a Toast alert.
 	  * 
-	  * @param context
-	  * @param message
-	  * @param centerOnScreen	Set to TRUE to center on the screen.
+	  * @param context				The context.
+	  * @param message				The message to show
+	  * @param centerOnScreen		Set to TRUE to center on the screen.
+	  * @param defaultToastStyle	Set to true to use the default system Toast style.
+	  * @param customToastType		The custom toast type {@link TOAST_TYPE}
 	  */
-	 public static void dialog_showToastAlert(Context context, String message, boolean centerOnScreen) {
-		 Toast msg = Toast.makeText(context, message, Toast.LENGTH_SHORT);
-		 if(centerOnScreen){
-			 msg.setGravity(Gravity.CENTER, msg.getXOffset() / 2, msg.getYOffset() / 2);
+	 public static void dialog_showToastAlert(Activity context, String message, 
+			 boolean centerOnScreen, boolean defaultToastStyle, 
+			 TOAST_TYPE customToastType) {
+		 
+		 if(defaultToastStyle) {
+			 Toast msg = Toast.makeText(context, message, Toast.LENGTH_SHORT);
+			 if(centerOnScreen){
+				 msg.setGravity(Gravity.CENTER, msg.getXOffset() / 2, msg.getYOffset() / 2);
+			 }
+			 msg.show();
+		 }else{
+			 toast_createCustomToast(context, message, customToastType, centerOnScreen);
 		 }
-		 msg.show();
+	 }
+	 
+	 /**
+	  * The GPS enable request code when using "showGpsDisabledAlert()"
+	  * method. Use this to check the result in "onActivityResult()"
+	  * of the activity.
+	  */
+	 public final static int ENABLE_GPS_REQUEST = 0x69;
+	 
+	 /**
+	  * Shows an alert dialog asking to enable in system
+	  * settings the GPS.
+	  * 
+	  * @param context	The activity that opens the dialog.
+	  * @param message	Optional.
+	  * @param okButtonText	Optional.
+	  * @param cancelButtonText	Optional.
+	  */
+	 public static void dialog_showGPSDisabledAlert(final Activity context, String message, String okButtonText, String cancelButtonText) {		 
+		 
+		 if(message==null || message!=null && message.length()==0) {
+			 message = "&The GPS is disabled. Application needs GPS location. ¿Do you want to enable it?";
+		 }
+		 if(okButtonText==null || okButtonText!=null && okButtonText.length()==0) {
+			 okButtonText = "Activate GPS";
+		 }
+		 if(cancelButtonText==null || cancelButtonText!=null && cancelButtonText.length()==0) {
+			 cancelButtonText = "Cancel";
+		 }
+		 
+		 AlertDialog.Builder builder = new AlertDialog.Builder(context);
+		 builder
+                .setMessage(message)
+                .setCancelable(false).setPositiveButton(okButtonText,
+                        new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int id) {
+                            	dialog.dismiss();
+                            	showAndroidGpsOptions(context);                            	
+                            }
+                        });
+        builder.setNegativeButton(cancelButtonText,
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        dialog.cancel();
+                    }
+                });
+        AlertDialog alert = builder.create();
+        alert.show();
+	 }
+		
+	/*
+	 * Opens system setting in location path.
+	 */
+	 private static void showAndroidGpsOptions(final Activity context) {
+		 Intent gpsOptionsIntent = new Intent(
+	              android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+	     context.startActivityForResult(gpsOptionsIntent, ENABLE_GPS_REQUEST);
 	 }
 	
 	//-------------------- GRAPHICS ----------------------------------------------------------------------
@@ -1334,21 +1507,25 @@ public final class ToolBox {
     
 	// Net Related -----------------------------------------------------------------------------------------------------------------------------
 	
-	/**
+    
+    /**
 	 * Makes a Http operation.
 	 * 
 	 * This method set a parameters to the request that avoid being waiting 
 	 * for the server response or once connected, being waiting to receive 
 	 * the data.
 	 * 
-	 * @param method		Method type to execute. @See HTTP_METHOD.
-	 * @param url			Url of the request.
-	 * @param jsonData		The body content of the request (JSON). Can be null.
+	 * @param method		Method type to execute. @see HTTP_METHOD.
+	 * @param url			URL of the request.
+	 * @param jsonDataKey	Optional. If not null, the JSON data will be sent under
+	 * 						this key in the POST. Otherwise the JSON data will be 
+	 * 						directly all the body of the POST.
+	 * @param jsonData		Optional. The body content of the request (JSON).
 	 * @param headers		The headers to include in the request.
 	 * @return The content of the request if there is one.
 	 * @throws Exception
 	 */
-	public static String net_httpclient_doAction(HTTP_METHOD method, String url, String jsonData, Map<String, String> headers) throws ConnectTimeoutException, SocketTimeoutException, Exception{
+	public static String net_httpclient_doAction(HTTP_METHOD method, String url, String jsonDataKey, String jsonData, Map<String, String> headers) throws ConnectTimeoutException, SocketTimeoutException, Exception{
     	String responseData = null;
 		
 		DefaultHttpClient httpclient = new DefaultHttpClient();
@@ -1365,9 +1542,18 @@ public final class ToolBox {
     	switch(method){
 			case POST:
 				httpMethod = new HttpPost(url);
-				//Add the body to the request.
-		    	StringEntity se = new StringEntity(jsonData);
-		    	((HttpPost)httpMethod).setEntity(se);
+				//Add the body to the request.				
+				List<NameValuePair> params = null;
+				if(jsonDataKey!=null && jsonDataKey.length()>0) {
+					//We set the JSON data under a specific data key.
+					params = new ArrayList<NameValuePair>();
+					params.add(new BasicNameValuePair(jsonDataKey, jsonData));
+					((HttpPost)httpMethod).setEntity(new UrlEncodedFormEntity(params, HTTP.UTF_8));
+				}else{
+					//The POSt will only contain the JSON
+					StringEntity se = new StringEntity(jsonData);
+			    	((HttpPost)httpMethod).setEntity(se);
+				}
 				break;
 			case DELETE:
 				httpMethod = new HttpDelete(url);
@@ -1409,14 +1595,65 @@ public final class ToolBox {
     	}
     	
     	return responseData;
-    } 
-	 
+    }
+    
+	/**
+	 * Makes a Http operation.
+	 * 
+	 * This method set a parameters to the request that avoid being waiting 
+	 * for the server response or once connected, being waiting to receive 
+	 * the data.
+	 * 
+	 * @param method		Method type to execute. @See HTTP_METHOD.
+	 * @param url			Url of the request.
+	 * @param jsonData		The body content of the request (JSON). Can be null.
+	 * @param headers		The headers to include in the request.
+	 * @return The content of the request if there is one.
+	 * @throws Exception
+	 */
+	public static String net_httpclient_doAction(HTTP_METHOD method, String url, String jsonData, Map<String, String> headers) throws ConnectTimeoutException, SocketTimeoutException, Exception{
+		return net_httpclient_doAction(method, url, null, jsonData, headers);
+    }
+	
+	 /**
+	  * Gets the status of the network service.
+	  * 
+	  * @param context
+	  * @return
+	  */
 	 public static boolean net_isNetworkAvailable(Context context) {
 	 	    ConnectivityManager connectivityManager 
 	 	          = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
 	 	    NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
 	 	    return activeNetworkInfo != null && activeNetworkInfo.isConnected();
 	 }
+	 
+	 /**
+	  * Gets the status of the location service.
+	  * 
+	  * @param context
+	  * @return
+	  */
+	 @SuppressWarnings("deprecation")
+	 @TargetApi(Build.VERSION_CODES.KITKAT)
+	 public static boolean isLocationEnabled(Context context) {
+		 int locationMode = 0;
+		 String locationProviders;
+
+		 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT){
+	    	locationMode = Settings.Secure.LOCATION_MODE_OFF;
+	    	try {
+	    		locationMode = Settings.Secure.getInt(context.getContentResolver(), Settings.Secure.LOCATION_MODE);
+
+	        } catch (SettingNotFoundException e) {}
+
+	        return locationMode != Settings.Secure.LOCATION_MODE_OFF;
+
+		 }else{
+	        locationProviders = Settings.Secure.getString(context.getContentResolver(), Settings.Secure.LOCATION_PROVIDERS_ALLOWED);
+	        return !TextUtils.isEmpty(locationProviders);
+		 }
+	 } 
 	 
 	 /**
 	 * Gets the network carrier.
@@ -2075,13 +2312,14 @@ public final class ToolBox {
 	 * 
 	 * @param context
 	 * @param type		Mime type.
-	 * @param nameApp	You can filter the application you want to share with. Use "wha", "twitt", etc.
-	 * @param title		The title of the share.Take in account that sometimes is not possible to add the title.
+	 * @param shareDialogTitle	The title of the share dialog
+	 * @param appNamesToShareWith	You can filter the application you want to share with. Use "wha", "twitt", etc.
+	 * @param title		The title of the share. Take in account that sometimes is not possible to add the title.
 	 * @param data		The data, can be a file or a text.
 	 * @param isBinaryData	If the share has a data file, set to TRUE otherwise FALSE.
 	 */
 	@SuppressLint("DefaultLocale")
-	public static Intent share_newSharingIntent(Context context, String type, String nameApp, String title, String data, boolean isBinaryData, boolean launch) {
+	public static Intent share_newSharingIntent(Context context, String shareDialogTitle, String type, String[] appNamesToShareWith, String title, String data, boolean isBinaryData, boolean launch) {
 	    
 		Intent res = null;
 		
@@ -2107,19 +2345,21 @@ public final class ToolBox {
             		targetedShare.putExtra(Intent.EXTRA_STREAM, Uri.fromFile(new File(data)));
             	}        
 	            
-	            if(nameApp!=null){
-	            	if (info.activityInfo.packageName.toLowerCase().contains(nameApp) || 
-		                    info.activityInfo.name.toLowerCase().contains(nameApp)) {
-		                targetedShare.setPackage(info.activityInfo.packageName);	                
-		                targetedShareIntents.add(targetedShare);
-		            }
+	            if(appNamesToShareWith!=null && appNamesToShareWith.length>0){
+	            	for(String appName: appNamesToShareWith) {
+	            		if (info.activityInfo.packageName.toLowerCase().contains(appName) || 
+	                    info.activityInfo.name.toLowerCase().contains(appName)) {
+	            			targetedShare.setPackage(info.activityInfo.packageName);	                
+	            			targetedShareIntents.add(targetedShare);
+	            		}
+	            	}
 	            }else{
 	            	targetedShare.setPackage(info.activityInfo.packageName);	                
 	                targetedShareIntents.add(targetedShare);
 	            }
 	        }
 
-	        Intent chooserIntent = Intent.createChooser(targetedShareIntents.remove(0), "Select app to share");
+	        Intent chooserIntent = Intent.createChooser(targetedShareIntents.remove(0), shareDialogTitle);
 	        chooserIntent.putExtra(Intent.EXTRA_INITIAL_INTENTS, targetedShareIntents.toArray(new Parcelable[]{}));
 	        
 	        res = chooserIntent;
@@ -2909,7 +3149,8 @@ public final class ToolBox {
 	}
 	
 	/**
-	 * Returns the device resolution type.
+	 * Returns the device resolution type or unknown
+	 * if not recognized.
 	 * 
 	 * @param context
 	 * @return	{@link es.javocsoft.android.lib.toolbox.ToolBox.DEVICE_RESOLUTION_TYPE}
@@ -2937,6 +3178,11 @@ public final class ToolBox {
 			case DisplayMetrics.DENSITY_XXHIGH:
 				res = DEVICE_RESOLUTION_TYPE.xxhdpi;
 				break;		
+			case DisplayMetrics.DENSITY_XXXHIGH:
+				res = DEVICE_RESOLUTION_TYPE.xxxhdpi;
+				break;
+			default:
+				res = DEVICE_RESOLUTION_TYPE.unknown;
 		}
 		
 		return res;
@@ -2979,21 +3225,37 @@ public final class ToolBox {
 	}
 	
 	/**
-	 * Gets the device number if is available.
+	 * Gets the device mobile number if is available,
+	 * NULL otherwise.
 	 * 
-	 * @param ctx
+	 * @param context
 	 * @return
 	 */
-	public static String device_getDeviceMobileNumber(Context ctx) {
-		TelephonyManager tm = (TelephonyManager) ctx
+	public static String device_getDeviceMobileNumber(Context context) {
+		TelephonyManager tm = (TelephonyManager) context
 				.getSystemService(Context.TELEPHONY_SERVICE);
-		return tm.getLine1Number();
+		if(tm!=null) {
+			return tm.getLine1Number();
+		}else{
+			return null;
+		}
 	}
 	
+	/**
+	 * Gets the device EMEI if is available, NULL otherwise.
+	 * 
+	 * @param context
+	 * @return
+	 */
 	public static String device_getIMEI(Context context) {
-		TelephonyManager telephonyManager = (TelephonyManager) context
+		TelephonyManager tm = (TelephonyManager) context
 				.getSystemService(Context.TELEPHONY_SERVICE);
-		return telephonyManager.getDeviceId();
+		if(tm!=null) {
+			return tm.getDeviceId();
+		}else{
+			return null;
+		}
+		
 	}
 
 	public static String device_getOSVersion() {
@@ -3007,7 +3269,8 @@ public final class ToolBox {
 	 * to query.
 	 * 
 	 * @param context
-	 * @param hardwareFeature	Use PackageManager.FEATURE_[feature] to specify the feature to query.
+	 * @param hardwareFeature	Use PackageManager.FEATURE_[feature] to specify 
+	 * 							the feature to query.
 	 * @return
 	 */
 	public static boolean device_isHardwareFeatureAvailable(Context context, String hardwareFeature){
@@ -3098,6 +3361,95 @@ public final class ToolBox {
 		}
 	}
 	
+	//-------------------- LOCATION ----------------------------------------------------------------------
+	
+	
+	/** The available latitude and longitude address information types. */
+	public static enum LOCATION_INFO_TYPE {COUNTRY, COUNTRY_CODE, CITY, POSTAL_CODE, ADDRESS, ALL}; 
+	
+	/**
+	 * From a latitude and longitude, return the desired address information type
+	 * or null in case of error.
+	 * 
+	 * @param context
+	 * @param locationInfoType	The desired location info. See LOCATION_INFO_TYPE enum.
+	 * @param lattitude
+	 * @param longitude
+	 * @return
+	 */
+	public static String location_addressInfo(Context context, LOCATION_INFO_TYPE locationInfoType, 
+			double latitude, double longitude) {
+
+        String res = "Not Found"; 
+        
+        Geocoder gcd = new Geocoder(context, Locale.getDefault());
+        try {
+            List<Address> addresses = gcd.getFromLocation(latitude, longitude,10);
+
+            for (Address adrs : addresses) {
+                if (adrs != null) {                	
+                	String data = null;
+                	switch (locationInfoType) {
+						case COUNTRY_CODE:
+							data = adrs.getCountryCode();
+							break;
+						case COUNTRY:
+							data = adrs.getCountryName();
+							break;
+						case CITY:
+							data = adrs.getLocality();
+							break;
+						case POSTAL_CODE:
+							data = adrs.getPostalCode();
+							break;
+						case ADDRESS:
+							data = adrs.getSubThoroughfare();
+							break;	
+						case ALL:	
+							res = adrs.toString();
+							break;
+					}                    
+                    if (data != null && data.length()>0) {
+                        res = data;         
+                    }
+                }
+            }
+        } catch (IOException e) {
+            return null;
+        }
+        
+        return res;
+    }	
+	
+	/**
+	 * Calculates the great circle distance between two points on the Earth. 
+	 * Uses the Haversine Formula.
+	 * 
+	 * 	http://en.wikipedia.org/wiki/Haversine_formula.
+	 * 	http://es.wikipedia.org/wiki/F%C3%B3rmula_del_Haversine
+	 * 
+	 * @param latitude1 	Latitude of first location in decimal degrees.
+	 * @param longitude1 	Longitude of first location in decimal degrees.
+	 * @param latitude2 	Latitude of second location in decimal degrees.
+	 * @param longitude2	Longitude of second location in decimal degrees.
+	 * @return distance in meters.
+	 */
+	public static double location_distance(double latitude1, double longitude1, double latitude2, double longitude2) {
+		
+		double earthRadius = 6378137;
+		
+		double latitudeSin = Math.sin(Math.toRadians(latitude2 - latitude1) / 2);
+		double longitudeSin = Math.sin(Math.toRadians(longitude2 - longitude1) / 2);
+		double a = latitudeSin * latitudeSin 
+								+ Math.cos(Math.toRadians(latitude1)) 
+								* Math.cos(Math.toRadians(latitude2)) 
+								* longitudeSin	
+								* longitudeSin;
+		double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+		
+		return earthRadius * c;
+	}
+		
 	
 	//-------------------- CRYPTO ------------------------------------------------------------------------
  	 
