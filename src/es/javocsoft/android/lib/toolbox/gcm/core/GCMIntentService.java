@@ -95,7 +95,8 @@ public class GCMIntentService extends IntentService {
 					Class<?> c = Class.forName(notificationOnNotReceivedThreadToCall);
 					Constructor<?> cons = c.getConstructor();
 					Object onNewNotificationRunnableObject = cons.newInstance();
-					NotificationModule.doWhenNotificationRunnable = (OnNewNotificationCallback)onNewNotificationRunnableObject;							
+					NotificationModule.doWhenNotificationRunnable = (OnNewNotificationCallback)onNewNotificationRunnableObject;
+					NotificationModule.doWhenNotificationRunnable.context = getApplicationContext();
 					
 				}catch(Exception e) {
 					if(NotificationModule.LOG_ENABLE)
@@ -178,6 +179,7 @@ public class GCMIntentService extends IntentService {
 	public static abstract class OnNewNotificationCallback extends Thread implements Runnable {
 		
 		private Bundle notificationBundle;
+		public Context context;
 		
 		public OnNewNotificationCallback() {}
 		
@@ -212,7 +214,7 @@ public class GCMIntentService extends IntentService {
 		 * @return
 		 */
 		protected Context getContext(){
-			return NotificationModule.APPLICATION_CONTEXT;
+			return context;
 		}
 	}
     

@@ -3225,6 +3225,42 @@ public final class ToolBox {
 	}
 	
 	/**
+	 * Get the version number of Android.
+	 * 
+	 * @return
+	 */
+	public static String device_getOSVersion() {
+		return String.valueOf(Build.VERSION.RELEASE);
+	}
+	
+	/**
+	 * Gets the device version codename.
+	 * 
+	 * @return
+	 */
+	public static String device_getOSCodename() {
+		return String.valueOf(Build.VERSION.CODENAME);
+	}
+	
+	/**
+	 * Get device extra information like Manufacturer,
+	 * brand and device model info.
+	 * 
+	 * @return
+	 */
+	public static String device_getExtraInfo() {
+		String extra = 	android.os.Build.MANUFACTURER + 
+						(android.os.Build.BRAND!=null?"/" + android.os.Build.BRAND:"") +
+						"/" + android.os.Build.DEVICE + 
+						"/" + android.os.Build.MODEL +
+						"/" + android.os.Build.HARDWARE +
+						"/" + android.os.Build.PRODUCT;
+						
+		return extra;
+	}
+	
+	
+	/**
 	 * Gets the device mobile number if is available,
 	 * NULL otherwise.
 	 * 
@@ -3256,10 +3292,6 @@ public final class ToolBox {
 			return null;
 		}
 		
-	}
-
-	public static String device_getOSVersion() {
-		return String.valueOf(Build.VERSION.SDK_INT);
 	}
 	
 	/**
