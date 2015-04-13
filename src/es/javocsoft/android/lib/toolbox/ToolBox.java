@@ -1430,6 +1430,7 @@ public final class ToolBox {
 	        }
 	                        
 	        notification.setLatestEventInfo(context, notTitle, notMessage, intent);
+	        notification.tickerText = notTitle + " Notification";
 	        
 	        //This makes the device to wake-up is is idle with the screen off.
 	        if(wakeUp){
