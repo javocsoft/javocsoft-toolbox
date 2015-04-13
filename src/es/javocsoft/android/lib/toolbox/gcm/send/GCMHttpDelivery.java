@@ -26,6 +26,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.http.params.CoreProtocolPNames;
+
 import com.google.gson.Gson;
 
 import es.javocsoft.android.lib.toolbox.gcm.core.beans.GCMDeliveryResponse;
@@ -170,6 +172,7 @@ public class GCMHttpDelivery {
 		Map<String, String> headersData = new HashMap<String,String>();
 		headersData.put(GCM_HTTP_HEADER_AUTH_KEY, "key="+apiKey);
 		headersData.put(GCM_HTTP_HEADER_CONTENTTYPE_KEY, GCM_HTTP_HEADER_CONTENTTYPE_VALUE);
+		headersData.put(CoreProtocolPNames.HTTP_CONTENT_CHARSET, "UTF-8");
 		
 		if(retries<=0){
 			retries = 5; //Default

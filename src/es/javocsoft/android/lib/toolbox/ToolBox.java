@@ -39,6 +39,7 @@ import java.net.MalformedURLException;
 import java.net.SocketTimeoutException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLDecoder;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.text.DecimalFormat;
@@ -1355,7 +1356,8 @@ public final class ToolBox {
 	 * @param groupMultipleNotKey	If is set, multiple notifications can be grupped by this key.
 	 * @param notAction				Action for this notification
 	 * @param notTitle				Title
-	 * @param notMessage			Message
+	 * @param notMessage			Message. Received message could have non-latin characters so 
+	 * 								it should be always received URLEncoded.
 	 * @param notClazz				Class to be executed
 	 * @param extras				Extra information
 	 * 
@@ -1371,7 +1373,11 @@ public final class ToolBox {
 		try {
 			int iconResId = notification_getApplicationIcon(context);			
 			long when = System.currentTimeMillis();
-	        	        	        
+	        
+			//Received message could have non-latin characters so it should be
+			//always received URLEncoded.
+			notMessage = URLDecoder.decode(notMessage, "UTF-8");
+			
 	        Notification notification = new Notification(iconResId, notMessage, when);
 	        
 	        // Hide the notification after its selected
