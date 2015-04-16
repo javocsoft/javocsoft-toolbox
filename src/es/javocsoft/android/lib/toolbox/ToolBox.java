@@ -55,6 +55,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 
+import org.apache.commons.codec.binary.Hex;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
@@ -93,6 +94,7 @@ import android.content.pm.ResolveInfo;
 import android.content.pm.Signature;
 import android.content.res.AssetFileDescriptor;
 import android.content.res.Configuration;
+import android.content.res.Resources.NotFoundException;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -103,6 +105,7 @@ import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Point;
 import android.graphics.Typeface;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.location.Address;
@@ -205,6 +208,7 @@ public final class ToolBox {
 			
 	public static enum SCREEN_ORIENTATION {PORTRAIT, LANDSCAPE, SQUARE};
 	
+	/** Accepted HASH types. */
 	public static enum HASH_TYPE{md5,sha1};
 	
 	/** The type of device by screen. */
@@ -2788,7 +2792,7 @@ public final class ToolBox {
 	}
     
 	/**
-     * Grabs an image direct from a file into a Drawable without saving a cache
+     * Grabs an image directly from a file into a Drawable without saving a cache
      * 
      * @param filePath
      * @return
@@ -2808,37 +2812,103 @@ public final class ToolBox {
 	    	    
 	    return res;
 	} 
-	 
-	 /**
-	  * Loads a Bitmap image form the internal storage.
-	  * 
-	  * @param context
-	  * @param fileName
-	  * @return
-	  * @throws Exception
-	  */
-	 public static Bitmap media_loadBitmapFromInternalStorage(Context context, String fileName) throws Exception{
+	
+	/**
+	 * Gets bytes from an image resource id.
+	 * 
+	 * @param context
+	 * @param resourceId
+	 * @return
+	 */
+	public static byte[] media_getBytesFromDrawableResourceId(Context context, int resourceId){
+		try{
+			Drawable d = context.getResources().getDrawable(resourceId);
+			return media_getBytesFromDrawable(context, d);
+			
+		}catch(NotFoundException e) {
+			Log.e(TAG,"media_getBytesFromDrawableResourceId() - Image bytes could not be get, invalid resource id ["+e.getMessage() + "].",e);
+			return null;
+		}
+		
+	}
+	
+	/**
+	 * Gets bytes from an asset folder image.
+	 * 
+	 * @param context
+	 * @param resourceName
+	 * @return
+	 */
+	public static byte[] media_getBytesFromAssetImage(Context context, String resourceName){
+		
+		try{
+			//Get the drawable from an asset. 
+		    InputStream ims = context.getAssets().open(resourceName);
+		    Drawable d = Drawable.createFromStream(ims, null);
+		    return media_getBytesFromDrawable(context, d);
+		    
+		}catch(IOException e){
+			Log.e(TAG, "media_getBytesFromAssetImage() - Error getting image bytes from asset folder [" + e.getMessage() + "].", e);
+		    return null;
+		}
+	}
+	
+	/**
+	 * Gets bytes from an Drawable object.
+	 * 
+	 * @param context
+	 * @param drawable
+	 * @return
+	 */
+	public static byte[] media_getBytesFromDrawable(Context context, Drawable drawable){
+		//Get the bytes from the Drawable
+		if(drawable!=null) {
+		    Bitmap bitmap = ((BitmapDrawable)drawable).getBitmap();
+		    ByteArrayOutputStream stream = new ByteArrayOutputStream();
+		    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream);
+		    byte[] bitmapData = stream.toByteArray();
+		    if(bitmapData==null || (bitmapData!=null && bitmapData.length==0)) {
+		    	Log.e(TAG, "media_getBytesFromDrawable() - Error getting image bytes from Drawable object.");
+		    	return bitmapData;
+		    }else{		    
+		    	return null;
+		    }		
+		}else{
+			Log.i(TAG, "media_getBytesFromDrawable() - Drawable object is null.");
+			return null;
+		}
+	}
+	
+	/**
+	 * Loads a Bitmap image form the internal storage.
+	 * 
+	 * @param context
+	 * @param fileName
+	 * @return
+	 * @throws Exception
+	 */
+	public static Bitmap media_loadBitmapFromInternalStorage(Context context, String fileName) throws Exception{
 		 
-		 try{
+		try{
 			 FileInputStream is = context.openFileInput(fileName);
 			 Bitmap b = BitmapFactory.decodeStream(is);
 			 
 			 return b;
-		 } catch (Exception e) {			 
+		} catch (Exception e) {			 
 			 throw new Exception("Error reading data '" + fileName + "' (internal storage) : "+ e.getMessage(),e);
-		 }
-	 }
+		}
+	}
 	 
 	 
-	 /**
-	  * Makes rounded corners on a bitmap.
-	  * 
-	  * Requires Level 17 of Android API!!
-	  * 
-	  * @param bitmap
-	  * @return
-	  */
-	 /*public static Bitmap media_getRoundedCornerBitmap(Bitmap bitmap) {
+	/**
+	 * Makes rounded corners on a bitmap.
+	 * 
+	 * Requires Level 17 of Android API!!
+	 * 
+	 * @param bitmap
+	 * @return
+	 */
+	/*public static Bitmap media_getRoundedCornerBitmap(Bitmap bitmap) {
 			Bitmap output = Bitmap.createBitmap(bitmap.getWidth(),
 					bitmap.getHeight(), Config.ARGB_8888);
 			Canvas canvas = new Canvas(output);
@@ -2857,8 +2927,8 @@ public final class ToolBox {
 			paint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.SRC_IN));
 			canvas.drawBitmap(bitmap, rect, rect, paint);
 
-			return output;
-		}*/
+		return output;
+	}*/
 
 	/**
 	 * Convers a Bitmap to grayscale.
@@ -3492,7 +3562,14 @@ public final class ToolBox {
 	
 	//-------------------- CRYPTO ------------------------------------------------------------------------
  	 
-	 public static String crypto_getHASH(byte[] data, HASH_TYPE hashType){
+	/**
+	 * Generates a HASH from the specified byte array.
+	 * 
+	 * @param data	The data to get the HASH from.
+	 * @param hashType	{@link HASH_TYPE}
+	 * @return
+	 */
+	public static String crypto_getHASH(byte[] data, HASH_TYPE hashType){
 		 
 		 MessageDigest digest = null;
 		 byte[] resData = null;
@@ -3506,11 +3583,11 @@ public final class ToolBox {
 				 case sha1:
 					 digest = MessageDigest.getInstance("SHA-1");
 					 resData = digest.digest(data);
-					 break;
+					 break;				 
 			 }
 			 
 			 if(resData!=null)
-				 return new String(resData);
+				 return new String(Hex.encodeHex(resData));
 			 else
 				 return null;
 			 
@@ -3520,23 +3597,23 @@ public final class ToolBox {
 			 
 			 return null;
 		 }
-	 }
+	}
 	 
-	 //-------------------- FONTS ------------------------------------------------------------------------
+	//-------------------- FONTS ------------------------------------------------------------------------
 	 
-	 /**
-	  *	Set a font to a text view.
-	  * 
-	  * @param context
-	  * @param textView
-	  * @param fontPath		The path to the font resource. Must be placed in asset 
-	  * 					folder.
-	  */
-	 public static void font_applyTitleFont(Context context, TextView textView, String fontPath) {
+	/**
+	 *	Set a font to a text view.
+	 * 
+	 * @param context
+	 * @param textView
+	 * @param fontPath		The path to the font resource. Must be placed in asset 
+	 * 					folder.
+	 */
+	public static void font_applyTitleFont(Context context, TextView textView, String fontPath) {
 		 if (textView != null) {
 			 Typeface font = Typeface.createFromAsset(context.getAssets(),fontPath);
 			 textView.setTypeface(font);
 		 }
-	 }
+	}
 	 
 }
