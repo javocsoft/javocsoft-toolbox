@@ -23,6 +23,7 @@ package es.javocsoft.android.lib.toolbox;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -42,6 +43,10 @@ import java.net.URL;
 import java.net.URLDecoder;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -628,6 +633,220 @@ public final class ToolBox {
     }
 
     /**
+     * Gets the application package name.
+     * 
+     * @param context
+     * @return
+     */
+    public static String application_packageName(Context context) {
+    	return context.getPackageName();    	
+    }
+    
+    /**
+     * Gets the application package info.
+     * 
+     * @param context
+     * @return
+     */
+    public static PackageInfo application_packageInfo(Context context) {
+    	PackageInfo pkgInfo = null;
+    	
+    	String pkgName = application_packageName(context);
+    	PackageManager pkgManager = context.getPackageManager();
+    	try {
+			pkgInfo = pkgManager.getPackageInfo(pkgName, PackageManager.GET_SIGNATURES);
+		} catch (NameNotFoundException e) {
+			Log.e(TAG, "Package name not found! [" + e.getMessage() + "].");
+		}
+    	
+    	return pkgInfo;
+    }
+    
+    /**
+     * Gets an application package info.
+     * 
+     * @param context
+     * @param pkgName	The application package name to get the package from
+     * @return
+     */
+    public static PackageInfo application_packageInfo(Context context, String pkgName) {
+    	PackageInfo pkgInfo = null;
+    	
+    	PackageManager pkgManager = context.getPackageManager();
+    	try {
+			pkgInfo = pkgManager.getPackageInfo(pkgName, PackageManager.GET_SIGNATURES);
+		} catch (NameNotFoundException e) {
+			Log.e(TAG, "Package name not found! [" + e.getMessage() + "].");
+		}
+    	
+    	return pkgInfo;
+    }
+    
+    /**
+     * Gets an application Name information.
+     * 
+     * @param context
+     * @param pkgName
+     * @return
+     */
+    public static String application_nameInfo(Context context, String pkgName) {
+    	String appName = null;
+    	    	
+    	final PackageManager packageManager = context.getPackageManager();
+    	PackageManager pkgManager = context.getPackageManager();
+    	try {
+    		PackageInfo pkgInfo = pkgManager.getPackageInfo(pkgName, PackageManager.GET_SIGNATURES);
+			appName = pkgInfo.applicationInfo.loadLabel(packageManager).toString();
+			
+		} catch (NameNotFoundException e) {
+			Log.e(TAG, "Package name not found! [" + e.getMessage() + "].");
+		}
+    	
+    	return appName;
+    }
+    
+    /**
+     * Gets an application X509 certificates from application signatures.<br><br>
+     * 
+     * With each certificate it is also available:
+     * 
+     * <ul>
+     * 		<li>Issuer</li>
+     * 		<li>Subject</li>
+     * 		<li>Serial Number</li>
+     * 		<li>Signature SHA-1 hash</li>
+     * 		<li>Signature MD5 hash</li>
+     * </ul>
+     * 
+     * @param context
+     * @param pkgName
+     * @return
+     */
+    public static List<ApplicationCertificate> application_certificates(Context context, String pkgName) {
+    	List<ApplicationCertificate> appCerts = new ArrayList<ApplicationCertificate>();
+    	    	
+    	PackageManager pkgManager = context.getPackageManager();
+    	try {
+    		PackageInfo pkgInfo = pkgManager.getPackageInfo(pkgName, PackageManager.GET_SIGNATURES);
+			
+    		ApplicationCertificate appCert = null;
+    		String signatureSHA1HASH = null;
+    		String signatureMD5HASH = null;
+    		final Signature[] arrSignatures = pkgInfo.signatures;
+    	    for (final Signature sig : arrSignatures) {
+    	    	signatureSHA1HASH = ToolBox.crypto_getHASH(sig.toString().getBytes(), ToolBox.HASH_TYPE.sha1);
+    	    	signatureMD5HASH = ToolBox.crypto_getHASH(sig.toString().getBytes(), ToolBox.HASH_TYPE.md5);
+    	    	
+    	        /*
+    	        * Get the X.509 certificate.
+    	        */
+    	        final byte[] rawCert = sig.toByteArray();
+    	        InputStream certStream = new ByteArrayInputStream(rawCert);
+
+    	        final CertificateFactory certFactory;
+    	        final X509Certificate x509Cert;
+    	        try {
+    	        	//Get the X509 certificate.
+    	            certFactory = CertificateFactory.getInstance("X509");
+    	            x509Cert = (X509Certificate) certFactory.generateCertificate(certStream);
+    	            
+    	            //Create the application certificate information.
+    	            appCert = new ApplicationCertificate(x509Cert.getSubjectDN().getName(), 
+    	            						x509Cert.getIssuerDN().getName(), 
+    	            						x509Cert.getSerialNumber().toString(), 
+    	            						x509Cert,
+    	            						signatureSHA1HASH, signatureMD5HASH);
+    	            
+    	            appCerts.add(appCert);    	            
+    	        }
+    	        catch (CertificateException e) {
+    	            Log.e(TAG, "Error getting X509 certificate from signature stream [" + e.getMessage() + "].", e);
+    	        }
+    	    }
+			
+		} catch (NameNotFoundException e) {
+			Log.e(TAG, "Package name not found! [" + e.getMessage() + "].");
+		}
+    	
+    	return appCerts;
+    }
+    
+    /**
+     * Application X509 certificate and certificate information.
+     */
+    public static class ApplicationCertificate {
+    	
+    	private String subject;
+    	private String issuer;
+    	private String serialNumber;
+    	private String signatureSHA1Hash;
+    	private String signatureMD5Hash;
+    	private X509Certificate x509Certificate;
+    	
+    	protected ApplicationCertificate() {}
+    	
+    	public ApplicationCertificate(String subject, String issuer, String serialNumber, X509Certificate x509Certificate) {
+    		this.subject = subject;
+    		this.issuer = issuer;
+    		this.serialNumber = serialNumber;
+    		this.x509Certificate = x509Certificate;
+    	}
+
+    	public ApplicationCertificate(String subject, String issuer, String serialNumber, X509Certificate x509Certificate, String signatureSHA1Hash, String signatureMD5Hash) {
+    		this.subject = subject;
+    		this.issuer = issuer;
+    		this.serialNumber = serialNumber;
+    		this.x509Certificate = x509Certificate;
+    		this.signatureSHA1Hash = signatureSHA1Hash;
+    		this.signatureMD5Hash = signatureMD5Hash;
+    	}
+    	
+		public String getSubject() {
+			return subject;
+		}
+		public void setSubject(String subject) {
+			this.subject = subject;
+		}
+
+		public String getIssuer() {
+			return issuer;
+		}
+		public void setIssuer(String issuer) {
+			this.issuer = issuer;
+		}
+
+		public String getSerialNumber() {
+			return serialNumber;
+		}
+		public void setSerialNumber(String serialNumber) {
+			this.serialNumber = serialNumber;
+		}
+
+		public X509Certificate getX509Certificate() {
+			return x509Certificate;
+		}
+		public void setX509Certificate(X509Certificate x509Certificate) {
+			this.x509Certificate = x509Certificate;
+		}
+
+		public String getSignatureSHA1Hash() {
+			return signatureSHA1Hash;
+		}
+		public void setSignatureSHA1Hash(String signatureSHA1Hash) {
+			this.signatureSHA1Hash = signatureSHA1Hash;
+		}
+
+		public String getSignatureMD5Hash() {
+			return signatureMD5Hash;
+		}
+		public void setSignatureMD5Hash(String signatureMD5Hash) {
+			this.signatureMD5Hash = signatureMD5Hash;
+		}		
+		
+    }
+    
+    
+    /**
      * Deletes a application desktop shortcut icon.
      *
      * This method need two additional permissions in the application:
@@ -881,8 +1100,8 @@ public final class ToolBox {
 
 	 
 	 /**
-	 * Returns a list with the current signatures of the 
-	 * application.
+	 * Returns a list with the current signatures SHA-1 hash 
+	 * of the application.
 	 * 
 	 * @param context	Application context
 	 * @param appPackageName	The package name of the application.
@@ -916,6 +1135,51 @@ public final class ToolBox {
 		return appSignatures;
 	}
 
+	//-------------------- RANDOM-------------------------------------------------------------------------
+	
+	/**
+	 * Gets a Random SHA-1 hash.
+	 * 
+	 * @return
+	 */
+	public static String random_HASH() {
+		return crypto_getHASH(random_UUID(UUID.randomUUID().toString().getBytes()).getBytes(),HASH_TYPE.sha1);
+	}
+	
+	/**
+	 * Gets a random UUID string.
+	 * 
+	 * @param data	An UUID bytes.
+	 * @return
+	 */
+	public static String random_UUID(byte[] data) {
+		if(data!=null)
+			return UUID.nameUUIDFromBytes(data).toString();
+		else
+			return UUID.randomUUID().toString();
+	}
+	
+	/**
+	 * Gets a Random generator.
+	 * 
+	 * @return
+	 */
+	public static Random random_getRandom() {
+		return new Random(new Date().getTime());
+	}
+	
+	/**
+	 * Gets a secure Random generator.
+	 * 
+	 * NOTES.
+	 *  See PRNGFixes class.
+	 *
+	 * @return
+	 */
+	public static Random random_getSecureRandom() {
+		return new SecureRandom();		
+	}
+	
     //-------------------- ACTIVITY-----------------------------------------------------------------------
 
     /**
