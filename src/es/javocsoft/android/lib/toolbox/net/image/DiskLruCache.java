@@ -35,6 +35,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import es.javocsoft.android.lib.toolbox.ToolBox;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.CompressFormat;
@@ -244,17 +245,11 @@ public class DiskLruCache {
 		synchronized (mLinkedHashMap) {
 			final String file = mLinkedHashMap.get(key);
 			if (file != null) {
-				// if (BuildConfig.DEBUG) {
-				// Log.d(TAG, "Disk cache hit");
-				// }
 				return BitmapFactory.decodeFile(file);
 			} else {
 				final String existingFile = createFilePath(mCacheDir, key);
 				if (new File(existingFile).exists()) {
-					put(key, existingFile);
-					// if (BuildConfig.DEBUG) {
-					// Log.d(TAG, "Disk cache hit (existing file)");
-					// }
+					put(key, existingFile);					
 					return BitmapFactory.decodeFile(existingFile);
 				}
 			}
@@ -280,9 +275,9 @@ public class DiskLruCache {
 						flushCache();
 					}
 				} catch (final FileNotFoundException e) {
-					// Log.e(TAG, "Error in put: " + e.getMessage());
+					Log.e(ToolBox.TAG + "(" + TAG + ")", "Error in put: " + e.getMessage());
 				} catch (final IOException e) {
-					// Log.e(TAG, "Error in put: " + e.getMessage());
+					Log.e(ToolBox.TAG + "(" + TAG + ")", "Error in put: " + e.getMessage());
 				}
 			}
 		}
@@ -322,9 +317,6 @@ public class DiskLruCache {
 			cacheSize = mLinkedHashMap.size();
 			cacheByteSize -= eldestFileSize;
 			count++;
-			// if (BuildConfig.DEBUG) {
-			// Log.d(TAG, "flushCache - Removed cache file, " + eldestFile + ", " + eldestFileSize);
-			// }
 		}
 	}
 

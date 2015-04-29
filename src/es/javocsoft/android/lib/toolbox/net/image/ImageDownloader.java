@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2014 - JavocSoft - Javier Gonzalez Serrano
+ * Copyright (C) 2010-2015 - JavocSoft - Javier Gonzalez Serrano
  * http://javocsoft.es/proyectos/code-libs/android/javocsoft-toolbox-android-library
  * 
  * This file is part of JavocSoft Android Toolbox library.
@@ -31,7 +31,6 @@ import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.HttpGet;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -136,7 +135,7 @@ public class ImageDownloader {
 		return true;
 	}
 
-	@SuppressLint("NewApi")
+	
 	private Bitmap downloadBitmap(String url) {
 		final Bitmap bitmap;
 		final int statusCode;

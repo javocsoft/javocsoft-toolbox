@@ -149,6 +149,7 @@ import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.RemoteViews;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -159,6 +160,7 @@ import com.google.android.gms.analytics.HitBuilders;
 import com.google.android.gms.analytics.HitBuilders.EventBuilder;
 import com.google.android.gms.analytics.Logger.LogLevel;
 import com.google.android.gms.analytics.Tracker;
+import com.google.gson.Gson;
 
 import es.javocsoft.android.lib.toolbox.encoding.Base64;
 import es.javocsoft.android.lib.toolbox.io.IOUtils;
@@ -194,7 +196,8 @@ public final class ToolBox {
 		
 		LEVEL_1(1), LEVEL_2(2), LEVEL_3(3), LEVEL_4(4), LEVEL_5(5), LEVEL_6(6),
 		LEVEL_7(7), LEVEL_8(8), LEVEL_9(9), LEVEL_10(10), LEVEL_11(11), LEVEL_12(12),
-		LEVEL_13(13), LEVEL_14(14), LEVEL_15(15), LEVEL_16(16), LEVEL_17(17), LEVEL_18(18);
+		LEVEL_13(13), LEVEL_14(14), LEVEL_15(15), LEVEL_16(16), LEVEL_17(17), LEVEL_18(18),
+		LEVEL_19(19), LEVEL_20(20), LEVEL_21(21), LEVEL_22(22);
 
 		private int value;
 
@@ -230,6 +233,22 @@ public final class ToolBox {
 	
 	
 	private ToolBox(){}
+	
+	
+	//-------------- GSON -----------------------------------------------------------------------------
+	
+	/**
+	 * Converts a GSON JSON LinkedMap of objects to list of objects.
+	 * 
+	 * @param jsonData	JSON string
+	 * @param type		See http://hmkcode.com/gson-json-java/
+	 * @return
+	 */
+	public static <T> List<T> gson_linkedMapAsList(String jsonData, java.lang.reflect.Type type) {
+		// Now convert the JSON string back to your java object		
+	    List<T> jsonObjectList = new Gson().fromJson(jsonData, type);	    
+	    return jsonObjectList;
+	}
 	
 	
 	//--------------- ANALYTICS ------------------------------------------------------------------------
@@ -1170,10 +1189,7 @@ public final class ToolBox {
 	
 	/**
 	 * Gets a secure Random generator.
-	 * 
-	 * NOTES.
-	 *  See PRNGFixes class.
-	 *
+	 *  
 	 * @return
 	 */
 	public static Random random_getSecureRandom() {
@@ -1738,6 +1754,123 @@ public final class ToolBox {
 				Log.e(TAG, "The notification could not be created (" +e.getMessage() + ")", e);
 		}        
     }
+    
+    public static void notification_generate(Context context, 
+    		boolean notSound, int notSoundRawId, 
+    		boolean multipleNot, String groupMultipleNotKey, 
+    		String notAction, 
+    		String notTitle, String notMessage, 
+    		Class<?> notClazz, Bundle extras,
+    		boolean wakeUp, RemoteViews contentView) {
+    	
+    	try {
+			int iconResId = notification_getApplicationIcon(context);			
+			long when = System.currentTimeMillis();
+	        
+			//Received message could have non-latin characters so it should be
+			//always received URLEncoded.
+			notMessage = URLDecoder.decode(notMessage, "UTF-8");
+			
+	        Notification notification = new Notification(iconResId, notMessage, when);
+	        
+	        // Hide the notification after its selected
+	        notification.flags |= Notification.FLAG_AUTO_CANCEL;  
+	        
+	        if(notSound){   
+	        	if(notSoundRawId>0 ){
+	        		try {					 
+	        			notification.sound = Uri.parse("android.resource://" + context.getApplicationContext().getPackageName() + "/" + notSoundRawId);
+	        		}catch(Exception e){
+	        			if(LOG_ENABLE){
+	        				Log.w(TAG, "Custom sound " + notSoundRawId + "could not be found. Using default.");
+	        			}
+	        			notification.defaults |= Notification.DEFAULT_SOUND;
+	        			notification.sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+	        		}
+	        	}else{
+	        		notification.defaults |= Notification.DEFAULT_SOUND;
+	        		notification.sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
+	        	}
+	        }
+	        
+	        Intent notificationIntent = new Intent(context, notClazz);
+	        notificationIntent.setAction(notClazz.getName()+"."+notAction);
+	        if(extras!=null){
+	        	notificationIntent.putExtras(extras);
+	        }	        
+	       	        
+	        //Set intent so it does not start a new activity
+	        //
+	        //Notes:
+	        //	- The flag FLAG_ACTIVITY_SINGLE_TOP makes that only one instance of the activity exists(each time the
+	        //	   activity is summoned no onCreate() method is called instead, onNewIntent() is called.
+	        //  - If we use FLAG_ACTIVITY_CLEAR_TOP it will make that the last "snapshot"/TOP of the activity it will 
+	        //	  be this called this intent. We do not want this because the HOME button will call this "snapshot". 
+	        //	  To avoid this behaviour we use FLAG_ACTIVITY_BROUGHT_TO_FRONT that simply takes to foreground the 
+	        //	  activity.
+	        //
+	        //See http://developer.android.com/reference/android/content/Intent.html	        
+	        notificationIntent.setFlags(Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+	        
+	        
+	        PendingIntent intent = PendingIntent.getActivity(context, 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+	        
+	        int REQUEST_UNIQUE_ID = 0;
+	        if(multipleNot){
+	        	if(groupMultipleNotKey!=null && groupMultipleNotKey.length()>0){
+	        		REQUEST_UNIQUE_ID = groupMultipleNotKey.hashCode();
+	        	}else{
+	        		if(random==null){
+	        			random = new Random();
+	        		}
+	        		REQUEST_UNIQUE_ID = random.nextInt();
+	        	}
+	        	PendingIntent.getActivity(context, REQUEST_UNIQUE_ID , notificationIntent, PendingIntent.FLAG_ONE_SHOT);
+	        }
+	                        
+	        //notification.setLatestEventInfo(context, notTitle, notMessage, intent);
+	        notification.tickerText = notTitle + " Notification";
+	        
+	        //This makes the device to wake-up is is idle with the screen off.
+	        if(wakeUp){
+	        	powersaving_wakeUp(context);
+	        }
+	        
+	        NotificationManager notificationManager = (NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
+	        
+	        //We check if the sound is disabled to enable just for a moment
+	        AudioManager amanager = (AudioManager)context.getSystemService(Context.AUDIO_SERVICE);
+	        int previousAudioMode = amanager.getRingerMode();;
+	        if(notSound && previousAudioMode!=AudioManager.RINGER_MODE_NORMAL){	        	
+	        	amanager.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
+	        }
+	        
+	        //For custom notification Layout
+	        if(contentView!=null) {
+	        	notification.contentView = contentView;	        	
+	        }
+	        
+	        notificationManager.notify(REQUEST_UNIQUE_ID, notification);
+	        
+	        //We restore the sound setting
+	        if(previousAudioMode!=AudioManager.RINGER_MODE_NORMAL){
+	        	//We wait a little so sound is played
+	        	try{
+		        	Thread.sleep(3000);
+		        }catch(Exception e){}		        
+	        }
+	        amanager.setRingerMode(previousAudioMode);
+			
+	        Log.d(TAG, "Android Notification created.");
+	        
+		} catch (Exception e) {
+			if(LOG_ENABLE)
+				Log.e(TAG, "The notification could not be created (" +e.getMessage() + ")", e);
+		}
+    	
+    }
+    		
+    
     
     /*
      * Gets the application Icon.
