@@ -75,18 +75,41 @@ public class NotificationModule {
 	public String deviceToken =null;
 	
 	/** Just in case the application owner wants some kind of feedback */
-	public static final String MESSAGE_EFFICACY_KEY = "notificationId";	
+	public static final String MESSAGE_EFFICACY_KEY = "notificationId";
+	/** The key where the notification type of the notification is */
+	public static final String ANDROID_NOTIFICATION_STYLE_KEY = "notStyle";
 	/** The key where the message of the notification is */
-	public static final String ANDROID_MESSAGE_KEY = "message";
+	public static final String ANDROID_NOTIFICATION_TITLE_KEY = "title";
+	/** The key where the message of the notification is */
+	public static final String ANDROID_NOTIFICATION_MESSAGE_KEY = "message";
+	/** The key where the ticker of the notification is */
+	public static final String ANDROID_NOTIFICATION_TICKER_KEY = "ticker";
+	/** The key where the content info of the notification is */
+    public static final String ANDROID_NOTIFICATION_CONTENT_INFO_KEY = "contentInfo";
+    /** The key where the big style title of the notification is */
+    public static final String ANDROID_NOTIFICATION_BIG_STYLE_TITLE_KEY = "bsTitle";
+    /** The key where the big style content of the notification is */
+    public static final String ANDROID_NOTIFICATION_BIG_STYLE_CONTENT_KEY = "bsContent";
+    /** The key where the big style summary of the notification is */
+    public static final String ANDROID_NOTIFICATION_BIG_STYLE_SUMMARY_KEY = "bsSummary";
+    /** The key where the big picture style image of the notification is */
+    public static final String ANDROID_NOTIFICATION_BIG_STYLE_IMAGE_KEY = "bsImage";
+    /** The key where the big style line content of the notification is */
+    public static final String ANDROID_NOTIFICATION_BIG_STYLE_INBOX_CONTENT_KEY = "bsInboxStyleContent";
+    /** The key where the inbox style line separator character of the notification is */
+    public static final String ANDROID_NOTIFICATION_BIG_STYLE_INBOX_LINE_SEPARATOR_KEY = "bsInboxStyleLineSeparator";
+    /** The key where the large icon of the notification is */
+    public static final String ANDROID_NOTIFICATION_BIG_STYLE_LARGE_ICON_KEY = "bslargeIcon";
 		
 	private final static String APP_NOTIFICATION_ACTION_KEY = "<app_package>";
 	/** Custom intent used to show the alert in the UI about a received push. */
-    public static String SHOW_NOTIFICATION_ACTION = "com.google.android.gcm."+APP_NOTIFICATION_ACTION_KEY+".DISPLAY_MESSAGE";
+    public static String SHOW_NOTIFICATION_ACTION = "com.google.android.gcm."+ APP_NOTIFICATION_ACTION_KEY+".DISPLAY_MESSAGE";
     /** Used to do something in particular when a notification arrives */ 
-    public static String NEW_NOTIFICATION_ACTION = "com.google.android.gcm."+APP_NOTIFICATION_ACTION_KEY+".NEW_DISPLAY_MESSAGE";
+    public static String NEW_NOTIFICATION_ACTION = "com.google.android.gcm."+ APP_NOTIFICATION_ACTION_KEY+".NEW_DISPLAY_MESSAGE";
     
 	public static String NOTIFICATION_TITLE = null;
     public static Class<?> NOTIFICATION_ACTIVITY_TO_CALL = null;
+    
     
     /** Google API project id registered to use GCM. */
     public static String SENDER_ID = null;

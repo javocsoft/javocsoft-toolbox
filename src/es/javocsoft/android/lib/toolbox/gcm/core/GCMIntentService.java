@@ -72,7 +72,7 @@ public class GCMIntentService extends IntentService {
     
     //AUXILIAR
     
-	/*
+	/**
 	 * Try to launch the configured runnable (if set) fro the
 	 * GCM OnNewNotification received event.
 	 *  
@@ -120,7 +120,7 @@ public class GCMIntentService extends IntentService {
 		}
 	}
 	
-    /*
+    /**
      * Creates the Android system notification to alert the user.
      *  
      * @param context
@@ -128,7 +128,20 @@ public class GCMIntentService extends IntentService {
      */
     private void generateNotification(Context context, Intent i) {
         
-    	String message = (String)i.getExtras().get(NotificationModule.ANDROID_MESSAGE_KEY);
+    	
+    	String notStyle = getNotificationKeyContent(i.getExtras(), NotificationModule.ANDROID_NOTIFICATION_STYLE_KEY);
+    	String notTitle = getNotificationKeyContent(i.getExtras(), NotificationModule.ANDROID_NOTIFICATION_TITLE_KEY);
+    	String notMessage = getNotificationKeyContent(i.getExtras(), NotificationModule.ANDROID_NOTIFICATION_MESSAGE_KEY);
+    	String notTicker = getNotificationKeyContent(i.getExtras(), NotificationModule.ANDROID_NOTIFICATION_TICKER_KEY);
+    	String notContentInfo = getNotificationKeyContent(i.getExtras(), NotificationModule.ANDROID_NOTIFICATION_CONTENT_INFO_KEY);
+    	String notBigStyleTitle = getNotificationKeyContent(i.getExtras(), NotificationModule.ANDROID_NOTIFICATION_BIG_STYLE_TITLE_KEY);
+    	String notBigStyleContent = getNotificationKeyContent(i.getExtras(), NotificationModule.ANDROID_NOTIFICATION_BIG_STYLE_CONTENT_KEY);    	
+    	String notBigStyleSummary = getNotificationKeyContent(i.getExtras(), NotificationModule.ANDROID_NOTIFICATION_BIG_STYLE_SUMMARY_KEY);
+    	String notBigStyleImage = getNotificationKeyContent(i.getExtras(), NotificationModule.ANDROID_NOTIFICATION_BIG_STYLE_IMAGE_KEY);
+    	String notBigStyleLargeIcon = getNotificationKeyContent(i.getExtras(), NotificationModule.ANDROID_NOTIFICATION_BIG_STYLE_LARGE_ICON_KEY);
+    	String notBigStyleInboxContent = getNotificationKeyContent(i.getExtras(), NotificationModule.ANDROID_NOTIFICATION_BIG_STYLE_INBOX_CONTENT_KEY);
+    	String notBigStyleInboxLineSeparator = getNotificationKeyContent(i.getExtras(), NotificationModule.ANDROID_NOTIFICATION_BIG_STYLE_INBOX_LINE_SEPARATOR_KEY);
+    	
     	
     	//This service must be isolated from the possible status of the app to be able to
     	//do its job even if the app is closed. This is the reason we get the required stuff
@@ -147,13 +160,35 @@ public class GCMIntentService extends IntentService {
 			Class<?> clazz = Class.forName(notificationActToCall);			
 			NotificationModule.NOTIFICATION_ACTIVITY_TO_CALL = clazz;
 			
-	    	ToolBox.notification_generate(context, 
-	    			true, -1, 
+			//Get the notification style.
+			ToolBox.NOTIFICATION_STYLE nStyle = ToolBox.NOTIFICATION_STYLE.NORMAL_STYLE;
+			try{
+				if(notStyle!=null && notStyle.length()>0){
+					nStyle = ToolBox.NOTIFICATION_STYLE.valueOf(notStyle);
+				}				
+			}catch(Exception e) {/* Invalid value, we use the NORMAL_STYLE. */}
+			
+			
+	        ToolBox.notification_create(context, 
+	    			true, null, false,
 	    			NotificationModule.multipleNot, NotificationModule.groupMultipleNotKey, 
 	    			NotificationModule.NOTIFICATION_ACTION_KEY, 
-	    			NotificationModule.NOTIFICATION_TITLE, message, 
-	    			NotificationModule.NOTIFICATION_ACTIVITY_TO_CALL, i.getExtras(), 
-	    			false);
+	    			(notTitle!=null?notTitle:NotificationModule.NOTIFICATION_TITLE), notMessage, 
+	    			notTicker, notContentInfo, 
+	    			notBigStyleTitle, notBigStyleContent,
+	    			notBigStyleSummary, notBigStyleImage, 
+	    			notBigStyleInboxContent, notBigStyleInboxLineSeparator, 
+	    			NotificationModule.NOTIFICATION_ACTIVITY_TO_CALL, 
+	    			i.getExtras(), false, 
+	    			ToolBox.NOTIFICATION_PRIORITY.DEFAULT, 
+	    			nStyle, 
+	    			ToolBox.NOTIFICATION_LOCK_SCREEN_PRIVACY.PRIVATE, 
+	    			(notBigStyleLargeIcon!=null?notBigStyleLargeIcon:null),
+	    			null, 
+	    			null,
+	    			ToolBox.NOTIFICATION_PROGRESSBAR_STYLE.NONE, 
+	    			null, null,
+					null);
 	    	
 	    	if(NotificationModule.LOG_ENABLE)
 	    		Log.d(NotificationModule.TAG, "Notification created for the recieve PUSH message.");
@@ -162,10 +197,28 @@ public class GCMIntentService extends IntentService {
 		}catch(Exception e) {
 			if(NotificationModule.LOG_ENABLE)
 				Log.e(NotificationModule.TAG,"Notification could not be created for the received PUSH message. " +
-						"Notification activity to open class could not be found (" + e.getMessage() + ").", e);
-			
-		}   	
+						"Notification activity to open class could not be found (" + e.getMessage() + ").", e);			
+		} 
     }
+    
+    
+    /**
+     * Gets the string content from the notification bundle.
+     *  
+     * @param extras
+     * @param key
+     * @return
+     */
+    private String getNotificationKeyContent(Bundle extras, String key) {
+    	String res = null;
+    	
+    	if(extras!=null && extras.get(key)!=null){
+    		res = (String)extras.get(key); 
+    	}
+    	
+    	return res;
+    }
+    
     
     
     //AUXILIAR CLASSES

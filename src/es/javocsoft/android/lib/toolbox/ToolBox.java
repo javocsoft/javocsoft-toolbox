@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
@@ -83,6 +84,7 @@ import android.app.AlertDialog;
 import android.app.Application;
 import android.app.Dialog;
 import android.app.Notification;
+import android.app.Notification.Builder;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
@@ -131,11 +133,16 @@ import android.os.PowerManager;
 import android.provider.Settings;
 import android.provider.Settings.Secure;
 import android.provider.Settings.SettingNotFoundException;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.NotificationCompat.Action;
+import android.support.v4.app.TaskStackBuilder;
 import android.support.v7.app.ActionBarActivity;
 import android.telephony.TelephonyManager;
+import android.text.Html;
 import android.text.TextUtils;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.util.Size;
 import android.view.Display;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -1629,7 +1636,7 @@ public final class ToolBox {
 	//SYSTEM NOTIFICATIONS ---------------------------------------------------------------------------------------------------------------------
 	
 	/**
-	 * Creates a system notification.
+	 * Creates a normal system notification.
 	 *    
 	 * @param context				Context.
 	 * @param notSound				Enable or disable the sound
@@ -1637,7 +1644,8 @@ public final class ToolBox {
 	 * 								default notification sound will be used. Set to -1 to 
 	 * 								default system notification.
 	 * @param multipleNot			Setting to True allows showing multiple notifications.
-	 * @param groupMultipleNotKey	If is set, multiple notifications can be grupped by this key.
+	 * @param groupMultipleNotKey	If is set, multiple notifications can be gruopped by 
+	 * 								this key.
 	 * @param notAction				Action for this notification
 	 * @param notTitle				Title
 	 * @param notMessage			Message. Received message could have non-latin characters so 
@@ -1645,7 +1653,9 @@ public final class ToolBox {
 	 * @param notClazz				Class to be executed
 	 * @param extras				Extra information
 	 * 
+	 * @deprecated Use {@link ToolBox#notification_create} instead.
 	 */
+	@Deprecated	
     public static void notification_generate(Context context, 
     		boolean notSound, int notSoundRawId, 
     		boolean multipleNot, String groupMultipleNotKey, 
@@ -1654,184 +1664,481 @@ public final class ToolBox {
     		Class<?> notClazz, Bundle extras,
     		boolean wakeUp) {
         
-		try {
-			int iconResId = notification_getApplicationIcon(context);			
-			long when = System.currentTimeMillis();
-	        
-			//Received message could have non-latin characters so it should be
-			//always received URLEncoded.
-			notMessage = URLDecoder.decode(notMessage, "UTF-8");
-			
-	        Notification notification = new Notification(iconResId, notMessage, when);
-	        
-	        // Hide the notification after its selected
-	        notification.flags |= Notification.FLAG_AUTO_CANCEL;  
-	        
-	        if(notSound){   
-	        	if(notSoundRawId>0 ){
-	        		try {					 
-	        			notification.sound = Uri.parse("android.resource://" + context.getApplicationContext().getPackageName() + "/" + notSoundRawId);
-	        		}catch(Exception e){
-	        			if(LOG_ENABLE){
-	        				Log.w(TAG, "Custom sound " + notSoundRawId + "could not be found. Using default.");
-	        			}
-	        			notification.defaults |= Notification.DEFAULT_SOUND;
-	        			notification.sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-	        		}
-	        	}else{
-	        		notification.defaults |= Notification.DEFAULT_SOUND;
-	        		notification.sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-	        	}
-	        }
-	        
-	        Intent notificationIntent = new Intent(context, notClazz);
-	        notificationIntent.setAction(notClazz.getName()+"."+notAction);
-	        if(extras!=null){
-	        	notificationIntent.putExtras(extras);
-	        }	        
-	       	        
-	        //Set intent so it does not start a new activity
-	        //
-	        //Notes:
-	        //	- The flag FLAG_ACTIVITY_SINGLE_TOP makes that only one instance of the activity exists(each time the
-	        //	   activity is summoned no onCreate() method is called instead, onNewIntent() is called.
-	        //  - If we use FLAG_ACTIVITY_CLEAR_TOP it will make that the last "snapshot"/TOP of the activity it will 
-	        //	  be this called this intent. We do not want this because the HOME button will call this "snapshot". 
-	        //	  To avoid this behaviour we use FLAG_ACTIVITY_BROUGHT_TO_FRONT that simply takes to foreground the 
-	        //	  activity.
-	        //
-	        //See http://developer.android.com/reference/android/content/Intent.html	        
-	        notificationIntent.setFlags(Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-	        
-	        
-	        PendingIntent intent = PendingIntent.getActivity(context, 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-	        
-	        int REQUEST_UNIQUE_ID = 0;
-	        if(multipleNot){
-	        	if(groupMultipleNotKey!=null && groupMultipleNotKey.length()>0){
-	        		REQUEST_UNIQUE_ID = groupMultipleNotKey.hashCode();
-	        	}else{
-	        		if(random==null){
-	        			random = new Random();
-	        		}
-	        		REQUEST_UNIQUE_ID = random.nextInt();
-	        	}
-	        	PendingIntent.getActivity(context, REQUEST_UNIQUE_ID , notificationIntent, PendingIntent.FLAG_ONE_SHOT);
-	        }
-	                        
-	        notification.setLatestEventInfo(context, notTitle, notMessage, intent);
-	        notification.tickerText = notTitle + " Notification";
-	        
-	        //This makes the device to wake-up is is idle with the screen off.
-	        if(wakeUp){
-	        	powersaving_wakeUp(context);
-	        }
-	        
-	        NotificationManager notificationManager = (NotificationManager)context.getSystemService(Context.NOTIFICATION_SERVICE);
-	        
-	        //We check if the sound is disabled to enable just for a moment
-	        AudioManager amanager = (AudioManager)context.getSystemService(Context.AUDIO_SERVICE);
-	        int previousAudioMode = amanager.getRingerMode();;
-	        if(notSound && previousAudioMode!=AudioManager.RINGER_MODE_NORMAL){	        	
-	        	amanager.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
-	        }
-	        
-	        notificationManager.notify(REQUEST_UNIQUE_ID, notification);
-	        
-	        //We restore the sound setting
-	        if(previousAudioMode!=AudioManager.RINGER_MODE_NORMAL){
-	        	//We wait a little so sound is played
-	        	try{
-		        	Thread.sleep(3000);
-		        }catch(Exception e){}		        
-	        }
-	        amanager.setRingerMode(previousAudioMode);
-			
-	        Log.d(TAG, "Android Notification created.");
-	        
-		} catch (Exception e) {
-			if(LOG_ENABLE)
-				Log.e(TAG, "The notification could not be created (" +e.getMessage() + ")", e);
-		}        
+		notification_create(context, 
+    			notSound, notSoundRawId, 
+    			false, multipleNot, groupMultipleNotKey, 
+    			notAction, notTitle, notMessage, 
+    			null, null, 
+    			null, notMessage, 
+    			null, null, 
+    			null, null, 
+    			notClazz, extras, wakeUp, 
+    			ToolBox.NOTIFICATION_PRIORITY.DEFAULT, 
+    			ToolBox.NOTIFICATION_STYLE.EXPANDABLE_BIG_TEXT_STYLE, 
+    			ToolBox.NOTIFICATION_LOCK_SCREEN_PRIVACY.PRIVATE, 
+    			null, 
+    			null, 
+    			null, 
+    			ToolBox.NOTIFICATION_PROGRESSBAR_STYLE.NONE, null, null,
+    			null);
+    	        
+    }
+
+    
+    /**
+     * In lock screen how notifications are show. For Android 5.0+ (API level 21+)<br><br><br>
+     * 
+     * The default level in Android is PRIVATE, behaves exactly as notifications 
+     * have always done on Android: The notification's icon and tickerText 
+     * (if available) are shown in all situations, but the contents are only 
+     * available if the device is unlocked for the appropriate user.<br><br>
+     *
+     * A more permissive policy can be expressed by PUBLIC; such a notification
+     * can be read even in an "insecure" context (that is, above a secure lockscreen).
+     * To modify the public version of this notification—for example, to redact 
+     * some portions—see {@link Builder#setPublicVersion(Notification)}.<br><br>
+     *
+     * Finally, a notification can be made SECRET, which will suppress its icon
+     * and ticker until the user has bypassed the lockscreen.
+     * 
+     */
+    public static enum NOTIFICATION_LOCK_SCREEN_PRIVACY {
+    	PUBLIC(1), PRIVATE(0), SECRET(-1);
+
+        private final int number;
+
+        private NOTIFICATION_LOCK_SCREEN_PRIVACY(int number) {
+            this.number = number;
+        }
+
+        public int getNumber() {
+            return number;
+        }
     }
     
-    public static void notification_generate(Context context, 
-    		boolean notSound, int notSoundRawId, 
-    		boolean multipleNot, String groupMultipleNotKey, 
-    		String notAction, 
-    		String notTitle, String notMessage, 
+    /**
+     * The notification priority.<br><br>
+     * 
+     * <i><code>HIGH</code>,<code>MAX</code> priorities:<br><br>
+     * The notification, with Android 5.0+ (API level 21+), if 
+     * using <code>HIGH, MAX</code> priority (with vibration or ringtone), 
+     * appears in a small floating window (also called a heads-up 
+     * notification) when the device is active (that is, the device 
+     * is unlocked and its screen is on). These notifications appear 
+     * similar to the compact form of your notification, except that 
+     * the heads-up notification also shows action buttons. Users can 
+     * act on, or dismiss, a heads-up notification without leaving 
+     * the current app</i>.
+     * 
+     */
+    public static enum NOTIFICATION_PRIORITY {
+    	DEFAULT(0), MIN(-2), LOW(-1), HIGH(1), MAX(2);
+
+        private final int number;
+
+        private NOTIFICATION_PRIORITY(int number) {
+            this.number = number;
+        }
+
+        public int getNumber() {
+            return number;
+        }
+    }
+    
+    /**
+     * Notification style types.<br><br>
+     * 
+     * Expandable ones are only supported in Android 4.1+<br><br>
+     * 
+     * See <a href="http://developer.android.com/reference/android/app/Notification.BigTextStyle.html">EXPANDABLE_BIG_TEXT_STYLE</a><br>
+     * See <a href="http://developer.android.com/reference/android/app/Notification.BigPictureStyle.html">EXPANDABLE_BIG_PICTURE_STYLE</a><br>
+     * See <a href="http://developer.android.com/reference/android/app/Notification.InboxStyle.html">EXPANDABLE_INBOX_STYLE</a><br><br>
+     * 
+     * For CUSTOM_STYLE, a RemoteViews object with a custom layout is required. See 
+     * <a href="http://developer.android.com/guide/topics/ui/notifiers/notifications.html#CustomNotification">CustomNotification</a>.
+     */
+    public static enum NOTIFICATION_STYLE {NORMAL_STYLE, EXPANDABLE_BIG_TEXT_STYLE, EXPANDABLE_BIG_PICTURE_STYLE, EXPANDABLE_INBOX_STYLE, CUSTOM_STYLE};
+  
+    /**
+     * A notification can have a progress bar, useful when notification has a
+     * process that is being done in background.
+     * 
+     */
+    public static enum NOTIFICATION_PROGRESSBAR_STYLE {NONE, DETERMINATE, INDETERMINATE};
+    
+    /**
+     * Creates and generates a new notification.<br><br>
+     * 
+     * See:<br><br>
+     * 							
+     * 	Notification:			http://developer.android.com/guide/topics/ui/notifiers/notifications.html<br>
+     * 							http://developer.android.com/design/patterns/notifications.html
+     * 							Previous to Android 5.0 https://stuff.mit.edu/afs/sipb/project/android/docs/guide/topics/ui/notifiers/notifications.html	
+     * 	Notification.Builder:	http://developer.android.com/reference/android/app/Notification.Builder.html<br>
+     * 	PendingIntent:			http://developer.android.com/reference/android/app/PendingIntent.html<br>
+     * 	Big View Styles: 		http://developer.android.com/training/notify-user/expanded.html<br>	
+     * 	
+     * @param context							The context of the notification.
+     * @param notSound							Set to TRUE to enable sound in the notification.
+     * @param notSoundRawId						Optional. Set one to use this sound instead the default one.
+     * @param forceSound						If enabled, sound is enabled avoiding any user setting. 
+     * @param multipleNot						Setting to True allows showing multiple notifications.
+	 * @param groupMultipleNotKey				If is set, multiple notifications can be grouped by this key.
+	 * @param notAction							Action for this notification
+     * @param notTitle							The title of the notification.
+     * @param notMessage						The message of the notification.
+     * @param notTicker							Optional. Text that appears for only a few seconds when notification 
+     * 											raises. (text which is sent to accessibility services). 
+     * @param notContentInfo					Optional. A small piece of additional information pertaining 
+     * 											to this notification. The platform template will draw this on 
+     * 											the last line of the notification, at the far right (to the 
+     * 											right of a smallIcon if it has been placed there).
+     * @param bigContentTitle					Optional. Android 4.1+. Overrides ContentTitle in the big form 
+     * 											of the template
+     * @param bigContentText					Optional. Android 4.1+. Overrides ContentMessage in the big form 
+     * 											of the template
+     * @param bigContentSummary					Optional. Android 4.1+. Adds a line at the bottom of the notification.
+     * @param bigContentImage					Optional. In BigPicture Expandable notification type. Android 4.1+.
+     * 											It is the image to show. Can be a drawable resourceId, an assets 
+     * 											resource file name or an URL to an image.
+     * @param bigStyleInboxContent				Optional. In InboxStyle Expandable notification type. It is the
+     * 											content of the notification for the expandable.
+     * @param bigStyleInboxSeparator			Optional. In InboxStyle Expandable notification type. It is the 
+     * 											separator of each line in the received message (notMessage)
+     * @param notClazz							Class to be executed
+	 * @param extras							Extra information to attach to the notification to be available
+	 * 											in the application or the destination intent class (notClazz). 
+     * @param wakeUp							Set to TRUE to wake-up the device when notification is received.
+     * @param notPriority						Optional. Select the desired notification priority. 
+     * 											See {@link NOTIFICATION_PRIORITY}
+     * @param notStyle							Select the notification style. See {@link NOTIFICATION_STYLE}
+     * @param notVisibility						Optional. The Default is PRIVATE. How and when the SystemUI reveals 
+     * 											the notification's presence and contents in untrusted situations 
+     * 											(namely, on the secure lockscreen). See {@link NOTIFICATION_LOCK_SCREEN_PRIVACY}
+     * @param largeIconResource					Optional. Set one to use a larger icon for the notification. Can be a 
+     * 											drawable resourceId, an assets/raw resource file name or an URL to an image.
+     * @param contentView						Optional. Avoid setting a background Drawable on your RemoteViews 
+     * 											object, because your text color may become unreadable. 
+     * 											See {@link RemoteViews} and How-To at 
+     * 											<a href="http://developer.android.com/guide/topics/ui/notifiers/notifications.html#CustomNotification">Information</a>
+     * @param notifyID							Optional. If set, this Id will be used instead a generated one.
+     * 											This is useful to reuse the notification in order to update the intent
+     * 											instead of generate a new one.
+     * @param progressBarStyle					Only for Android 4.0+ (API Level 14+). See {@link NOTIFICATION_PROGRESSBAR_STYLE}
+     * @param progressBarRunnable				If parameter <code>progressBarStyle</code> is other than <code>NONE</code>,
+     * 											this parameter is a {@link NotificationProgressBarRunnable} type. use it to do 
+     * 											some taks while notification progress bar is shown. 
+     * @param progressBarFinishText  			If parameter <code>progressBarStyle</code> is other than <code>NONE</code>, when
+     * 											tasks is finished, parameter <code>progressBarRunnable</code>, this text is shown
+     * 											in the notification.
+     * @param actions							Optional. For Android 4.1+ (API Level 16+). If set, such actions will be presented 
+     * 											in the notification. <b>Remember</b> that to close the notification after action is
+     * 											clicked, you should use the "notifyID" parameter and set it as an extra of your
+     * 											action to be able to close the notification from your application.
+     */
+    public static void notification_create(Context context,
+    		boolean notSound, Integer notSoundRawId, boolean forceSound,
+    		boolean multipleNot, String groupMultipleNotKey,
+    		String notAction,
+    		String notTitle, String notMessage,
+    		String notTicker, String notContentInfo,
+    		String bigContentTitle, String bigContentText, 
+    		String bigContentSummary,
+    		String bigContentImage, 
+    		String bigStyleInboxContent, String bigStyleInboxSeparator,
     		Class<?> notClazz, Bundle extras,
-    		boolean wakeUp, RemoteViews contentView) {
+    		boolean wakeUp,
+    		NOTIFICATION_PRIORITY notPriority,
+    		NOTIFICATION_STYLE notStyle,
+    		NOTIFICATION_LOCK_SCREEN_PRIVACY notVisibility,    		
+    		String largeIconResource,
+    		RemoteViews contentView,    		
+    		Integer notifyID,
+    		NOTIFICATION_PROGRESSBAR_STYLE progressBarStyle,
+    		NotificationProgressBarRunnable progressBarRunnable,
+    		String progressBarFinishText,
+    		List<Action> actions
+    		) {
     	
-    	try {
-			int iconResId = notification_getApplicationIcon(context);			
-			long when = System.currentTimeMillis();
+    	try{
+    		
+    		//1.- Prepare the intent that is launched by the notification
+    		//
+    		//This is the intent that runs in case the user clicks on the notification
+    		Intent notificationIntent = new Intent(context, notClazz);    		
+	        notificationIntent.setAction(notClazz.getName()+"."+notAction);
+	        //We save in the intent all the info received.
+	        if(extras!=null){
+	        	notificationIntent.putExtras(extras);
+	        }	        
+	       	 
+	        if(actions!=null && actions.size()>0) {
+	        	for(Action action:actions){
+	        		Set<String> aExtrasKeys = action.getExtras().keySet();
+	        		Object value;
+	        		for(String key:aExtrasKeys) {
+	        			value = action.getExtras().get(key);
+	        			//TODO Improve this.
+	        			if(value instanceof String){
+	        				if(!extras.containsKey(key))
+	        					extras.putString(key, (String)value);
+	        			}else if(value instanceof Integer){
+	        				if(!extras.containsKey(key))
+	        					extras.putInt(key, (Integer)value);
+	        			}else if(value instanceof Boolean){
+	        				if(!extras.containsKey(key))
+	        					extras.putBoolean(key, (Boolean)value);
+	        			}else if(value instanceof Character){
+	        				if(!extras.containsKey(key))
+	        					extras.putChar(key, (Character)value);
+	        			}else if(value instanceof CharSequence){
+	        				if(!extras.containsKey(key))
+	        					extras.putCharSequence(key, (CharSequence)value);
+	        			}else if(value instanceof Double){
+	        				if(!extras.containsKey(key))
+	        					extras.putDouble(key, (Double)value);
+	        			}else if(value instanceof Float){
+	        				if(!extras.containsKey(key))
+	        					extras.putFloat(key, (Float)value);
+	        			}else if(value instanceof Long){
+	        				if(!extras.containsKey(key))
+	        					extras.putLong(key, (Long)value);
+	        			}else if(value instanceof Serializable){
+	        				if(!extras.containsKey(key))
+	        					extras.putSerializable(key, (Serializable)value);
+	        			}else if(value instanceof Size){
+	        				/*TODO if(!extras.containsKey(key))
+	        					extras.putSize(key, (Size)value);*/
+	        			}else if(value instanceof Parcelable){
+	        				if(!extras.containsKey(key))
+	        					extras.putParcelable(key, (Parcelable)value);
+	        			}else if(value instanceof Byte){
+	        				if(!extras.containsKey(key))
+	        					extras.putByte(key, (Byte)value);
+	        			}else if(value instanceof String[]){
+	        				if(!extras.containsKey(key))
+	        					extras.putStringArray(key, (String[])value);
+	        			}else if(value instanceof byte[]){
+	        				if(!extras.containsKey(key))
+	        					extras.putByteArray(key, (byte[])value);
+	        			}
+	        		}					
+				}
+	        	notificationIntent.putExtras(extras);
+	        }
+	        
+	        //Set intent so it does not start a new activity
+	        //
+	        //Notes:
+	        //	- The flag FLAG_ACTIVITY_SINGLE_TOP makes that only one instance of the activity exists 
+	        //	  (each time the activity is summoned, instead onCreate(), a call to  onNewIntent() is made.
+	        //  - If we use FLAG_ACTIVITY_CLEAR_TOP, it will make that the last "snapshot"/TOP of the activity
+	        //	  be called. We do not want this because the HOME button will call this "snapshot". 
+	        //	  To avoid this behavior we use FLAG_ACTIVITY_BROUGHT_TO_FRONT that simply takes to 
+	        //	  foreground the activity.
+	        //
+	        //See http://developer.android.com/reference/android/content/Intent.html	        
+	        notificationIntent.setFlags(Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT 
+	        							| Intent.FLAG_ACTIVITY_SINGLE_TOP 
+	        							| Intent.FLAG_ACTIVITY_CLEAR_TOP);
+	        
+		    // This ensures that the back button follows the recommended
+		    // convention for the back key.
+		    TaskStackBuilder stackBuilder = TaskStackBuilder.create(context);		      
+		    // Adds the back stack for the Intent (but not the Intent itself)
+		    stackBuilder.addParentStack(notClazz);		      
+		    // Adds the Intent that starts the Activity to the top of the stack
+		    stackBuilder.addNextIntent(notificationIntent);
+	        		    
+	        int REQUEST_UNIQUE_ID = 0;
+	        if(notifyID!=null) {
+	        	//User specified a custom notification id so we use it
+	        	REQUEST_UNIQUE_ID = notifyID.intValue();
+	        }else{
+	        	if(multipleNot){
+	        		//user wants multiple notifications in the system tray.
+	        		if(groupMultipleNotKey!=null && groupMultipleNotKey.length()>0){
+	        			//We set specified custom collapse_key. This means that all 
+	        			//notifications will be collapsed in one, the most recent one.
+			       		REQUEST_UNIQUE_ID = groupMultipleNotKey.hashCode();
+			       	}else{
+			       		//We generate a new ID so this notification with no collapse key
+			       		//will produce a new notification in the system try.
+			       		if(random==null){
+		        			random = new Random();
+		        		}
+		        		REQUEST_UNIQUE_ID = random.nextInt();
+			       	}
+	        	}else{
+	        		//We use default, 0, value for all multiple notifications.	        		
+	        	}
+	        }
+	        
+	        PendingIntent intent = PendingIntent.getActivity(context, REQUEST_UNIQUE_ID, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+	        
+	        
+	        //2.- Prepare the notification
+	        //
+    		//Get the application icon.
+
+	        /** 
+	         * Since Android 5.0+ notification icons must follow a design
+	         * guidelines to be showed correctly.
+	         * 
+	         * See: http://developer.android.com/design/style/iconography.html#notification 
+	         **/
+	    	int iconResId = notification_getApplicationIcon(context);
+	    	long when = System.currentTimeMillis();
 	        
 			//Received message could have non-latin characters so it should be
 			//always received URLEncoded.
 			notMessage = URLDecoder.decode(notMessage, "UTF-8");
+	    	
+			// Create the notification
+			NotificationCompat.Builder notifyBuilder = new NotificationCompat.Builder(context);
+			notifyBuilder.setWhen(when);
+			notifyBuilder.setSmallIcon(iconResId);
+			notifyBuilder.setAutoCancel(true); //Make this notification automatically dismissed when the user touches it.
+			if(notTicker!=null) {
+				notifyBuilder.setTicker(notTicker); //Text that appears for only a few seconds when notification raises.
+			}
+			if(notContentInfo!=null){
+				notifyBuilder.setContentInfo(notContentInfo); //Text (auxiliar) that appears to the right.
+			}			
+			if(largeIconResource!=null) {
+				Bitmap bIconLarge = media_getBitmap(context, largeIconResource);
+				if(bIconLarge!=null) {
+					notifyBuilder.setLargeIcon(bIconLarge);
+					
+					//In this case, in Android 5.0+, the application icon is 
+					//show in the bottom right of the large icon and should be
+					//one flat notification icon following:
+					//http://developer.android.com/design/style/iconography.html#notification
+					
+				}
+			}			
+			//Lock Screen Notifications, Android 5.0+ (API level 21+)
+	    	if(notVisibility!=null) {
+	    		notifyBuilder.setVisibility(notVisibility.getNumber());
+	    	}
+	    	//Priority of the notification
+			if(notPriority!=null) {
+				notifyBuilder.setPriority(notPriority.getNumber());
+			}else{
+				notifyBuilder.setPriority(NOTIFICATION_PRIORITY.DEFAULT.getNumber());
+			}
+			//Set the specified actions to the notification.
+			if(actions!=null && actions.size()>0){
+				for(Action action:actions){
+					notifyBuilder.addAction(action);
+				}
+			}
 			
-	        Notification notification = new Notification(iconResId, notMessage, when);
-	        
-	        // Hide the notification after its selected
-	        notification.flags |= Notification.FLAG_AUTO_CANCEL;  
-	        
-	        if(notSound){   
-	        	if(notSoundRawId>0 ){
-	        		try {					 
-	        			notification.sound = Uri.parse("android.resource://" + context.getApplicationContext().getPackageName() + "/" + notSoundRawId);
+			//Set the notification pending intent.
+			notifyBuilder.setContentIntent(intent);
+			
+			//Set the notification sound
+			notifyBuilder.setSound(Settings.System.DEFAULT_NOTIFICATION_URI);
+			if(notSound){
+	        	if(notSoundRawId!=null && notSoundRawId.intValue()>0){
+	        		try {
+	        			//We try to use the specified notification sound
+	        			notifyBuilder.setSound(Uri.parse("android.resource://" + context.getApplicationContext().getPackageName() + "/" + notSoundRawId.intValue()));
 	        		}catch(Exception e){
 	        			if(LOG_ENABLE){
-	        				Log.w(TAG, "Custom sound " + notSoundRawId + "could not be found. Using default.");
+	        				Log.w(TAG, "Custom sound " + notSoundRawId.intValue() + "could not be found. Using default.");
 	        			}
-	        			notification.defaults |= Notification.DEFAULT_SOUND;
-	        			notification.sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
 	        		}
-	        	}else{
-	        		notification.defaults |= Notification.DEFAULT_SOUND;
-	        		notification.sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
 	        	}
 	        }
-	        
-	        Intent notificationIntent = new Intent(context, notClazz);
-	        notificationIntent.setAction(notClazz.getName()+"."+notAction);
-	        if(extras!=null){
-	        	notificationIntent.putExtras(extras);
-	        }	        
-	       	        
-	        //Set intent so it does not start a new activity
-	        //
-	        //Notes:
-	        //	- The flag FLAG_ACTIVITY_SINGLE_TOP makes that only one instance of the activity exists(each time the
-	        //	   activity is summoned no onCreate() method is called instead, onNewIntent() is called.
-	        //  - If we use FLAG_ACTIVITY_CLEAR_TOP it will make that the last "snapshot"/TOP of the activity it will 
-	        //	  be this called this intent. We do not want this because the HOME button will call this "snapshot". 
-	        //	  To avoid this behaviour we use FLAG_ACTIVITY_BROUGHT_TO_FRONT that simply takes to foreground the 
-	        //	  activity.
-	        //
-	        //See http://developer.android.com/reference/android/content/Intent.html	        
-	        notificationIntent.setFlags(Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-	        
-	        
-	        PendingIntent intent = PendingIntent.getActivity(context, 0, notificationIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-	        
-	        int REQUEST_UNIQUE_ID = 0;
-	        if(multipleNot){
-	        	if(groupMultipleNotKey!=null && groupMultipleNotKey.length()>0){
-	        		REQUEST_UNIQUE_ID = groupMultipleNotKey.hashCode();
-	        	}else{
-	        		if(random==null){
-	        			random = new Random();
-	        		}
-	        		REQUEST_UNIQUE_ID = random.nextInt();
-	        	}
-	        	PendingIntent.getActivity(context, REQUEST_UNIQUE_ID , notificationIntent, PendingIntent.FLAG_ONE_SHOT);
-	        }
-	                        
-	        //notification.setLatestEventInfo(context, notTitle, notMessage, intent);
-	        notification.tickerText = notTitle + " Notification";
-	        
-	        //This makes the device to wake-up is is idle with the screen off.
+			
+			//Conform the Notification style
+			//			
+			String bContentTitle = notTitle;
+			String bContentSummary = notMessage;
+			if(bigContentTitle!=null){
+				bContentTitle = bigContentTitle; 
+			}
+			if(bigContentSummary!=null){
+				bContentSummary = bigContentSummary; 
+			}
+			notifyBuilder.setContentTitle(notTitle);
+    	    notifyBuilder.setContentText(Html.fromHtml((notMessage!=null?notMessage:"")));
+			
+			//Custom notification layout
+	    	//
+	    	//The height available for a custom notification layout depends on the 
+	    	//notification view:
+	    	// - Normal view layouts are limited to 64 dp.
+	    	// - Expanded view layouts are limited to 256 dp.
+			if(notStyle==NOTIFICATION_STYLE.CUSTOM_STYLE) {
+				if(contentView!=null) {				
+					notifyBuilder.setContent(contentView);					
+				}
+			}else if(notStyle==NOTIFICATION_STYLE.EXPANDABLE_BIG_PICTURE_STYLE) {
+				Bitmap bContentImage = media_getBitmap(context, bigContentImage);
+				
+				notifyBuilder.setStyle(
+						new NotificationCompat.BigPictureStyle()
+							.setBigContentTitle(bContentTitle)
+							.setSummaryText(bContentSummary)
+							.bigPicture((bContentImage!=null?bContentImage:null)) // Add the big picture to the style.
+				);
+				
+			}else if(notStyle==NOTIFICATION_STYLE.EXPANDABLE_BIG_TEXT_STYLE) {
+				String bsContentText = "";
+				String nShortMessage = (notMessage!=null?notMessage:"");
+				if(bigContentText!=null && bigContentText.length()>0){
+					bsContentText = bigContentText;
+				}else{
+					bsContentText = notMessage;
+					/*if(notMessage!=null && notMessage.length()>12) {
+						nShortMessage = notMessage.substring(0, 12) + "...";
+					}*/
+				}
+				
+				notifyBuilder.setStyle(
+						new NotificationCompat.BigTextStyle()						
+							.setBigContentTitle(bContentTitle)
+							.setSummaryText(bContentSummary)
+							.bigText(Html.fromHtml(bsContentText))
+						);
+				
+				notifyBuilder.setContentText(Html.fromHtml(nShortMessage));
+				
+			}else if(notStyle==NOTIFICATION_STYLE.EXPANDABLE_INBOX_STYLE){
+				//Prepare the style
+				NotificationCompat.InboxStyle iStyle = new NotificationCompat.InboxStyle();					
+				iStyle.setBigContentTitle(bContentTitle);
+				iStyle.setSummaryText(bContentSummary);
+				
+				//Now we try to get lines for the style. Each line should be separated 
+				//in the message string by some separation character.
+				int nLines = 1;
+				if(bigStyleInboxSeparator!=null && bigStyleInboxContent!=null && 
+						bigStyleInboxContent.length()>0) {
+					//Prepare all lines from the received message.
+					String[] lines = bigStyleInboxContent.split(bigStyleInboxSeparator);
+					nLines = lines.length;
+					for(String line:lines) {
+						iStyle.addLine(Html.fromHtml(line));
+					}
+				}else{
+					//No separator character found so we show all the message in one
+					//single line.
+					iStyle.addLine(notMessage);
+				}
+				
+				notifyBuilder.setStyle(iStyle);
+				//To show the number of lines
+				notifyBuilder.setNumber(nLines);				
+				
+			}else if(notStyle==NOTIFICATION_STYLE.NORMAL_STYLE){
+				//Some other initializations
+			}
+			
+			
+			//This makes the device to wake-up is is idle with the screen off.
 	        if(wakeUp){
 	        	powersaving_wakeUp(context);
 	        }
@@ -1840,37 +2147,139 @@ public final class ToolBox {
 	        
 	        //We check if the sound is disabled to enable just for a moment
 	        AudioManager amanager = (AudioManager)context.getSystemService(Context.AUDIO_SERVICE);
-	        int previousAudioMode = amanager.getRingerMode();;
-	        if(notSound && previousAudioMode!=AudioManager.RINGER_MODE_NORMAL){	        	
-	        	amanager.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
+	        int previousAudioMode = amanager.getRingerMode();
+	        if(forceSound) {
+		        if(notSound && previousAudioMode!=AudioManager.RINGER_MODE_NORMAL){	        	
+		        	amanager.setRingerMode(AudioManager.RINGER_MODE_NORMAL);
+		        }
 	        }
 	        
-	        //For custom notification Layout
-	        if(contentView!=null) {
-	        	notification.contentView = contentView;	        	
+	        if(progressBarStyle!=null && 
+	        		progressBarRunnable!=null && 
+	        		(progressBarRunnable instanceof NotificationProgressBarRunnable)) {
+	        	
+	        	switch (progressBarStyle) {
+					case DETERMINATE:
+						progressBarRunnable.initialize(notificationManager, notifyBuilder, 
+			        			REQUEST_UNIQUE_ID, false, progressBarFinishText);						
+						progressBarRunnable.run();
+						break;
+					case INDETERMINATE:
+						progressBarRunnable.initialize(notificationManager, notifyBuilder, 
+			        			REQUEST_UNIQUE_ID, true, progressBarFinishText);
+						progressBarRunnable.run();
+						break;
+					case NONE:
+						//Show the notification to the user.
+				        //(Sets an ID for the notification, so it can be updated)
+				        notificationManager.notify(REQUEST_UNIQUE_ID, notifyBuilder.build());
+				}
+	        }else{
+	        	//Show the notification to the user.
+		        //(Sets an ID for the notification, so it can be updated)
+		        notificationManager.notify(REQUEST_UNIQUE_ID, notifyBuilder.build());
 	        }
-	        
-	        notificationManager.notify(REQUEST_UNIQUE_ID, notification);
 	        
 	        //We restore the sound setting
-	        if(previousAudioMode!=AudioManager.RINGER_MODE_NORMAL){
-	        	//We wait a little so sound is played
-	        	try{
-		        	Thread.sleep(3000);
-		        }catch(Exception e){}		        
+	        if(forceSound) {
+		        if(previousAudioMode!=AudioManager.RINGER_MODE_NORMAL){
+		        	//We wait a little so sound is played
+		        	try{
+			        	Thread.sleep(3000);
+			        }catch(Exception e){}		        
+		        }
+		        amanager.setRingerMode(previousAudioMode);
 	        }
-	        amanager.setRingerMode(previousAudioMode);
 			
 	        Log.d(TAG, "Android Notification created.");
 	        
-		} catch (Exception e) {
-			if(LOG_ENABLE)
+    	}catch(Exception e) {
+    		if(LOG_ENABLE)
 				Log.e(TAG, "The notification could not be created (" +e.getMessage() + ")", e);
-		}
+    	}
+    }
+    
+    /**
+     * This class is intented to show a progress bar in a notification 
+     * , with {@link ToolBox#notification_create} method, while doing some 
+     * tasks. When finished, progress bar ends an notification can be 
+     * then discarded when opened or clicked.
+     * 
+     * <ul>
+     * <li>Overwrite <code>doTask()</code> with your task code.</li>
+     * <li>Use <code>notify(int progress)</code> to notify your progress.</li>
+     * <li>Use <code>notifyFinish(String message)</code> when your process 
+     * finishes to end progress bar. <i>The "message" parameter can be null, 
+     * in this case, the parameter of notification creation will be used</i>.</li>
+     * </ul>
+     * 
+     */
+    public static abstract class NotificationProgressBarRunnable implements Runnable {
+    	
+    	private NotificationManager notificationManager = null;
+    	private NotificationCompat.Builder notificationBuilder = null;
+    	private boolean indeterminate = false;
+    	protected String finalizationText = null;
+    	private int notificationId = 0;
+    	protected int pBarProgress = 0;
+    	
+    	public void initialize(NotificationManager notificationManager, 
+    			NotificationCompat.Builder notificationBuilder,
+    			int notificationId, boolean indeterminate, 
+    			String finalizationText) {
+    		this.notificationManager = notificationManager;
+    		this.notificationBuilder = notificationBuilder;    		
+    		this.notificationId = notificationId;
+    		this.indeterminate = indeterminate;
+    		this.finalizationText = 
+    				(finalizationText!=null && finalizationText.length()>0?finalizationText:"Done");
+    		
+    		//This avoids the notification to be discarded 
+    		this.notificationBuilder.setOngoing(true);
+    	}
+    	
+    	@Override
+        public void run() {
+    		notify(0);
+    		doTask();    		
+    	}
+    	
+    	protected void notify(int pBarProgress) {
+    		//We ensure max i always 100.
+    		if(pBarProgress>100)
+    			pBarProgress = 100;
+    		
+    		if(!indeterminate) 
+    			notificationBuilder.setProgress(100, pBarProgress, false);
+    		else
+    			notificationBuilder.setProgress(0, 0, true);
+    		    		
+            notificationManager.notify(notificationId, notificationBuilder.build());
+            notificationBuilder.setSound(null);
+    	}
+    	
+    	protected void notifyFinish(String finalizationMessage) {
+    		//When the task is finished, update the notification.
+            if(finalizationMessage==null || 
+            		(finalizationMessage!=null && finalizationMessage.length()==0)){
+            	if(finalizationText!=null && finalizationText.length()>0){
+            		notificationBuilder.setContentText(finalizationText);
+            	}
+            }else{
+            	notificationBuilder.setContentText(finalizationMessage);
+            }
+    		
+            //Removes the progress bar
+            notificationBuilder.setProgress(0,0,false);
+            notificationBuilder.setOngoing(false);
+            notificationManager.notify(notificationId, notificationBuilder.build());
+    	}
+    	
+    	
+    	protected abstract void doTask();    	
     	
     }
     		
-    
     
     /*
      * Gets the application Icon.
@@ -2100,6 +2509,13 @@ public final class ToolBox {
 	
 	// Storage Related -----------------------------------------------------------------------------------------------------------------------------
 	
+	/**
+	 * Gets bytes from a resource located in the "assets" folder.
+	 * 
+	 * @param context
+	 * @param fileName	The file name of the resource.
+	 * @return
+	 */
 	public static byte[] storage_readAssetResource(Context context, String fileName){
 		
 		 try{
@@ -2121,7 +2537,14 @@ public final class ToolBox {
 		 }
 	}
 	
-	 public static byte[] storage_readRawResource(Context context, String fileName){
+	/**
+	 * Gets bytes from a resource located in the "raw" folder.
+	 * 
+	 * @param context
+	 * @param fileName	The file name of the resource.
+	 * @return
+	 */
+	public static byte[] storage_readRawResource(Context context, String fileName){
 		 int resId = context.getResources().getIdentifier(fileName,"raw", context.getPackageName());
 		 
 		 try{
@@ -3035,7 +3458,7 @@ public final class ToolBox {
 	}
 	
 	/**
-	 * Converts an image file to Base64 string.
+	 * Converts an image file from Assets folder to Base64 string.
 	 *  
 	 * @param pathToFile
 	 * @return
@@ -3047,6 +3470,207 @@ public final class ToolBox {
 		encodedImage = Base64.encodeToString(b, false);
 		
 		return encodedImage; 
+	}
+	
+	
+	/**
+	 * Gets a Bitmap from a file in the asset folder.<br><br>
+	 * 
+	 * NOTE:<br>
+	 * When decoding Bitmap we more often get memory overflow exceptions 
+	 * if Image size is very big. This method of loading a bitmap avoids
+	 * these kind of exceptions.
+	 * 
+	 * @param context
+	 * @param fileName	The file to load
+	 * @param reqWidth	The desired bitmap width
+	 * @param reqHeight	The desired bitmap heigh
+	 * @return	The {@link Bitmap} or {@code null} if failed to decode the file.
+	 */
+	public static Bitmap media_getBitmapFromAsset(Context context, String fileName, int reqWidth, int reqHeight){
+		InputStream is = null;
+	    Bitmap bitmap = null;
+	    try {
+	        is = context.getAssets().open(fileName);
+	        
+	        BitmapFactory.Options options = new BitmapFactory.Options();
+	        options.inJustDecodeBounds = true;	        
+	        BitmapFactory.decodeStream(is, null, options);
+	        
+	        // Calculate inSampleSize
+	        options.inSampleSize = bitmapCalculateInSampleSize(options, reqWidth, reqHeight);
+	        
+	        // Decode bitmap with inSampleSize set
+	        options.inJustDecodeBounds = false;
+	        bitmap = BitmapFactory.decodeStream(is, null, options);
+	        
+	    } catch (final IOException e) {
+	        bitmap = null;
+	    } finally {
+	        if (is != null) {
+	            try {
+	                is.close();
+	            } catch (IOException ignored) {
+	            }
+	        }
+	    }
+	    return bitmap;
+	}
+	
+	/**
+	 * This method obtains a Bitmao object for the specified resource where
+	 * resource can be a drawable resource Id, an assets/raw folder file name or 
+	 * an URL.<br><br>
+	 * 
+	 * The order of load is:<br>
+	 *		DRAWABLE -> ASSETS -> RAW -> URL
+	 *	
+	 * @param context
+	 * @param resource	A drawable resource Id, an assets folder file name or 
+	 * 					an URL
+	 * @return
+	 */
+	public static Bitmap media_getBitmap(Context context, String resource) {
+		Bitmap bResource = null;
+		
+		//First we try to get the image from the drawable resources
+		try{
+			int imgResourceId = Integer.decode(resource);
+			bResource = media_getBitmapFromResourceId(context, imgResourceId);
+		}catch(Exception e){}
+		
+		//If no drawable found, we try with assets folder
+		if(bResource==null){					
+			bResource = media_getBitmapFromAsset(context, resource);
+		}	
+		
+		//If no drawable found, we try with raw folder
+		if(bResource==null){					
+			bResource = media_getBitmapFromRaw(context, resource);
+		}
+				
+		//If no raw found, we try download the image
+		if(bResource==null && resource.startsWith("http")){
+			try{
+				bResource = media_getBitmapFromURL(context, resource);
+			}catch(Exception e){}
+		}
+		
+		return bResource;
+	}
+	
+	
+	/**
+	 * Gets an Image as drawable from the Raw folder.
+	 *   
+	 * @param context
+	 * @param fileName
+	 * @return
+	 */
+	public static Drawable media_getDrawableFromRaw(Context context, String fileName){
+		Drawable image = null;
+		InputStream in = null;
+		int resId = context.getResources().getIdentifier(fileName,"raw", context.getPackageName());
+		try{
+			in = context.getResources().openRawResource(resId);
+			image = Drawable.createFromStream(in, fileName);			
+		}catch (Exception e){
+			if(LOG_ENABLE)
+				Log.e("TollBox_ERROR","media_getDrawableFromRaw() Error obtaining raw data: " + e.getMessage(),e);
+			image = null;
+		}finally {
+			if (in != null) {
+			 		try {
+		            	in.close();
+		            } catch (IOException ignored) {
+		        }
+		     }
+		 }
+		
+		return image;
+	 }
+	 
+	
+	/**
+	 * Gets an Image as bitmap from the Raw folder.
+	 * 
+	 * @param context
+	 * @param fileName
+	 * @return
+	 */
+	 public static Bitmap media_getBitmapFromRaw(Context context, String fileName){
+		 
+		 Bitmap image = null;
+		 InputStream in = null;
+		 BufferedInputStream inBuff = null;
+		 int resId = context.getResources().getIdentifier(fileName,"raw", context.getPackageName());
+		 try{
+			 in = context.getResources().openRawResource(resId);			 
+			 inBuff = new BufferedInputStream(in);
+			 image = BitmapFactory.decodeStream(inBuff);
+			 
+		 }catch (Exception e){
+			 image = null;
+			 if(LOG_ENABLE)
+				 Log.e("TollBox_ERROR","media_getDrawableFromRaw() Error obtaining raw data: " + e.getMessage(),e);   
+		     
+		 }finally {
+			if (in != null) {
+				try{
+            		inBuff.close();
+            	}catch (IOException ignored) {}
+		 		try{
+	            	in.close();
+	            }catch (IOException ignored) {}
+		    }
+		 }
+		 
+		 return image;
+	 }
+	
+	
+	/**
+	 * Gets a Bitmap from a file in the asset folder.
+	 * 
+	 * @param context
+	 * @param fileName
+	 * @return	The {@link Bitmap} or {@code null} if failed to decode the file.
+	 */
+	public static Bitmap media_getBitmapFromAsset(Context context, String fileName){
+		InputStream is = null;
+	    Bitmap bitmap = null;
+	    try {
+	        is = context.getAssets().open(fileName);
+	        bitmap = BitmapFactory.decodeStream(is);
+	    } catch (final IOException e) {
+	        bitmap = null;
+	    } finally {
+	        if (is != null) {
+	            try {
+	                is.close();
+	            } catch (IOException ignored) {
+	            }
+	        }
+	    }
+	    return bitmap;
+	}
+	
+	private static int bitmapCalculateInSampleSize(
+            BitmapFactory.Options options, int reqWidth, int reqHeight) {
+	    
+		// Raw height and width of image
+	    final int height = options.outHeight;
+	    final int width = options.outWidth;
+	    int inSampleSize = 1;
+	
+	    if (height > reqHeight || width > reqWidth) {
+	        if (width > height) {
+	            inSampleSize = Math.round((float)height / (float)reqHeight);
+	        } else {
+	            inSampleSize = Math.round((float)width / (float)reqWidth);
+	        }
+	    }
+	    return inSampleSize;
 	}
 	
 	/**
@@ -3065,11 +3689,13 @@ public final class ToolBox {
     	
     	//I creates the names of the images by the hashcode of its url
     	String filename=String.valueOf(urlImage.hashCode());
-        File f=new File(storageDir, filename);
-        
+    	File f= null;
+    	
         try {
         	//First, try to load then from the cache SD dir        
             if(cacheExists){
+            	f=new File(storageDir, filename);
+            	
             	Bitmap b = media_getBitmapFromFile(f);
     	        if(b!=null)
     	            return b;
@@ -3105,6 +3731,38 @@ public final class ToolBox {
         return res;
     }
 
+    /**
+     * returns the Bitmap of a specified image resource id.
+     * 
+     * @param context
+     * @param resourceId
+     * @return
+     * @throws Exception
+     */
+    public static Bitmap media_getBitmapFromResourceId(Context context, int resourceId) throws Exception{
+    	return BitmapFactory.decodeResource(context.getResources(), resourceId);
+    }
+    
+    /**
+     * Returns a Bitmap from an URL.
+     * 
+     * @param context
+     * @param url
+     * @return
+     * @throws Exception
+     */
+    public static Bitmap media_getBitmapFromURL(Context context, String url) throws Exception{
+    	Bitmap res = null;
+    	try {
+    		res = BitmapFactory.decodeStream((InputStream) new URL(url).getContent());
+    	} catch (IOException e) {
+    		if(LOG_ENABLE)
+        		Log.e(TAG,"media_getBitmapFromURL(): "+e.getMessage(),e);
+    	}
+    	
+    	return res;
+    }    
+    
     /**
      * Decodes the specified image from the storage, scales it to reduce memory consumption
      * and returning as a Bitmap object.
