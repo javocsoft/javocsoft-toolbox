@@ -195,6 +195,9 @@ public final class ToolBox {
 	private static final int CONNECTION_DEFAULT_DATA_RECEIVAL_TIMEOUT = 10000; // 10 sgs.
 	
 	private static final int HTTP_CACHE_SIZE = 10 * 1024 * 1024; // 10 MiB
+
+	/** A field name to use with notification Id. */
+	public static final String NOTIFICATION_ID = "notificationId";
 	
 	public static final String NETWORK_OPERATOR_EMU = "Android";
 	public static final String NETWORK_OPERATOR_NOSIM = "NO_SIM";
@@ -1771,12 +1774,16 @@ public final class ToolBox {
      * 
      * See:<br><br>
      * 							
-     * 	Notification:			http://developer.android.com/guide/topics/ui/notifiers/notifications.html<br>
-     * 							http://developer.android.com/design/patterns/notifications.html
+     * 	Notification:			http://developer.android.com/design/patterns/notifications.html<br>
+     * 							http://developer.android.com/guide/topics/ui/notifiers/notifications.html<br> 									
      * 							Previous to Android 5.0 https://stuff.mit.edu/afs/sipb/project/android/docs/guide/topics/ui/notifiers/notifications.html	
      * 	Notification.Builder:	http://developer.android.com/reference/android/app/Notification.Builder.html<br>
      * 	PendingIntent:			http://developer.android.com/reference/android/app/PendingIntent.html<br>
      * 	Big View Styles: 		http://developer.android.com/training/notify-user/expanded.html<br>	
+     * 							http://developer.android.com/reference/android/app/Notification.BigTextStyle.html<br>
+     * 							http://developer.android.com/reference/android/app/Notification.InboxStyle.html<br>
+     * 							http://developer.android.com/reference/android/support/v4/app/NotificationCompat.InboxStyle.html<br>
+     *  Iconografy				http://developer.android.com/design/style/iconography.html#notification
      * 	
      * @param context							The context of the notification.
      * @param notSound							Set to TRUE to enable sound in the notification.
@@ -2300,7 +2307,41 @@ public final class ToolBox {
 			throw e;
 		}
     }
-	 
+	
+    /**
+	 * Creates an action for a notification. Only for Android 4.1 (API level 16+)
+	 * <br><br>
+	 * The generated Action also has a field {@link ToolBox#NOTIFICATION_ID} in its extra
+	 * Bundle for afterwards being able to cancel the parent notification once the
+	 * action is consumed.
+	 * 
+	 * @param iconId
+	 * @param title
+	 * @param actionIntent		
+	 * @param notificationId	Used to be able to cancel a notification once
+	 * 							the action is consumed.
+	 * @return
+	 */
+	public static Action notification_createAction(int iconId, String title, PendingIntent actionIntent, int notificationId) {
+		Action action = new Action(iconId, title, actionIntent);
+		action.getExtras().putInt(NOTIFICATION_ID, notificationId);
+		
+		return action;
+	}
+	
+	/**
+	 * This method dismisses a notification from the status bar.
+	 * 
+	 * @param context
+	 * @param notificationId	The notification id to cancel.
+	 */
+	public static void notification_cancel(Context context, int notificationId) {
+		if(notificationId!=0) {
+			NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);		
+			manager.cancel(notificationId);
+		}
+	}
+    
 	
     // Power saving ----------------------------------------------------------------------------------------------------------------------------
     
@@ -3292,7 +3333,103 @@ public final class ToolBox {
 		}
 		return i;
 	} 
-	 
+	
+	//--------------- (PENDING) INTENTS ---------------------------------------------------------------------
+	
+	/**
+	 * Creates a new intent for a Broadcast.
+	 *  
+	 * @param context
+	 * @param action	Required.	
+	 * @param bundle	Any additional information to get in the service.
+	 * @return
+	 */
+	public static Intent intent_toBroadcast(Context context, String action, Bundle bundle) {
+		
+		Intent intent = new Intent();
+		if(action!=null)
+			intent.setAction(action);
+		if(bundle!=null)
+			intent.putExtras(bundle);
+		
+		return intent;
+	}
+	
+	/**
+	 * Creates a new intent for a Service.
+	 * 
+	 * @param context
+	 * @param serviceClass	Required.
+	 * @param action		Optional.
+	 * @param bundle		Any additional information to get in the service.
+	 * @return
+	 */
+	public static Intent intent_toService(Context context, @SuppressWarnings("rawtypes") Class serviceClass, String action, Bundle bundle) {
+		
+		Intent intent = new Intent(context, serviceClass);
+		if(action!=null)
+			intent.setAction(action);
+		if(bundle!=null)
+			intent.putExtras(bundle);
+		
+		return intent;
+	}
+	
+	/**
+	 * Creates a new intent to open an application.
+	 * 
+	 * @param context
+	 * @param appPackage	Required. The application, package, to launch.
+	 * @param bundle		Any additional information to get in the service.
+	 * @return	The intent or null if the application does not exists.
+	 */
+	public static Intent intent_openApp(Context context, String appPackage, Bundle bundle) {
+		
+		PackageManager manager = context.getPackageManager();
+        Intent intent = manager.getLaunchIntentForPackage(appPackage);
+        intent.addCategory(Intent.CATEGORY_LAUNCHER);
+        if(bundle!=null)
+        	intent.putExtras(bundle);
+        
+		return intent;
+	}
+	
+	/**
+	 * Creates a new intent to open an URL in the default browser.
+	 * 
+	 * @param url	The URL
+	 * @return
+	 */
+	public static Intent intent_openURL(String url) {
+		Intent intent = null;
+		
+		if(url!=null){
+			intent = new Intent(Intent.ACTION_VIEW);
+			intent.setData(Uri.parse(url));
+		}
+		
+		return intent;
+	}
+	
+	/**
+	 * Gets a pending intent.
+	 * 
+	 * @param context	
+	 * @param intent
+	 * @param flags		If not set, default {@link PendingIntent#FLAG_UPDATE_CURRENT}.
+	 * @return
+	 */
+	public static PendingIntent pendingIntent_getForIntent(Context context, Intent intent, int flags) {
+		
+		if(random==null)
+			random = new Random();		
+		if(flags==0)
+			flags = PendingIntent.FLAG_UPDATE_CURRENT;
+		
+		return PendingIntent.getActivity(context, random.nextInt(), intent, flags);		
+	}
+	
+	
 	//--------------- SCREEN ----------------------------------------------------------------------------
 	 
 	/**
