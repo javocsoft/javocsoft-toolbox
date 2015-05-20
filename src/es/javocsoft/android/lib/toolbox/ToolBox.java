@@ -80,6 +80,7 @@ import org.apache.http.protocol.HTTP;
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.Activity;
+import android.app.ActivityManager;
 import android.app.AlertDialog;
 import android.app.Application;
 import android.app.Dialog;
@@ -125,6 +126,7 @@ import android.media.RingtoneManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
+import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -1162,6 +1164,101 @@ public final class ToolBox {
 	    }
 		
 		return appSignatures;
+	}
+	
+	
+	/**
+	 * Returns an application package by its UID value.<br><br>
+	 * 
+	 * @param context	
+	 * @param uid	The application UID (<i>In a service, use {@link Binder#getCallingUid()}  
+	 * 				inside the service Binder object to get the UID parameter. If used 
+	 * 				outside of the binder object, it will always return the application 
+	 * 				itself, not the calling application</i>).
+	 * @return
+	 */
+	public static String application_getPackageByUID(Context context, int uid) {
+		return context.getPackageManager().getNameForUid(uid);
+	}
+	
+	
+	/**
+	 * Returns an application package by its PID value.<br><br>
+	 * 
+	 * @param context
+	 * @param pid	The application PID (<i>In a service, use {@link Binder#getCallingPid()}
+	 * 				inside the service Binder object to get the PID parameter. If used 
+	 * 				outside of the binder object, it will always return the application 
+	 * 				itself, not the calling application</i>).
+	 * @return
+	 */
+	public static String application_getPackageByPID(Context context, int pid) {
+		String processName = null;
+		
+        ActivityManager am = (ActivityManager) context.getSystemService( Context.ACTIVITY_SERVICE );
+        List<ActivityManager.RunningAppProcessInfo> processes = am.getRunningAppProcesses();
+        for (ActivityManager.RunningAppProcessInfo proc : processes) {
+            if (proc.pid == pid) {
+            	//processName will be the package name of the caller process :)
+            	processName = proc.processName;
+            	break;
+            }
+        }
+        
+        return processName;
+	}
+	
+	/**
+	 * Returns activity's calling application package name.
+	 * 
+	 * @param activity	The activity being called.
+	 * @return
+	 */
+	public static String application_getCallingApplicationPackage(Activity activity) {
+		return activity.getCallingActivity().getPackageName();
+	}
+	
+	
+	/**
+	 * Checks the signature of the application identified by its UID. Returns TRUE if is 
+	 * the expected one.
+	 * 
+	 * @param context	The application context.
+	 * @param packageName	The application package to check.
+	 * @param signatureType	See {@link ToolBox#HASH_TYPE}
+	 * @param expectedSignature	The expected application signature.
+	 * @return	Return TRUE if the application has the expected signature, otherwise FALSE.
+	 * 
+	 */
+	public static boolean application_checkSignature(Context context, String packageName, HASH_TYPE signatureType, String expectedSignature)  {
+		boolean res = false;
+		
+		if(packageName!=null) {
+			//Gets the application certificates
+			List<ApplicationCertificate> appCerts = ToolBox.application_certificates(context, packageName);
+			
+			String appCerHash = null;
+			for(ApplicationCertificate c:appCerts){
+				
+				switch (signatureType) {
+					case sha1:
+						appCerHash = c.getSignatureSHA1Hash();
+						break;
+					case md5:
+						appCerHash = c.getSignatureMD5Hash();
+				}
+				
+				if(appCerHash.equals(expectedSignature)){
+					res = true;
+					break;
+				}
+			}
+		}else{
+			if(ToolBox.LOG_ENABLE)
+				Log.e(TAG, "No package name!.");
+		}
+		
+		return res;
 	}
 
 	//-------------------- RANDOM-------------------------------------------------------------------------
