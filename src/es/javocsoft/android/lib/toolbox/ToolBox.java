@@ -4158,9 +4158,9 @@ public final class ToolBox {
 		    byte[] bitmapData = stream.toByteArray();
 		    if(bitmapData==null || (bitmapData!=null && bitmapData.length==0)) {
 		    	Log.e(TAG, "media_getBytesFromDrawable() - Error getting image bytes from Drawable object.");
-		    	return bitmapData;
-		    }else{		    
 		    	return null;
+		    }else{
+		    	return bitmapData;		    	
 		    }		
 		}else{
 			Log.i(TAG, "media_getBytesFromDrawable() - Drawable object is null.");
