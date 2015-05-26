@@ -22,7 +22,7 @@ We have the ToolBox.java main class but also there are other utility classes and
 * <i>Google Play Services</i>. A <b>Google Cloud Messaging</b> (GCM) module. very easy and fast to use and integrate in your project to allow receiving/sending push notifications from your application.
 * <i>Google Play Services</i>. An Ads module for <b>AdMob</b>. Easy to integrate in your project.
 * <i>Google Play Services</i>. Google <b>Analytics</b> v4 helper classes to have working the tracking of your app. Also with a <b>Custom Campaign Receiver</b> to be able to measure your ads campaigns (allowing also getting the campaign info giving the opportunity to do something when is received).
-* <i>SQLite</i>. Now library allows to use easily SQLite databases in your applications.
+* <i><b>SQLite</b></i>. Now library allows to use easily SQLite databases in your applications.
 
 This library is under development because i use it for all my projects so i am all time adding new features :).
 
