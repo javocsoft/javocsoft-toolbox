@@ -23,6 +23,13 @@ We have the ToolBox.java main class but also there are other utility classes and
 * <i>Google Play Services</i>. An Ads module for <b>AdMob</b>. Easy to integrate in your project.
 * <i>Google Play Services</i>. Google <b>Analytics</b> v4 helper classes to have working the tracking of your app. Also with a <b>Custom Campaign Receiver</b> to be able to measure your ads campaigns (allowing also getting the campaign info giving the opportunity to do something when is received).
 * <i><b>SQLite</b></i>. Now library allows to use easily SQLite databases in your applications.
+* Notifications using the last API maintaining retro-compatibility.
+* GCM module. This allows to integrate Android notifications in your project in a easy way.
+* A <b>GsonProcessor</b>. This class allows to work with JSON.
+* The <b>HTMLStyledTextView</b>. A class that allows to show HTML content in a textview.
+* An <b>animation factory</b> class set.
+* The <b>PRNGFixes</b> class. For Android Jelly Bean or minor versions. Applications which use Android's Java Cryptography Architecture (JCA) or the OpenSSL PRNG for key generation, signing, or random number generation may not receive cryptographically strong values on Android devices due to improper initialization of the underlying PRNG. Applications that 
+directly invoke the system-provided OpenSSL PRNG without explicit initialization on Android are also affected.
 
 This library is under development because i use it for all my projects so i am all time adding new features :).
 
@@ -50,7 +57,7 @@ Internally it also uses some other libraries like GSON, json_simple and commons-
 
 ##LICENSE##
 
-Copyright 2010-2014 JavocSoft.
+Copyright 2010-2015 JavocSoft.
 
 JavocSoft Android Toolbox is free software: you can redistribute it 
 and/or modify it under the terms of the GNU General Public License as 
