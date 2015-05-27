@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2014 - JavocSoft - Javier Gonzalez Serrano
+ * Copyright (C) 2010-2015 - JavocSoft - Javier Gonzalez Serrano
  * http://javocsoft.es/proyectos/code-libs/android/javocsoft-toolbox-android-library
  * 
  * This file is part of JavocSoft Android Toolbox library.
@@ -144,7 +144,6 @@ import android.text.Html;
 import android.text.TextUtils;
 import android.util.DisplayMetrics;
 import android.util.Log;
-import android.util.Size;
 import android.view.Display;
 import android.view.Gravity;
 import android.view.LayoutInflater;
@@ -2010,8 +2009,8 @@ public final class ToolBox {
 	        			}else if(value instanceof Serializable){
 	        				if(!extras.containsKey(key))
 	        					extras.putSerializable(key, (Serializable)value);
-	        			}else if(value instanceof Size){
-	        				/*TODO if(!extras.containsKey(key))
+	        			/*}else if(value instanceof Size){
+	        				if(!extras.containsKey(key))
 	        					extras.putSize(key, (Size)value);*/
 	        			}else if(value instanceof Parcelable){
 	        				if(!extras.containsKey(key))
@@ -3473,20 +3472,42 @@ public final class ToolBox {
 	}
 	
 	/**
-	 * Creates a new intent to open an application.
+	 * Creates a new intent from its package name to open the application. 
+	 * 
+	 * Note:<br><br>
+	 * 
+	 * Remember that in the application there must be an activity with an intent
+	 * filter that has at least:<br><br>
+	 * 
+	 * 		<ul>
+	 * 			<li>The action name "<b>android.intent.action.MAIN</b>"</li>
+	 * 			<li>The category name "<b>android.intent.category.LAUNCHER</b>". 
+	 * 				(<i>This creates also a launcher icon</i>).</li>
+	 * 		</ul>
+	 * 
+	 * <b>If the application does not have to have an icon</b>, use as category 
+	 * "<b>android.intent.category.INFO</b>" instead of "android.intent.category.LAUNCHER". 
+	 * Doing this, the application will have internally a launcher activity but the launcher 
+	 * icon will not be created.
 	 * 
 	 * @param context
 	 * @param appPackage	Required. The application, package, to launch.
 	 * @param bundle		Any additional information to get in the service.
-	 * @return	The intent or null if the application does not exists.
+	 * @return	The intent or null if the application does not exists or no launcher 
+	 * 			intent is found in the application.
 	 */
 	public static Intent intent_openApp(Context context, String appPackage, Bundle bundle) {
 		
 		PackageManager manager = context.getPackageManager();
         Intent intent = manager.getLaunchIntentForPackage(appPackage);
-        intent.addCategory(Intent.CATEGORY_LAUNCHER);
-        if(bundle!=null)
-        	intent.putExtras(bundle);
+        if(intent!=null) {
+        	intent.addCategory(Intent.CATEGORY_LAUNCHER);
+        	if(bundle!=null){
+        		intent.putExtras(bundle);
+        	}
+        }else{
+        	return null;
+        }
         
 		return intent;
 	}
@@ -3507,6 +3528,38 @@ public final class ToolBox {
 		
 		return intent;
 	}
+	
+	/**
+	 * Checks if there is a launcher intent for the specified action
+	 * for the application package name.
+	 * 
+	 * @param context
+	 * @param action		Action that is checked.
+	 * @param packageName	Application package to launch.
+	 * @return TRUE if the an intent for the given action for the specified 
+	 * 		   application package exists, otherwise FALSE.
+	 */
+	public static boolean intent_checkForAppLauncherAction(Context context, String action, String packageName) {
+		boolean res = false;
+		
+		PackageManager manager = context.getPackageManager();
+        Intent i = new Intent();
+        i.setAction(action);
+        
+        //I check if an activity is found with such action
+        List<ResolveInfo> actFound = manager.queryIntentActivities(i, PackageManager.GET_RESOLVED_FILTER);
+        if(actFound.size()>0){
+        	for(ResolveInfo info:actFound){
+        		if(info.activityInfo.packageName.equals(packageName)){
+        			res = true;
+        			break;
+        		}
+        	}        	
+        }
+        
+        return res;
+	}
+	
 	
 	/**
 	 * Gets a pending intent.
