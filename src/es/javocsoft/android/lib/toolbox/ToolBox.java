@@ -153,6 +153,7 @@ import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
+import android.view.animation.Animation;
 import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -259,6 +260,79 @@ public final class ToolBox {
 		// Now convert the JSON string back to your java object		
 	    List<T> jsonObjectList = new Gson().fromJson(jsonData, type);	    
 	    return jsonObjectList;
+	}
+	
+	
+	//--------------- ANIMATIONS ------------------------------------------------------------------------
+	
+	/**
+	 * Applies an effect to an Activity load.<br><br>
+	 * 
+	 * <b>Notes</b>:<br><br>
+	 * Animations will not run if they are disabled. To check it, enter into "Developer options" 
+	 * in Setting (where you activated debugging mode), find the user's interface section and 
+	 * check if the animation's transition scale have the animations disabled. If so, set it 
+	 * to .5x<br><br>
+	 * 
+	 * There is a set of ready to use animations under the <b><code>toolbox_library/res/anim</code></b> folder.
+	 * 
+	 * @param from	The current activity.
+	 * @param activityToIntent	The intent of the activity to launch.
+	 * @param animationIn	
+	 * @param animationOut
+	 */
+	public static void animation_applyAnimationToActivityLoad(final Activity from, final Intent activityToIntent, 
+			final int animationIn, final int animationOut) {
+		
+	    //We make this in this way to ensure animation runs in the UI Thread.
+		from.runOnUiThread(new Runnable() {
+	    	public void run() {                		
+	    		from.startActivity(activityToIntent);
+	            from.finish();
+	            from.overridePendingTransition(animationIn, animationOut);
+	        }
+	    });
+	}	
+	
+	/**
+	 * This method allows to get an Animation object from its resource id.
+	 * 
+	 * @param context
+	 * @param animationResourceId	Animation XMLs should be in the res/anim folder.
+	 * @return
+	 */
+	public static Animation animation_getFromAnimResourceId(Context context, int animationResourceId) {
+		return android.view.animation.AnimationUtils.loadAnimation(context, animationResourceId);
+	}
+	
+	/**
+	 * Applies an animation to a view.
+	 * 
+	 * @param context
+	 * @param applyTo
+	 * @param animation	An animation object. You can get it from predefined ones with
+	 * 					{@link ToolBox#animation_getFromAnimResourceId}
+	 */
+	public static void animation_applyAnimationTo(Context context, View applyTo, Animation animation) {
+		if(animation!=null) {
+			applyTo.startAnimation(animation);
+		}else{
+			if(LOG_ENABLE){
+				Log.w(TAG, "Not a valid animation.");
+			}
+		}
+	}
+	
+	/**
+	 * Applies an animation to a view.
+	 * 
+	 * @param context
+	 * @param applyTo
+	 * @param animationResourceId	Animation XMLs should be in the res/anim folder.
+	 */
+	public static void animation_applyAnimationTo(Context context, View applyTo, int animationResourceId) {
+		Animation animation = animation_getFromAnimResourceId(context, animationResourceId);
+		animation_applyAnimationTo(context, applyTo, animation);
 	}
 	
 	
