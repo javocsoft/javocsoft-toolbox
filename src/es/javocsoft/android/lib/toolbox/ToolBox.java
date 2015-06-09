@@ -243,6 +243,9 @@ public final class ToolBox {
 	
 	private static Set<String> systemAppsList = null;
 	
+	/** Exit application style */
+	public static enum EXIT_CONFIRMATION_STYLE {NONE, BACK_PRESS, DIALOG};
+	
 	
 	private ToolBox(){}
 	
@@ -1508,7 +1511,7 @@ public final class ToolBox {
 			 									   int yesLabel, int cancelLabel,
 			 									   final boolean moveTaskToBack){
 		 new AlertDialog.Builder(context)
-	        .setIcon(android.R.drawable.ic_dialog_alert)
+	        .setIcon(android.R.drawable.ic_menu_info_details)
 	        .setTitle(context.getResources().getString(title))
 	        .setMessage(context.getResources().getString(message))
 	        .setPositiveButton(context.getResources().getString(yesLabel), new DialogInterface.OnClickListener()
