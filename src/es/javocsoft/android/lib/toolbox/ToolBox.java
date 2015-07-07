@@ -178,7 +178,7 @@ import es.javocsoft.android.lib.toolbox.io.IOUtils;
 /**
  * This class will hold utility functions related with Android.
  * 
- * @author JavocSoft 2013
+ * @author JavocSoft 2015
  * @since  2012
  */
 public final class ToolBox {
@@ -3897,27 +3897,33 @@ public final class ToolBox {
 	public static Bitmap media_getBitmap(Context context, String resource) {
 		Bitmap bResource = null;
 		
-		//First we try to get the image from the drawable resources
-		try{
-			int imgResourceId = Integer.decode(resource);
-			bResource = media_getBitmapFromResourceId(context, imgResourceId);
-		}catch(Exception e){}
-		
-		//If no drawable found, we try with assets folder
-		if(bResource==null){					
-			bResource = media_getBitmapFromAsset(context, resource);
-		}	
-		
-		//If no drawable found, we try with raw folder
-		if(bResource==null){					
-			bResource = media_getBitmapFromRaw(context, resource);
-		}
-				
-		//If no raw found, we try download the image
-		if(bResource==null && resource.startsWith("http")){
+		if(resource!=null) {
+			//First we try to get the image from the drawable resources
 			try{
-				bResource = media_getBitmapFromURL(context, resource);
+				int imgResourceId = Integer.decode(resource);
+				bResource = media_getBitmapFromResourceId(context, imgResourceId);
 			}catch(Exception e){}
+			
+			//If no drawable found, we try with assets folder
+			if(bResource==null){
+				try{
+					bResource = media_getBitmapFromAsset(context, resource);
+				}catch(Exception e){}
+			}	
+			
+			//If no drawable found, we try with raw folder
+			if(bResource==null){
+				try{
+					bResource = media_getBitmapFromRaw(context, resource);
+				}catch(Exception e){}
+			}
+					
+			//If no raw found, we try download the image
+			if(bResource==null && resource.startsWith("http")){
+				try{
+					bResource = media_getBitmapFromURL(context, resource);
+				}catch(Exception e){}
+			}
 		}
 		
 		return bResource;
@@ -3967,26 +3973,29 @@ public final class ToolBox {
 		 Bitmap image = null;
 		 InputStream in = null;
 		 BufferedInputStream inBuff = null;
-		 int resId = context.getResources().getIdentifier(fileName,"raw", context.getPackageName());
-		 try{
-			 in = context.getResources().openRawResource(resId);			 
-			 inBuff = new BufferedInputStream(in);
-			 image = BitmapFactory.decodeStream(inBuff);
-			 
-		 }catch (Exception e){
-			 image = null;
-			 if(LOG_ENABLE)
-				 Log.e("TollBox_ERROR","media_getDrawableFromRaw() Error obtaining raw data: " + e.getMessage(),e);   
-		     
-		 }finally {
-			if (in != null) {
-				try{
-            		inBuff.close();
-            	}catch (IOException ignored) {}
-		 		try{
-	            	in.close();
-	            }catch (IOException ignored) {}
-		    }
+		 
+		 if(fileName!=null) {
+			 int resId = context.getResources().getIdentifier(fileName,"raw", context.getPackageName());
+			 try{
+				 in = context.getResources().openRawResource(resId);			 
+				 inBuff = new BufferedInputStream(in);
+				 image = BitmapFactory.decodeStream(inBuff);
+				 
+			 }catch (Exception e){
+				 image = null;
+				 if(LOG_ENABLE)
+					 Log.e(TAG,"media_getDrawableFromRaw() Error obtaining raw data: " + e.getMessage(),e);   
+			     
+			 }finally {
+				if (in != null) {
+					try{
+	            		inBuff.close();
+	            	}catch (IOException ignored) {}
+			 		try{
+		            	in.close();
+		            }catch (IOException ignored) {}
+			    }
+			 }
 		 }
 		 
 		 return image;
@@ -4003,19 +4012,29 @@ public final class ToolBox {
 	public static Bitmap media_getBitmapFromAsset(Context context, String fileName){
 		InputStream is = null;
 	    Bitmap bitmap = null;
-	    try {
-	        is = context.getAssets().open(fileName);
-	        bitmap = BitmapFactory.decodeStream(is);
-	    } catch (final IOException e) {
-	        bitmap = null;
-	    } finally {
-	        if (is != null) {
-	            try {
-	                is.close();
-	            } catch (IOException ignored) {
-	            }
-	        }
+	    
+	    if(fileName!=null) {
+		    try {
+		        is = context.getAssets().open(fileName);
+		        bitmap = BitmapFactory.decodeStream(is);	   
+		    } catch (final IOException e) {
+		        bitmap = null;
+		        if(LOG_ENABLE)
+					 Log.e(TAG,"media_getBitmapFromAsset() Error obtaining image form asset: " + e.getMessage(),e);
+		    } catch (final Exception e) {
+		    	bitmap = null;
+		    	if(LOG_ENABLE)
+					 Log.e(TAG,"media_getBitmapFromAsset() Error obtaining image form asset: " + e.getMessage(),e);
+		    } finally {
+		        if (is != null) {
+		            try {
+		                is.close();
+		            } catch (IOException ignored) {
+		            }
+		        }
+		    }
 	    }
+	    
 	    return bitmap;
 	}
 	
@@ -4117,11 +4136,14 @@ public final class ToolBox {
      */
     public static Bitmap media_getBitmapFromURL(Context context, String url) throws Exception{
     	Bitmap res = null;
-    	try {
-    		res = BitmapFactory.decodeStream((InputStream) new URL(url).getContent());
-    	} catch (IOException e) {
-    		if(LOG_ENABLE)
-        		Log.e(TAG,"media_getBitmapFromURL(): "+e.getMessage(),e);
+    	
+    	if(url!=null){
+	    	try {
+	    		res = BitmapFactory.decodeStream((InputStream) new URL(url).getContent());
+	    	} catch (IOException e) {
+	    		if(LOG_ENABLE)
+	        		Log.e(TAG,"media_getBitmapFromURL(): "+e.getMessage(),e);
+	    	}
     	}
     	
     	return res;
