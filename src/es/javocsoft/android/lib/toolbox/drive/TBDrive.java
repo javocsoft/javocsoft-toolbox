@@ -24,6 +24,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentSender;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
 
@@ -1655,6 +1657,126 @@ public class TBDrive implements GoogleApiClient.ConnectionCallbacks,
 		return Drive.DriveApi.getFile(mGoogleApiClient,
 		        DriveId.decodeFromString(driveIdString));
 	}
+		
+	/**
+	 * Saves data, an string, in the cloud using Google Drive.<br><br>
+	 * 
+	 * When operation finishes, handler will receive in "what" field:
+	 * <ul>
+	 *  <li> 0 (If the operation is done successfully)</li>
+	 *  <li>-1 (when error)</li>
+	 * </ul>
+	 * 
+	 * When file still does not exists, callback parameter is used to notify
+	 * once the file is created with the result of the operation. See 
+	 * {@link TBDriveFileCreationOpCallback}.
+	 * 
+	 * @param data				The string data to save.
+	 * @param fileName			The desired file name or title for the Drive.
+	 * @param creationCallback	The callback to call once file is created. 
+	 * 							See {@link TBDriveFileCreationOpCallback}. 
+	 * @param handler			Android Handler to notify about the result.
+	 * @param useAppFolder		Set to TRUE to store the file in the application
+	 * 							folder.
+	 */
+	public void saveInCloud(final String data, final String fileName, 
+			final TBDriveFileCreationOpCallback creationCallback, final Handler handler,
+			final boolean useAppFolder) {
+    	
+    	new Thread(new Runnable() {
+    		
+    		int OP_OK = 0;
+			int OP_KO = -1;
+    		
+			@Override
+			public void run() {
+				
+		        DriveFile driveFile;
+				try {
+					driveFile = sync_getFile(fileName);
+					if(driveFile==null) { //We create the file						
+			        	async_createFile(fileName, "text/plain", data.getBytes(), creationCallback, useAppFolder);
+			        }else{	//We update the file			        	
+			        	DriveContents fileContents = sync_getFileContents(driveFile, DriveFile.MODE_WRITE_ONLY, null);			        	
+			        	if(fileContents!=null) {
+				        	DriveContents modifiedFileContents = drive_replaceTextOfFile(fileContents, data);
+				        	if(sync_commitChangesAndClose(modifiedFileContents, false)){
+				        		Log.i(TAG, "Data commited successfully to Google Drive.");
+				        		handler.sendEmptyMessage(OP_OK);
+				        	}else{
+				        		Log.e(TAG, "Data could not be commited to Google Drive correctly!");
+				        		handler.sendEmptyMessage(OP_KO);
+				        	}
+			        	}
+			        }
+					
+				} catch (TBDriveException e) {
+					Log.e(TAG, "Error saving in Google Drive data [" + e.getMessage() + "]", e);
+					handler.sendEmptyMessage(OP_KO);
+				} catch (IOException e) {
+					Log.e(TAG, "Error saving in Google Drive data [" + e.getMessage() + "]", e);
+					handler.sendEmptyMessage(OP_KO);
+				}
+			}
+		}).start();
+    }
+	
+	/**
+	 * Loads data from the Google Drive cloud.<br><br>
+	 * 
+	 * When operation finishes, handler will receive in "what" field:
+	 * <ul>
+	 *  <li> 0 (If the operation is done successfully and in the "msg" field the contents)</li>
+	 *  <li>-1 (when error)</li>
+	 *  <li>-2 (when file does not exists)</li>
+	 * </ul>
+	 * 
+	 * @param fileName	The file name or title of the desired file.
+	 * @param handler	Android Handler to notify about the result.
+	 */
+	public void getFromCloud(final String fileName, final Handler handler) {
+    	
+    	new Thread(new Runnable() {
+			
+    		final int OP_OK = 0;
+    		final int OP_KO = -1;
+    		final int OP_KO_NOT_EXISTS = -2;
+    		
+			@Override
+			public void run() {
+				
+	    		DriveFile driveFile;
+	    		try {
+	    			driveFile = sync_getFile(fileName);
+	    			if(driveFile!=null) {
+		    			DriveContents fileContent = sync_getFileContents(driveFile, DriveFile.MODE_READ_ONLY, null);
+		    			if(fileContent!=null) {
+			    			String data = drive_fileContentToString(fileContent);
+			    			if(data!=null) {
+			    				Log.i(TAG, "Data loaded from Google Drive cloud :)");
+			    				Message msg = handler.obtainMessage(OP_OK, data);
+			    				handler.sendMessage(msg);
+			    			}else{
+			    				Log.e(TAG, "Data could not be loaded from Google Drive cloud!");
+			    				handler.sendEmptyMessage(OP_KO);
+			    			}
+		    			}else{
+		    				handler.sendEmptyMessage(OP_KO);
+		    			}
+	    			}else{
+	    				handler.sendEmptyMessage(OP_KO_NOT_EXISTS);
+	    			}
+				} catch (TBDriveException e) {
+					Log.e(TAG, "Data not loaded from Google Drive cloud [" + e.getMessage() + "]", e);
+					handler.sendEmptyMessage(OP_KO);
+				} catch (IOException e) {
+					Log.e(TAG, "Data not loaded from Google Drive cloud [" + e.getMessage() + "]", e);
+					handler.sendEmptyMessage(OP_KO);
+				}
+			}
+		}).start();		
+    }
+	
 	
 	//END OTHER OPERATIONS
 	
