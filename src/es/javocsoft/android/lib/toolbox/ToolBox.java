@@ -2170,10 +2170,6 @@ public final class ToolBox {
 	    	int iconResId = notification_getApplicationIcon(context);
 	    	long when = System.currentTimeMillis();
 	        
-			//Received message could have non-latin characters so it should be
-			//always received URLEncoded.
-			notMessage = URLDecoder.decode(notMessage, "UTF-8");
-	    	
 			// Create the notification
 			NotificationCompat.Builder notifyBuilder = new NotificationCompat.Builder(context);
 			notifyBuilder.setWhen(when);
