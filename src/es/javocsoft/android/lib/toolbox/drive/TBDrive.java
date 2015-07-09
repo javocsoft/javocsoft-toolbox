@@ -218,7 +218,13 @@ public class TBDrive implements GoogleApiClient.ConnectionCallbacks,
 	 */
 	public void drive_connect() {
 		if (getGoogleApiClient() != null) {
-			getGoogleApiClient().connect();
+			new Thread(new Runnable() {
+				
+				@Override
+				public void run() {
+					getGoogleApiClient().connect();					
+				}
+			}).start();
 		}
 	}
 	
@@ -227,7 +233,13 @@ public class TBDrive implements GoogleApiClient.ConnectionCallbacks,
 	 */
 	public void drive_disconnect() {
 		if (getGoogleApiClient() != null) {
-			getGoogleApiClient().disconnect();
+			new Thread(new Runnable() {
+				
+				@Override
+				public void run() {
+					getGoogleApiClient().disconnect();					
+				}
+			}).start();
 		}
 	}
 	
@@ -254,7 +266,7 @@ public class TBDrive implements GoogleApiClient.ConnectionCallbacks,
 	 */
 	public void drive_onPause()  {
 		if (mGoogleApiClient != null) {
-			getGoogleApiClient().disconnect();
+			drive_disconnect();
         }     
 	}
 	
@@ -275,7 +287,6 @@ public class TBDrive implements GoogleApiClient.ConnectionCallbacks,
     }
     
     
-	
 	//FILE MANIPULATION
     
     
@@ -1679,15 +1690,48 @@ public class TBDrive implements GoogleApiClient.ConnectionCallbacks,
 		        DriveId.decodeFromString(driveIdString));
 	}
 		
+	
 	/**
-	 * Saves data, an string, in the cloud using Google Drive.<br><br>
+	 * Available cloud result codes
+	 */
+	public static enum CloudOperationResult {
+		OK_SAVE(0), OK_LOAD(1), LOAD_ERROR(-1), WRITE_ERROR(-2), NOT_EXISTS(-3), UNKNOWN(-100);
+		 
+		private int opResult;
+		 
+		private CloudOperationResult(int opResult) {
+			this.opResult = opResult;
+		}
+		 
+		public int getValue() {
+			return opResult;
+		}
+		
+		public static CloudOperationResult getCloudOperationResult(int value) {
+			switch (value) {
+				case 0:
+					return OK_SAVE;
+				case 1:
+					return OK_LOAD;	
+				case -1:
+					return LOAD_ERROR;					
+				case -2:
+					return WRITE_ERROR;					
+				case -3:
+					return NOT_EXISTS;					
+				default:
+					return UNKNOWN;
+			}
+		}
+	}
+	
+	/**
+	 * Saves string data, an string, in the cloud using Google Drive.<br><br>
 	 * 
-	 * When operation finishes, handler will receive in "what" field:
-	 * <ul>
-	 *  <li> 0 (If the operation is done successfully)</li>
-	 *  <li>-1 (when error)</li>
-	 * </ul>
+	 * When operation finishes, handler will receive in "what" field the result code, see
+	 * {@link CloudOperationResult} and an informative message.<br><br>
 	 * 
+	 * <b>Note</b>:<br>
 	 * When file still does not exists, callback parameter is used to notify
 	 * once the file is created with the result of the operation. See 
 	 * {@link TBDriveFileCreationOpCallback}.
@@ -1696,21 +1740,21 @@ public class TBDrive implements GoogleApiClient.ConnectionCallbacks,
 	 * @param fileName			The desired file name or title for the Drive.
 	 * @param creationCallback	The callback to call once file is created. 
 	 * 							See {@link TBDriveFileCreationOpCallback}. 
-	 * @param handler			Android Handler to notify about the result.
+	 * @param handler			Android Handler to notify about the result. For result codes 
+	 * 							see {@link CloudOperationResult}
 	 * @param useAppFolder		Set to TRUE to store the file in the application
 	 * 							folder.
 	 */
-	public void saveInCloud(final String data, final String fileName, 
+	public void saveStringDataInCloud(final String data, final String fileName, 
 			final TBDriveFileCreationOpCallback creationCallback, final Handler handler,
 			final boolean useAppFolder) {
     	
     	new Thread(new Runnable() {
     		
-    		int OP_OK = 0;
-			int OP_KO = -1;
-    		
 			@Override
 			public void run() {
+				
+				Message msg = null;
 				
 		        DriveFile driveFile;
 				try {
@@ -1723,49 +1767,56 @@ public class TBDrive implements GoogleApiClient.ConnectionCallbacks,
 				        	DriveContents modifiedFileContents = drive_replaceTextOfFile(fileContents, data);
 				        	if(sync_commitChangesAndClose(modifiedFileContents, false)){
 				        		Log.i(TAG, "Data commited successfully to Google Drive.");
-				        		handler.sendEmptyMessage(OP_OK);
+				        		msg = handler.obtainMessage(
+			    						CloudOperationResult.OK_SAVE.getValue(), "Data commited to Google Drive.");				        		
 				        	}else{
 				        		Log.e(TAG, "Data could not be commited to Google Drive correctly!");
-				        		handler.sendEmptyMessage(OP_KO);
+				        		msg = handler.obtainMessage(
+			    						CloudOperationResult.WRITE_ERROR.getValue(), "Data could not be commited to Google Drive.");				        						        		
 				        	}
+			        	}else{
+			        		msg = handler.obtainMessage(
+		    						CloudOperationResult.WRITE_ERROR.getValue(), 
+		    						"Current contents could not be loaded from Google Drive to update them!");
 			        	}
 			        }
-					
 				} catch (TBDriveException e) {
 					Log.e(TAG, "Error saving in Google Drive data [" + e.getMessage() + "]", e);
-					handler.sendEmptyMessage(OP_KO);
-				} catch (IOException e) {
+					msg = handler.obtainMessage(
+    						CloudOperationResult.WRITE_ERROR.getValue(), 
+    						"Error writing data to Google Drive [" + e.getMessage() + "]");
+				} catch (Exception e) {
 					Log.e(TAG, "Error saving in Google Drive data [" + e.getMessage() + "]", e);
-					handler.sendEmptyMessage(OP_KO);
+					msg = handler.obtainMessage(
+    						CloudOperationResult.WRITE_ERROR.getValue(), 
+    						"Un-expected error writing data to Google Drive [" + e.getMessage() + "]");					
+				} finally {
+					if(msg!=null){
+						handler.sendMessage(msg);
+					}
 				}
 			}
 		}).start();
     }
 	
 	/**
-	 * Loads data from the Google Drive cloud.<br><br>
+	 * Loads string data from the Google Drive cloud.<br><br>
 	 * 
-	 * When operation finishes, handler will receive in "what" field:
-	 * <ul>
-	 *  <li> 0 (If the operation is done successfully and in the "msg" field the contents)</li>
-	 *  <li>-1 (when error)</li>
-	 *  <li>-2 (when file does not exists)</li>
-	 * </ul>
+	 * When operation finishes, handler will receive in "what" field the result code, see
+	 * {@link CloudOperationResult} and an informative message.
 	 * 
 	 * @param fileName	The file name or title of the desired file.
-	 * @param handler	Android Handler to notify about the result.
+	 * @param handler	Android Handler to notify about the result. For result codes 
+	 * 					see {@link CloudOperationResult}
 	 */
-	public void getFromCloud(final String fileName, final Handler handler) {
+	public void getStringDataFromCloud(final String fileName, final Handler handler) {
     	
     	new Thread(new Runnable() {
 			
-    		final int OP_OK = 0;
-    		final int OP_KO = -1;
-    		final int OP_KO_NOT_EXISTS = -2;
-    		
 			@Override
 			public void run() {
 				
+				Message msg = null;
 	    		DriveFile driveFile;
 	    		try {
 	    			driveFile = sync_getFile(fileName);
@@ -1775,25 +1826,37 @@ public class TBDrive implements GoogleApiClient.ConnectionCallbacks,
 			    			String data = drive_fileContentToString(fileContent);
 			    			if(data!=null) {
 			    				Log.i(TAG, "Data loaded from Google Drive cloud :)");
-			    				Message msg = handler.obtainMessage(OP_OK, data);
-			    				handler.sendMessage(msg);
+			    				msg = handler.obtainMessage(
+			    						CloudOperationResult.OK_LOAD.getValue(), data);			    				
 			    			}else{
 			    				Log.e(TAG, "Data could not be loaded from Google Drive cloud!");
-			    				handler.sendEmptyMessage(OP_KO);
+			    				msg = handler.obtainMessage(
+			    						CloudOperationResult.LOAD_ERROR.getValue(), 
+			    						"Data could not be loaded from Google Drive contents!");			    				
 			    			}
 		    			}else{
-		    				handler.sendEmptyMessage(OP_KO);
+		    				msg = handler.obtainMessage(
+		    						CloudOperationResult.LOAD_ERROR.getValue(), 
+		    						"Contents could not be loaded from Google Drive!");		    				
 		    			}
 	    			}else{
-	    				handler.sendEmptyMessage(OP_KO_NOT_EXISTS);
+	    				msg = handler.obtainMessage(
+	    						CloudOperationResult.LOAD_ERROR.getValue(), 
+	    						"The file does not exist in Google Drive!");	    				
 	    			}
 				} catch (TBDriveException e) {
 					Log.e(TAG, "Data not loaded from Google Drive cloud [" + e.getMessage() + "]", e);
-					handler.sendEmptyMessage(OP_KO);
-				} catch (IOException e) {
+					msg = handler.obtainMessage(
+    						CloudOperationResult.LOAD_ERROR.getValue(), 
+    						"Error loading data from Google Drive [" + e.getMessage() + "]");					
+				} catch (Exception e) {
 					Log.e(TAG, "Data not loaded from Google Drive cloud [" + e.getMessage() + "]", e);
-					handler.sendEmptyMessage(OP_KO);
+					msg = handler.obtainMessage(
+    						CloudOperationResult.LOAD_ERROR.getValue(), 
+    						"Un-expected Error loading data from Google Drive [" + e.getMessage() + "]");					
 				}
+	    		
+	    		handler.sendMessage(msg);
 			}
 		}).start();		
     }
@@ -1869,7 +1932,7 @@ public class TBDrive implements GoogleApiClient.ConnectionCallbacks,
 	@Override
 	public void onConnectionFailed(ConnectionResult result) {
 		Log.i(TAG, "GoogleApiClient connection failed: " + result.toString());
-        
+		
 		if (result.hasResolution()) {
 	        try {
 	        	result.startResolutionForResult(activity, REQUEST_CODE_RESOLUTION);
@@ -1900,6 +1963,7 @@ public class TBDrive implements GoogleApiClient.ConnectionCallbacks,
 	@Override
 	public void onConnected(Bundle connectionHint) {
 		Log.i(TAG, "GoogleApiClient connected");
+		
 		if(onConnCallback!=null) {
 			onConnCallback.setConnectionHint(connectionHint);			
 			try {
@@ -1913,6 +1977,7 @@ public class TBDrive implements GoogleApiClient.ConnectionCallbacks,
 	@Override
 	public void onConnectionSuspended(int cause) {
 		Log.i(TAG, "GoogleApiClient connection suspended");
+		
 		if(onConnSuspendedCallback!=null) {
 			onConnSuspendedCallback.setConnectionSuspendedCause(cause);
 			try {
