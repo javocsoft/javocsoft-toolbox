@@ -29,6 +29,8 @@ We have the ToolBox.java main class but also there are other utility classes and
 * A <b>GsonProcessor</b>. This class allows to work with JSON.
 * The <b>HTMLStyledTextView</b>. A class that allows to show HTML content in a textview.
 * An <b>animation factory</b> class set.
+* An <b>MessengerService</b> class. This, in conjuction with "MessengerIncomingHandler.java" class, will allow to have a messenger service very easily.
+* A class to connect to other applications messenger services. See <b>Mezzenger.java</b> class.
 * The <b>PRNGFixes</b> class. For Android Jelly Bean or minor versions. <i>Applications which use Android's Java Cryptography Architecture (JCA) or the OpenSSL PRNG for key generation, signing, or random number generation may not receive cryptographically strong values on Android devices due to improper initialization of the underlying PRNG. Applications that 
 directly invoke the system-provided OpenSSL PRNG without explicit initialization on Android are also affected</i>.
 
