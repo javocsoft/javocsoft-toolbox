@@ -34,9 +34,9 @@ import android.util.Log;
  * 
  * @author JavocSoft, 2015
  * @version 1.0<br>
- * $Rev$<br>
- * $LastChangedDate$<br>
- * $LastChangedBy$
+ * $Rev: 773 $<br>
+ * $LastChangedDate: 2015-07-14 09:53:17 +0200 (Tue, 14 Jul 2015) $<br>
+ * $LastChangedBy: admin $
  */
 public abstract class MessengerIncomingHandler extends Handler {
 
@@ -51,8 +51,6 @@ public abstract class MessengerIncomingHandler extends Handler {
 
 	@Override
 	public void handleMessage(Message msg) {
-		super.handleMessage(msg);
-		
 		Log.i(TAG, "Messenger received WHAT value: " + msg.what);
 		doWork(msg);
 	}
