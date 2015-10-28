@@ -52,6 +52,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -134,9 +135,11 @@ import android.os.PowerManager;
 import android.provider.Settings;
 import android.provider.Settings.Secure;
 import android.provider.Settings.SettingNotFoundException;
+import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationCompat.Action;
 import android.support.v4.app.TaskStackBuilder;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.ActionBarActivity;
 import android.telephony.TelephonyManager;
 import android.text.Html;
@@ -2510,6 +2513,355 @@ public final class ToolBox {
 		}
 	}
     
+	
+	// Android 6 Permissions new system --------------------------------------------------------------------------------------------------------
+	/**
+	 * The methods in this section allows you to ensure that this points bellow can be achivied
+	 * in order to run an application with Android 6+ versions.
+	 * 
+	 * 	Android >= 6+
+	 * 	=============
+	 *
+	 *	Start the App:
+	 *	  Ask for permission (OK)
+	 *	    Accept     -> App runs normally with the service that requires the permissions (OK)
+	 *	    Not accept -> App runs normally without the service that requires the permissions (OK)
+	 *	
+	 *	Granted permissions:
+	 *	  Start the App -> App runs normally with the service that requires the permissions (OK)
+	 *	  
+	 *  In a running App with granted permissions:
+	 *  	Deny the permissions -> When returning to the App, it Asks for permissions (OK)
+	 *        Accept     -> App runs normally with the service that requires the permissions (OK)
+	 *	      Not accept -> App runs normally without the service that requires the permissions (OK)	
+	 *	
+	 *	User denies the permission and marks "Never ask again"
+	 *	  Start the App:
+	 *	    - Show a message to the user about the required permissions (OK)
+	 *		    Accept. Ask for permission (OK)
+	 *	    	  		  Accept     -> App runs normally with the service that requires the permissions (OK)
+	 *	    			  Not accept -> App runs normally without the service that requires the permissions (OK)
+	 *	
+	 *	Android < 6
+	 *	===========
+	 *	
+	 *	Start the App:
+	 *	    Do not ask for permissions and runs normally (OK)
+	 */	
+	
+	/**
+	 * Permissions required to interact with the calendar.
+	 */
+    public static final Map<String, String> PERMISSION_CALENDAR;
+    static {
+    	PERMISSION_CALENDAR = new HashMap<String, String>();
+    	PERMISSION_CALENDAR.put("android.permission.READ_CALENDAR", "Calendar");
+    	PERMISSION_CALENDAR.put("android.permission.WRITE_CALENDAR", "Calendar");
+    }
+    /** 
+     * Permissions required to interact with the camera
+     */
+    public static final Map<String, String> PERMISSION_CAMERA;
+    static {
+    	PERMISSION_CAMERA = new HashMap<String, String>();
+    	PERMISSION_CAMERA.put("android.permission.CAMERA", "Camera");    	
+    }
+    /**
+     * Permissions required to interact with the location services
+     */
+    public static final Map<String, String> PERMISSION_LOCATION;
+    static {
+    	PERMISSION_LOCATION = new HashMap<String, String>();
+    	PERMISSION_LOCATION.put("android.permission.ACCESS_COARSE_LOCATION", "Location");
+    	PERMISSION_LOCATION.put("android.permission.ACCESS_FINE_LOCATION", "Location");
+    }
+    /**
+     * Permissions required to interact with the microphone
+     */
+    public static final Map<String, String> PERMISSION_MICROPHONE;
+    static {
+    	PERMISSION_MICROPHONE = new HashMap<String, String>();
+    	PERMISSION_MICROPHONE.put("android.permission.RECORD_AUDIO", "Microphone");    	
+    }
+    /**
+     * Permissions required to interact with the phone functions like calls,
+     * voice mail, call log, etc.
+     */
+    public static final Map<String, String> PERMISSION_PHONE;
+    static {
+    	PERMISSION_PHONE = new HashMap<String, String>();
+    	PERMISSION_PHONE.put("android.permission.READ_PHONE_STATE", "Phone");
+    	PERMISSION_PHONE.put("android.permission.CALL_PHONE", "Phone");
+    	PERMISSION_PHONE.put("android.permission.READ_CALL_LOG", "Phone");
+    	PERMISSION_PHONE.put("android.permission.WRITE_CALL_LOG", "Phone");
+    	PERMISSION_PHONE.put("android.permission.ADD_VOICEMAIL", "Phone");
+    	PERMISSION_PHONE.put("android.permission.USE_SIP", "Phone");
+    	PERMISSION_PHONE.put("android.permission.PROCESS_OUTGOING_CALLS", "Phone");    	    	
+    }
+    /**
+     * Permissions required to interact with the device sensors
+     */
+    public static final Map<String, String> PERMISSION_SENSORS;
+    static {
+    	PERMISSION_SENSORS = new HashMap<String, String>();
+    	PERMISSION_SENSORS.put("android.permission.BODY_SENSORS", "Sensors");    	    	    	
+    }
+    /**
+     * Permissions required to interact with the SMS/WAP/MMS 
+     * device capabilities. 
+     */
+    public static final Map<String, String> PERMISSION_SMS;
+    static {
+    	PERMISSION_SMS = new HashMap<String, String>();
+    	PERMISSION_SMS.put("android.permission.SEND_SMS", "SMS");
+    	PERMISSION_SMS.put("android.permission.RECEIVE_SMS", "SMS");
+    	PERMISSION_SMS.put("android.permission.READ_SMS", "SMS");
+    	PERMISSION_SMS.put("android.permission.RECEIVE_WAP_PUSH", "SMS");
+    	PERMISSION_SMS.put("android.permission.RECEIVE_MMS", "SMS");    	    	    	
+    }
+    /**
+     * Permissions required to interact with the storage service.
+     */
+    public static final Map<String, String> PERMISSION_STORAGE;
+    static {
+    	PERMISSION_STORAGE = new HashMap<String, String>();
+    	PERMISSION_STORAGE.put("android.permission.READ_EXTERNAL_STORAGE", "Storage");
+    	PERMISSION_STORAGE.put("android.permission.WRITE_EXTERNAL_STORAGE", "Storage");    	    	    	    	
+    }
+    
+    //Note: 
+    // validateRequestPermissionsRequestCode in FragmentActivity requires requestCode 
+    // to be of 8 bits, meaning the range is from 0 to 255.
+    /** Android 6 request code for Calendar usage permission request. */
+    final public static int PERMISSIONS_REQUEST_CODE_ASK_CALENDAR = 90;
+    /** Android 6 request code for Camera usage permission request. */
+    final public static int PERMISSIONS_REQUEST_CODE_ASK_CAMERA = 91;
+    /** Android 6 request code for Location service usage permission request. */
+    final public static int PERMISSIONS_REQUEST_CODE_ASK_LOCATION = 92;
+    /** Android 6 request code for Microphone usage permission request. */
+    final public static int PERMISSIONS_REQUEST_CODE_ASK_MICROPHONE = 93;
+    /** Android 6 request code for Phone (calls, call log, etc) usage permission request. */
+    final public static int PERMISSIONS_REQUEST_CODE_ASK_PHONE = 94;
+    /** Android 6 request code for Sensors usage permission request. */
+    final public static int PERMISSIONS_REQUEST_CODE_ASK_SENSORS = 95;
+    /** Android 6 request code for SMS/WAP/MMS usage permission request. */
+    final public static int PERMISSIONS_REQUEST_CODE_ASK_SMS = 96;
+    /** Android 6 request code for Storage usage permission request. */
+    final public static int PERMISSIONS_REQUEST_CODE_ASK_STORAGE = 97;
+    
+	
+	/**
+	 * Beginning in Android 6.0 (API level 23), users grant permissions to apps 
+	 * while the app is running, not when they install the app. If the device is 
+	 * running Android 5.1 (API level 22) or lower, or the app's targetSdkVersion 
+	 * is 22 or lower, the system asks the user to grant the permissions at 
+	 * install time<br><br>
+	 * 
+	 * System permissions are divided into two categories, normal and dangerous 
+	 * (<a href="http://developer.android.com/intl/es/guide/topics/security/permissions.html#normal-dangerous">
+	 * http://developer.android.com/intl/es/guide/topics/security/permissions.html#normal-dangerous</a>):
+	 * <ul>
+	 * 	<li>Normal permissions do not directly risk the user's privacy. If your app 
+	 * 		lists a normal permission in its manifest, the system grants the 
+	 * 		permission automatically. See the list at  		
+	 * 		<a href="http://developer.android.com/intl/es/guide/topics/security/normal-permissions.html">
+	 * 		http://developer.android.com/intl/es/guide/topics/security/normal-permissions.html</a>
+	 *  </li>
+	 *  <li>Dangerous permissions can give the app access to the user's confidential data. If 
+	 *  	your app lists a normal permission in its manifest, the system grants the permission 
+	 *  	automatically. If you list a dangerous permission, the user has to explicitly 
+	 *  	give approval to your app. If an app requests a dangerous permission listed in 
+	 *  	its manifest, and the app already has another dangerous permission in the same 
+	 *  	permission group, the system immediately grants the permission without any 
+	 *  	interaction with the user</li>
+	 * </ul>
+	 * 
+	 * This method checks for permissions to ask to the user to allow them if they are
+	 * not already granted.<br><br>
+	 * 
+	 * See http://developer.android.com/intl/es/training/permissions/index.html
+	 * <br><br>
+	 * 
+	 * @param context	The activity context.
+	 * @param pList		The list of permissions to be granted. Format: Map of permission,permission_name
+	 * @param requestCode	The request code to be checked in onRequestPermissionsResult of the activity.
+	 * @param dialogTitle	If there are permissions to be granted, a dialog pop-ups, set here the title.
+	 * @param dialogAcceptBtnText If there are permissions to be granted, a dialog pop-ups, set here 
+	 * 							  the accept button text.
+	 * @param dialogText If there are permissions to be granted, a dialog pop-ups, set here the text that
+	 * 					 presents the permission that need to be granted..
+	 */
+	public static void permission_askFor (final Activity context, final Map<String, String> pList, 
+			final int requestCode, String dialogTitle, String dialogAcceptBtnText, String dialogDenyBtnText,
+			String dialogText) {
+    	
+		//We only check if not all permissions are granted and we are above/equal 23 API level.
+		if(device_getAPILevel()<23 || 
+				(device_getAPILevel()>=23 && permission_areGranted(context, pList.keySet())) ) {
+			return;
+		}
+				
+    	final List<String> permissionsList = new ArrayList<String>();
+    	List<String> permissionsNeeded = new ArrayList<String>();
+    	
+    	//Ask for permissions
+    	Set<String> keys = pList.keySet();
+    	for(String p:keys) {
+    		if (permission_add(context, permissionsList, p)) {
+    			if(!permissionsNeeded.contains(pList.get(p)))
+    				permissionsNeeded.add(pList.get(p)); //We add the name
+    		}
+    	}
+    	
+    	//if there are some that was revoked and set never ask again, we
+    	//show a dialog asking for then so user re-enables them.
+    	if (permissionsList.size() > 0) {
+            if (permissionsNeeded.size() > 0) {
+            	
+            	// Need Rationale
+                String message = dialogText + permissionsNeeded.get(0);                
+                for (int i = 1; i < permissionsNeeded.size(); i++)
+                    message = message + ", " + permissionsNeeded.get(i);
+                
+                message = message + ".";
+                ToolBox.dialog_showCustomActionsDialog(context, 
+                		dialogTitle, message, 
+                		dialogAcceptBtnText, new Runnable() {
+							
+							@Override
+							public void run() {
+								ActivityCompat.requestPermissions(context,
+										permissionsList.toArray(new String[permissionsList.size()]),
+										requestCode);							
+							}
+						}, 
+						dialogDenyBtnText, new Runnable() {
+							
+							@Override
+							public void run() {
+								//Do nothing							
+							}
+						}, 
+                		null, null);
+                
+                return;
+            }
+            
+            ActivityCompat.requestPermissions(context, 
+            		permissionsList.toArray(new String[permissionsList.size()]),
+            		requestCode);
+            
+            return;
+    	}
+    }
+	
+	/**
+	 * Checks the results of an Android 6+ permissions ask. Returns TRUE only if 
+	 * all permissions are granted.
+	 * 
+	 * @param permissions	Permissions asked.
+	 * @param grantResults	Results of the ask.
+	 * @return TRUE/FALSE
+	 */
+	public static boolean permission_checkAskPermissionsresult(String[] permissions, int[] grantResults) {
+    	
+    	boolean res = false;
+    		
+    	// Create the list with the results
+    	Map<String, Integer> perms = new HashMap<String, Integer>();    		
+        for (int i = 0; i < permissions.length; i++) {
+        	perms.put(permissions[i], grantResults[i]);
+        }            
+            
+        // Check if all permissions are granted
+        Set<String> pNameList = perms.keySet();
+        for(String pName:pNameList) {
+        	if(perms.get(pName) == PackageManager.PERMISSION_GRANTED){
+        		res = true;        		
+            }else{
+            	res = false;
+            	break;
+            }
+        }      
+        
+    	return res;
+    }
+	
+	/**
+	 * Checks if a permission is granted. In case of API level minor than 23,
+	 * we always return TRUE.
+	 * 
+	 * @param context	An activity context.
+	 * @param permission	The permission to check.
+	 * @return	TRUE/FALSE
+	 */
+	public static boolean permission_isGranted(Activity context, String permission) {
+		if(device_getAPILevel()<23) {
+			return true;
+		}else{
+			return ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED;
+		}
+	}
+	
+	/**
+	 * Returns TRUE only if all permissions are granted. In case of API level minor than 23,
+	 * we always return TRUE.
+	 * 
+	 * @param context	An activity context.
+	 * @param permissions	The permissions list.	
+	 * @return	TRUE only if all permissions are granted.
+	 */
+	public static boolean permission_areGranted(Activity context, List<String> permissions) {
+		boolean granted = true;
+		for(String p:permissions) {
+			if(!permission_isGranted(context, p)){
+				granted = false;
+				break;
+			}
+		}
+		
+		return granted;
+	}
+	
+	/**
+	 * Returns TRUE only if all permissions are granted. In case of API level minor than 23,
+	 * we always return TRUE.
+	 * 
+	 * @param context	An activity context.
+	 * @param permissions	The permissions list.	
+	 * @return	TRUE only if all permissions are granted.
+	 */
+	public static boolean permission_areGranted(Activity context, Set<String> permissions) {
+		boolean granted = true;
+		for(String p:permissions) {
+			if(!permission_isGranted(context, p)){
+				granted = false;
+				break;
+			}
+		}
+		
+		return granted;
+	}
+	
+	/**
+	 * Checks a permission list. If a permission needs to be granted, it returns TRUE.
+	 * 
+	 * @param context	An activity context
+	 * @param permissionsList	Adds to this list the processed permission for afterwards usage.
+	 * @param permission	The permission to check.
+	 * @return	TRUE/FALSE
+	 */
+	private static boolean permission_add(Activity context, List<String> permissionsList, String permission) {
+		if (ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED) {
+            permissionsList.add(permission);
+            // Check for Rationale Option. To know if we need to show a message
+            // telling to the user why we need this permissions.
+            if (!ActivityCompat.shouldShowRequestPermissionRationale(context, permission))
+                return false;
+        }
+        return true;
+    }
+	
 	
     // Power saving ----------------------------------------------------------------------------------------------------------------------------
     
