@@ -2689,11 +2689,20 @@ public final class ToolBox {
 	 * @param dialogAcceptBtnText If there are permissions to be granted, a dialog pop-ups, set here 
 	 * 							  the accept button text.
 	 * @param dialogText If there are permissions to be granted, a dialog pop-ups, set here the text that
-	 * 					 presents the permission that need to be granted..
+	 * 					 presents the permission that need to be granted.
+	 * @param showRationaleDialog By default, a rationale dialog explaining why permissions are required
+	 * 							  is only showed once user denies a permission for the application. If
+	 * 							  this parameter is set to TRUE, the dialog will always appear unless user
+	 * 							  checked "Never ask again" checkbox.
+	 * @param showRememberPermissions If set to TRUE, if user check "Never ask again" checkbox, a rationale
+	 * 								  pop-up with cusomizable text will appear (usualy used to remember to 
+	 * 								  the user that enabling permissions should be the best).
+	 * @param rememberPermissionsText The text to show in case showRememberPermissions parameter is TRUE.
 	 */
 	public static void permission_askFor (final Activity context, final Map<String, String> pList, 
 			final int requestCode, String dialogTitle, String dialogAcceptBtnText, String dialogDenyBtnText,
-			String dialogText) {
+			String dialogText, boolean showRationaleDialog, boolean showRememberPermissions,
+			String rememberPermissionsText) {
     	
 		//We only check if not all permissions are granted and we are above/equal 23 API level.
 		if(device_getAPILevel()<23 || 
@@ -2713,47 +2722,97 @@ public final class ToolBox {
     		}
     	}
     	
-    	//if there are some that was revoked and set never ask again, we
-    	//show a dialog asking for then so user re-enables them.
     	if (permissionsList.size() > 0) {
             if (permissionsNeeded.size() > 0) {
-            	
-            	// Need Rationale
-                String message = dialogText + permissionsNeeded.get(0);                
-                for (int i = 1; i < permissionsNeeded.size(); i++)
-                    message = message + ", " + permissionsNeeded.get(i);
-                
-                message = message + ".";
-                ToolBox.dialog_showCustomActionsDialog(context, 
-                		dialogTitle, message, 
-                		dialogAcceptBtnText, new Runnable() {
-							
-							@Override
-							public void run() {
-								ActivityCompat.requestPermissions(context,
-										permissionsList.toArray(new String[permissionsList.size()]),
-										requestCode);							
-							}
-						}, 
-						dialogDenyBtnText, new Runnable() {
-							
-							@Override
-							public void run() {
-								//Do nothing							
-							}
-						}, 
-                		null, null);
-                
-                return;
+            	//Once the user denies some permissions, we show a dialog asking for 
+            	//them with an explanation before show Android ask dialog.
+            	//
+            	// Need Rationale (explanation before ask for permissions)
+            	showDescriptivePermissionsDialog(context, permissionsList, permissionsNeeded, 
+            			requestCode, dialogTitle, dialogAcceptBtnText, dialogDenyBtnText, dialogText);
+            	return;
             }
             
-            ActivityCompat.requestPermissions(context, 
-            		permissionsList.toArray(new String[permissionsList.size()]),
-            		requestCode);
+            //We can choose to show always a rationale dialog explaining why we need the permissions.
+            if(showRationaleDialog) {
+            	if(permissionsNeeded.size()>0) {
+            		//If user checked "Never ask again", we should not ask for them again.
+	            	showDescriptivePermissionsDialog(context, permissionsList, permissionsNeeded, 
+	            			requestCode, dialogTitle, dialogAcceptBtnText, dialogDenyBtnText, dialogText);
+            	}else{
+            		//User checked "Never ask again". We show a rationale dialog
+            		//with a custom text to remember him that enabling permissions is the best.
+            		if(showRememberPermissions) {
+            			ToolBox.dialog_showCustomActionsDialog(context, 
+            	        		dialogTitle, rememberPermissionsText, 
+            	        		"OK", new Runnable() {
+            						
+            						@Override
+            						public void run() {
+            														
+            						}
+            					}, 
+            					null, null, 
+            	        		null, null);
+            		}
+            	}
+            }else{
+	            //Show directly the permissions approval
+	            ActivityCompat.requestPermissions(context, 
+	            		permissionsList.toArray(new String[permissionsList.size()]),
+	            		requestCode);
+            }
             
             return;
     	}
     }
+	
+	/**
+	 * Shows a rationale dialog explaining why permissions are required
+	 * before asking for them.
+	 *  
+	 * @param context
+	 * @param permissionsList
+	 * @param permissionsNeeded
+	 * @param requestCode
+	 * @param dialogTitle
+	 * @param dialogAcceptBtnText
+	 * @param dialogDenyBtnText
+	 * @param dialogText
+	 */
+	private static void showDescriptivePermissionsDialog(final Activity context, 
+			final List<String> permissionsList,
+			List<String> permissionsNeeded,
+			final int requestCode,
+			String dialogTitle, String dialogAcceptBtnText, 
+			String dialogDenyBtnText, String dialogText
+			) {
+		// Need Rationale (explanation before ask for permissions)
+        String message = dialogText + permissionsNeeded.get(0);                
+        for (int i = 1; i < permissionsNeeded.size(); i++)
+            message = message + ", " + permissionsNeeded.get(i);
+        
+        message = message + ".";
+        ToolBox.dialog_showCustomActionsDialog(context, 
+        		dialogTitle, message, 
+        		dialogAcceptBtnText, new Runnable() {
+					
+					@Override
+					public void run() {
+						ActivityCompat.requestPermissions(context,
+								permissionsList.toArray(new String[permissionsList.size()]),
+								requestCode);							
+					}
+				}, 
+				dialogDenyBtnText, new Runnable() {
+					
+					@Override
+					public void run() {
+						//Do nothing							
+					}
+				}, 
+        		null, null);
+	}
 	
 	/**
 	 * Checks the results of an Android 6+ permissions ask. Returns TRUE only if 
