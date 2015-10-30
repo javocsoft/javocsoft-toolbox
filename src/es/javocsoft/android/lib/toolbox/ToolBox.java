@@ -2736,12 +2736,13 @@ public final class ToolBox {
             //We can choose to show always a rationale dialog explaining why we need the permissions.
             if(showRationaleDialog) {
             	if(permissionsNeeded.size()>0) {
-            		//If user checked "Never ask again", we should not ask for them again.
-	            	showDescriptivePermissionsDialog(context, permissionsList, permissionsNeeded, 
+            		showDescriptivePermissionsDialog(context, permissionsList, permissionsNeeded, 
 	            			requestCode, dialogTitle, dialogAcceptBtnText, dialogDenyBtnText, dialogText);
             	}else{
-            		//User checked "Never ask again". We show a rationale dialog
-            		//with a custom text to remember him that enabling permissions is the best.
+            		//If user checked "Never ask again", we should not ask for them again.
+            		//
+            		//If we want, we show a rationale dialog with a custom text to remember 
+            		//him that enabling permissions is the best.
             		if(showRememberPermissions) {
             			ToolBox.dialog_showCustomActionsDialog(context, 
             	        		dialogTitle, rememberPermissionsText, 
