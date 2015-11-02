@@ -33,6 +33,7 @@ We have the ToolBox.java main class but also there are other utility classes and
 * A class to connect to other applications messenger services. See <b>Mezzenger.java</b> class.
 * The <b>PRNGFixes</b> class. For Android Jelly Bean or minor versions. <i>Applications which use Android's Java Cryptography Architecture (JCA) or the OpenSSL PRNG for key generation, signing, or random number generation may not receive cryptographically strong values on Android devices due to improper initialization of the underlying PRNG. Applications that 
 directly invoke the system-provided OpenSSL PRNG without explicit initialization on Android are also affected</i>.
+* Methods to handle <b>new Android M (v6, API level 23) permissions usage approach</b> allowing to adapt the applications to new permissions system in Android. 
 
 This library is under development because i use it for all my projects so i am all time adding new features :).
 
