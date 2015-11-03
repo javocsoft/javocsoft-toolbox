@@ -139,8 +139,9 @@ public class LocationService extends Service {
     @Override
     public void onDestroy() {       
     	Log.d(TAG, "Location service destroyed");
-        super.onDestroy();        
-        locationManager.removeUpdates((LocationListener) listener);
+        super.onDestroy();
+        if(listener!=null)
+        	locationManager.removeUpdates((LocationListener) listener);
         
         deliverBroadcast(ACTION_LOCATION_SERVICE_SHUTDOWN, null);
     }
@@ -167,18 +168,23 @@ public class LocationService extends Service {
     		}
     	}
     	
-    	locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        listener = new CustomLocationListener();        
-        locationManager.requestLocationUpdates(
-        		LocationManager.NETWORK_PROVIDER, 
-        		minTime, minDistance, listener);
-        locationManager.requestLocationUpdates(
-        		LocationManager.GPS_PROVIDER, 
-        		minTime, minDistance, listener);
-        
-        Log.d(TAG, "Location service started. Parameters 'minTime': " + minTime + " / 'minDistance': " + minDistance);
-        
-        deliverBroadcast(ACTION_LOCATION_SERVICE_STARTED, null);       
+    	if(ToolBox.permission_areGranted(getApplicationContext(), ToolBox.PERMISSION_LOCATION.keySet())) {
+    		locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+            listener = new CustomLocationListener();        
+            locationManager.requestLocationUpdates(
+            		LocationManager.NETWORK_PROVIDER, 
+            		minTime, minDistance, listener);
+            locationManager.requestLocationUpdates(
+            		LocationManager.GPS_PROVIDER, 
+            		minTime, minDistance, listener);
+            
+            Log.d(TAG, "Location service started. Parameters 'minTime': " + minTime + " / 'minDistance': " + minDistance);
+            
+            deliverBroadcast(ACTION_LOCATION_SERVICE_STARTED, null);
+    	}else{
+    		Log.d(TAG, "Location service not started, permissions not granted. Parameters 'minTime': " + minTime + " / 'minDistance': " + minDistance);
+    	}
+    	
     }
 	
     /**

@@ -2864,6 +2864,22 @@ public final class ToolBox {
 	}
 	
 	/**
+	 * Checks if a permission is granted. In case of API level minor than 23,
+	 * we always return TRUE.
+	 * 
+	 * @param context	The context.
+	 * @param permission	The permission to check.
+	 * @return	TRUE/FALSE
+	 */
+	public static boolean permission_isGranted(Context context, String permission) {
+		if(device_getAPILevel()<23) {
+			return true;
+		}else{
+			return ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED;
+		}
+	}
+	
+	/**
 	 * Returns TRUE only if all permissions are granted. In case of API level minor than 23,
 	 * we always return TRUE.
 	 * 
@@ -2892,6 +2908,26 @@ public final class ToolBox {
 	 * @return	TRUE only if all permissions are granted.
 	 */
 	public static boolean permission_areGranted(Activity context, Set<String> permissions) {
+		boolean granted = true;
+		for(String p:permissions) {
+			if(!permission_isGranted(context, p)){
+				granted = false;
+				break;
+			}
+		}
+		
+		return granted;
+	}
+	
+	/**
+	 * Returns TRUE only if all permissions are granted. In case of API level minor than 23,
+	 * we always return TRUE.
+	 * 
+	 * @param context	The context.
+	 * @param permissions	The permissions list.	
+	 * @return	TRUE only if all permissions are granted.
+	 */
+	public static boolean permission_areGranted(Context context, Set<String> permissions) {
 		boolean granted = true;
 		for(String p:permissions) {
 			if(!permission_isGranted(context, p)){
