@@ -35,6 +35,7 @@ We have the ToolBox.java main class but also there are other utility classes and
 directly invoke the system-provided OpenSSL PRNG without explicit initialization on Android are also affected</i>.
 * Methods to handle <b>new Android M (v6, API level 23) permissions usage approach</b> allowing to adapt the applications to new permissions system in Android. 
 * A <b>ready-to-use localization service</b>. This makes very easy to have a service running in background watching for any location or GPS status changes, see the Wiki :)
+* <b>Geofencing</b> supported.
 
 This library is under development because i use it for all my projects so i am all time adding new features :).
 
