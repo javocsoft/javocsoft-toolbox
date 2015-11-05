@@ -118,6 +118,7 @@ import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.location.Address;
 import android.location.Geocoder;
+import android.location.Location;
 import android.media.AudioManager;
 import android.media.ExifInterface;
 import android.media.MediaPlayer;
@@ -171,6 +172,13 @@ import com.google.android.gms.analytics.HitBuilders;
 import com.google.android.gms.analytics.HitBuilders.EventBuilder;
 import com.google.android.gms.analytics.Logger.LogLevel;
 import com.google.android.gms.analytics.Tracker;
+import com.google.android.gms.common.api.Api;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.common.api.ResultCallback;
+import com.google.android.gms.common.api.Status;
+import com.google.android.gms.location.Geofence;
+import com.google.android.gms.location.GeofencingRequest;
+import com.google.android.gms.location.LocationServices;
 import com.google.gson.Gson;
 
 import es.javocsoft.android.lib.toolbox.encoding.Base64;
@@ -2961,13 +2969,17 @@ public final class ToolBox {
 	
     // Power saving ----------------------------------------------------------------------------------------------------------------------------
     
-    /*
-     * Makes the device to wake-up. yeah!
+    /**
+     * Makes the device to wake-up. yeah!<br><br>
      * 
-     * Requires the permission android.permission.WAKE_LOCK
+     * <b>Note</b>:<br><br>
+     * 	Requires the permission android.permission.WAKE_LOCK
      *  
+     *  @deprecated use {@link ToolBox#powersaving_getWakeUp} instead.
+     *   
      * @param ctx
      */
+	@Deprecated
     public static void powersaving_wakeUp(Context ctx) {
     	    	
     	if (wakeLock != null) wakeLock.release();
@@ -2977,6 +2989,62 @@ public final class ToolBox {
                 PowerManager.ACQUIRE_CAUSES_WAKEUP |
                 PowerManager.ON_AFTER_RELEASE, "javocsoft_library_wakeup");
         wakeLock.acquire();
+    }
+    
+   /**
+    * Generates a new WakeUp object.<br><br> 
+    * 
+    * To start using it do:
+    * <pre>wakeLock.acquire();</pre>
+    * To stop using it:
+    * <pre>wakeLock.release();</pre> 
+    * 
+    * <b>Note</b>:<br><br>
+     * 	Requires the permission {@link android.permission.WAKE_LOCK}<br><br>
+    * 
+    * If you need to keep the CPU running in order to complete some work before
+    * the device goes to sleep, you can use a PowerManager system service feature
+    * called wake locks. Wake locks allow your application to control the power 
+    * state of the host device.<br><br>
+	*
+	* Creating and holding wake locks can have a dramatic impact on the host 
+	* device's battery life. Thus you should use wake locks only when strictly 
+	* necessary and hold them for as short a time as possible.<br><br>
+	* 
+	* Recommendation:<br><br>
+	* 
+	* You should never need to use a wake lock in an activity. If you want to keep 
+	* the screen on in your activity, use FLAG_KEEP_SCREEN_ON. To do it put in
+	* onCreate() the following:<br>
+	* <pre>getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);</pre>
+	* You can also put in the activity layout the following parameter:
+	* <pre>android:keepScreenOn="true"</pre>
+	* 
+	* More info about WakeLocks at <a href="http://developer.android.com/intl/es/training/scheduling/wakelock.html">
+	* Google Developer</a>.
+	* 
+    * @param ctx
+    * @param wakeUpName
+    * @param switchOnDevice
+    * @return
+    */
+    public static PowerManager.WakeLock powersaving_getWakeUp(Context ctx, String wakeUpName, boolean switchOnDevice) {
+    	
+    	PowerManager.WakeLock wakeLock = null;
+
+        PowerManager pm = (PowerManager) ctx.getSystemService(Context.POWER_SERVICE);
+        
+        int flags = PowerManager.FULL_WAKE_LOCK | PowerManager.ON_AFTER_RELEASE;
+        if(switchOnDevice) {
+        	flags = flags | PowerManager.ACQUIRE_CAUSES_WAKEUP;
+        }
+        String wkName = "javocsoft_library_wakeup";
+        if(wakeUpName!=null && wakeUpName.length()>0)
+        	wkName = wakeUpName;
+        
+        wakeLock = pm.newWakeLock(flags, wkName);
+        
+        return wakeLock; 
     }
     
 	// Net Related -----------------------------------------------------------------------------------------------------------------------------
@@ -5442,6 +5510,180 @@ public final class ToolBox {
 		
 		return earthRadius * c;
 	}
+	
+	/**
+	 * Creates a circular area, or fence, around the location of interest.
+	 * <br><br>
+	 * Geofencing combines awareness of the user's current location with 
+	 * awareness of the user's proximity to locations that may be of 
+	 * interest. You can have multiple active geofences, with a limit of 
+	 * 100 per device user.<br>
+	 * <br>
+	 * See Geofences at <a href="http://developer.android.com/intl/es/training/location/geofencing.html">Google developer</a>.
+	 * <br><br>
+	 * Note:<br><br>
+	 * 
+	 * Requires the permission {@link android.permission.ACCESS_FINE_LOCATION}.
+	 * 
+	 * @param name				The name of the Geofence.
+	 * @param latitute			The latitude.
+	 * @param longitude			The longitude.
+	 * @param radius			To adjust the proximity for the location.
+	 * @param expirationMillis	After this time geofence expires. If expiration 
+	 * 							is not needed, use {@link Geofence#NEVER_EXPIRE}.
+	 * @return
+	 */
+	public static Geofence location_geofencesCreate(String name, 
+			double latitute, double longitude, float radius,
+			long expirationMillis) {
+		
+		return new Geofence.Builder()
+	    // Set the request ID of the geofence. This is a string to identify this
+	    // geofence.
+	    .setRequestId(name)
+	    .setCircularRegion(latitute,longitude,radius)
+	    .setExpirationDuration(expirationMillis)
+	    .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER |
+	    					Geofence.GEOFENCE_TRANSITION_EXIT)
+	    .build();
+	}
+	
+	/**
+	 * Creates a circular area, or fence, around the location of interest.
+	 * <br><br>
+	 * Geofencing combines awareness of the user's current location with 
+	 * awareness of the user's proximity to locations that may be of 
+	 * interest. You can have multiple active geofences, with a limit of 
+	 * 100 per device user.<br>
+	 * <br>
+	 * See Geofences at <a href="http://developer.android.com/intl/es/training/location/geofencing.html">Google developer</a>.
+	 * <br><br>
+	 * Note:<br><br>
+	 * 
+	 * Requires the permission {@link android.permission.ACCESS_FINE_LOCATION}.
+	 * 
+	 * @param name				The name of the Geofence.
+	 * @param location			The location.
+	 * @param radius			To adjust the proximity for the location.
+	 * @param expirationMillis	After this time geofence expires. If expiration 
+	 * 							is not needed, use {@link Geofence#NEVER_EXPIRE}.
+	 * @return
+	 */
+	public static Geofence location_geofencesCreate(String name,
+			Location location, float radius,
+			long expirationMillis) {
+		return location_geofencesCreate(name, location.getLatitude(), location.getLongitude(), 
+				radius, expirationMillis);
+	}
+	
+	/**
+	 * Creates a geofencing trigger request. This will make the location service
+	 * to launch geofencing events (enter/exit events) with the specified
+	 * geofence list.
+	 * <br>
+	 * See Geofences at <a href="http://developer.android.com/intl/es/training/location/geofencing.html">Google developer</a>.
+	 * <br><br>
+	 * Note:<br><br>
+	 * 
+	 * Requires the permission {@link android.permission.ACCESS_FINE_LOCATION}.
+	 * 
+	 * @param geofenceList	The list of Geofences to watch.
+	 */
+	public static GeofencingRequest location_geofencesCreateTriggerRequest(List<Geofence> geofenceList) {
+		GeofencingRequest.Builder builder = new GeofencingRequest.Builder();
+		//The GEOFENCE_TRANSITION_ENTER/GEOFENCE_TRANSITION_EXIT transition 
+		//triggers when a device enters/exits a geofence.
+		//
+		//Specifying INITIAL_TRIGGER_ENTER tells Location services that 
+		//GEOFENCE_TRANSITION_ENTER should be triggered if the the device is 
+		//already inside the geofence.
+		//
+		//In many cases, it may be preferable to use instead INITIAL_TRIGGER_DWELL,
+		//which triggers events only when the user stops for a defined duration 
+		//within a geofence.
+	    builder.setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER);
+	    builder.addGeofences(geofenceList);	    
+	    return builder.build();
+	}
+	
+	/**
+	 * Creates a pending intent to be launched once location service detects
+	 * that user enters/exists a Geofence. This intent is received by the 
+	 * specified service in order to process the geofencing enter/exit events.	 * 
+	 * <br>
+	 * See Geofences at <a href="http://developer.android.com/intl/es/training/location/geofencing.html">Google developer</a>.
+	 * <br><br>
+	 * Note:<br><br>
+	 * 
+	 * Requires the permission {@link android.permission.ACCESS_FINE_LOCATION}.
+	 * @param context
+	 * @param service
+	 * @return
+	 */
+	public static PendingIntent location_geofencesCreatePendingIntent(Context context, Class<?> service) {
+		Intent intent = new Intent(context, service);
+        // We use FLAG_UPDATE_CURRENT so that we get the same pending intent back when
+        // calling addGeofences() and removeGeofences().
+        return PendingIntent.getService(context, 0, intent, PendingIntent. FLAG_UPDATE_CURRENT);
+	}
+	
+	/**
+	 * Makes the location service to watch for any location change
+	 * that could interact with the geofences set in the parameter   
+	 * "geofencingRequest".<br> 
+	 * <br>
+	 * See Geofences at <a href="http://developer.android.com/intl/es/training/location/geofencing.html">Google developer</a>.
+	 * <br><br>
+	 * Note:<br><br>
+	 * 
+	 * Requires the permission {@link android.permission.ACCESS_FINE_LOCATION}.
+	 * 
+	 * @param gApiClient			The Google API client. You can use {@link #googleAPI_getApiClient}.
+	 * See <a href="http://developer.android.com/intl/es/training/location/retrieve-current.html#play-services">Google Play Services</a>
+	 * @param geofencingRequest		The geofencing trigger request. You can use {@link #location_geofencesCreateTriggerRequest}.
+	 * @param pendingIntent			The intent that is launched once a geofencing event occurs. You can use {@link #location_geofencesCreatePendingIntent}.
+	 * @param resultCallback		The class that processes the result of this call. See 
+	 * <a href="https://developers.google.com/android/reference/com/google/android/gms/common/api/ResultCallback">resultCallback</a>
+	 * 
+	 */
+	public static void location_geofencesAddAwareness(GoogleApiClient gApiClient, 
+			GeofencingRequest geofencingRequest,
+			PendingIntent pendingIntent,
+			ResultCallback<? super Status> resultCallback) {
+		
+		LocationServices.GeofencingApi.addGeofences(
+				gApiClient,
+				geofencingRequest,
+				pendingIntent
+        ).setResultCallback(resultCallback);
+	}
+	
+	/**
+	 * Makes the location service to stop watching for location changes
+	 * that could interect with the geofences in your application.
+	 * <br>
+	 * See Geofences at <a href="http://developer.android.com/intl/es/training/location/geofencing.html">Google developer</a>.
+	 * <br><br>
+	 * Note:<br><br>
+	 * 
+	 * Requires the permission {@link android.permission.ACCESS_FINE_LOCATION}.
+	 * 
+	 * @param gApiClient			The Google API client. You can use {@link #googleAPI_getApiClient}.
+	 * See <a href="http://developer.android.com/intl/es/training/location/retrieve-current.html#play-services">Google Play Services</a>
+	 * @param pendingIntent			The intent that is launched once a geofencing event occurs. You can use {@link #location_geofencesCreatePendingIntent}.
+	 * @param resultCallback		The class that processes the result of this call. See 
+	 * <a href="https://developers.google.com/android/reference/com/google/android/gms/common/api/ResultCallback">resultCallback</a>
+	 */
+	public static void location_geofencesRemoveAwareness(GoogleApiClient gApiClient, 
+			PendingIntent pendingIntent,
+			ResultCallback<? super Status> resultCallback) {
+		
+		LocationServices.GeofencingApi.removeGeofences(
+				gApiClient,	            
+				pendingIntent
+	    ).setResultCallback(resultCallback);
+	}
+	
 		
 	
 	//-------------------- CRYPTO ------------------------------------------------------------------------
@@ -5499,5 +5741,31 @@ public final class ToolBox {
 			 textView.setTypeface(font);
 		 }
 	}
-	 
+	
+	//-------------------- Google API -------------------------------------------------------------------
+	
+	/**
+	 * Gets a Google API client for the desired Google API.<br><br>
+	 * 
+	 * See:<br><br>
+	 * <a href="https://developers.google.com/android/reference/com/google/android/gms/common/api/GoogleApiClient">Google API Client</a><br>
+	 * <a href="https://developers.google.com/android/guides/setup">Google API Client Setup</a>
+	 * 
+	 * @param context	The context for this Google API client.
+	 * @param connectionCallback		Processes connection results.
+	 * @param connectionFailListener	The listener that processes connection fails. 
+	 * @param requestedApi				The Google API to request.
+	 * @return GoogleApiClient			The Google API client.
+	 */
+	public static GoogleApiClient googleAPI_getApiClient(Context context, 
+			GoogleApiClient.ConnectionCallbacks connectionCallback,
+			GoogleApiClient.OnConnectionFailedListener connectionFailListener,
+			Api<? extends Api.ApiOptions.NotRequiredOptions> requestedApi) {
+		
+		return new GoogleApiClient.Builder(context)
+        .addConnectionCallbacks(connectionCallback)
+        .addOnConnectionFailedListener(connectionFailListener)
+        .addApi(requestedApi)
+        .build();
+	}
 }
