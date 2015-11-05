@@ -267,6 +267,8 @@ public class LocationService extends Service {
         public void onLocationChanged(final Location loc) {
             Log.i(TAG, "Location changed.");
             if(isBetterLocation(loc, previousBestLocation)) {
+            	previousBestLocation = loc;
+            	
             	//Send the change to an application receiver.
             	Bundle extras = new Bundle(); 
                 loc.getLatitude();
