@@ -54,12 +54,14 @@ import es.javocsoft.android.lib.toolbox.ToolBox;
  *   <ul>
  * 		<li>Time between localization changes. Default is 4 seconds (4000 milliseconds).</li>
  * 		<li>Distance between localization changes. Default is 2 meters.</li>
+ * 	    <li>Accuracy change threshold (in meters). Default is 0.</li>
  *   </ul>  
  *   To set these values, set them through the service starting intent by 
  *   using these keys in the bundle:
  *   <ul>
  *     <li>LOCATION_SERVICE_PARAM_MIN_DISTANCE</li> 
  * 	   <li>LOCATION_SERVICE_PARAM_MIN_TIME</li>
+ * 	   <li>LOCATION_SERVICE_PARAM_ACCURACY_THRESHOLD</li>
  *   </ul>
  *  </li> 
  *  <li>If service gets stopped, it will automatically run again.</li>
@@ -91,6 +93,7 @@ public class LocationService extends Service {
 	
 	public static final String LOCATION_SERVICE_PARAM_MIN_DISTANCE = "LOCATION_UPDATE_MIN_DISTANCE";
 	public static final String LOCATION_SERVICE_PARAM_MIN_TIME = "LOCATION_UPDATE_MIN_TIME";
+	public static final String LOCATION_SERVICE_PARAM_ACCURACY_THRESHOLD = "LOCATION_UPDATE_ACCURACY_THRESHOLD";
 	
 	public static final String ACTION_LOCATION_SERVICE_STARTED = LocationService.class.getPackage().getName() + ".intent.action.LOCATION_SERVICE_STARTED";
 	public static final String ACTION_LOCATION_SERVICE_SHUTDOWN = LocationService.class.getPackage().getName() + ".intent.action.LOCATION_SERVICE_SHUTDOWN";
@@ -104,6 +107,7 @@ public class LocationService extends Service {
     
     private static final int UPDATE_MIN_DISTANCE = 2; //meters 
     private static final long UPDATE_MIN_TIME = 4000; //Milliseconds
+    private static final int UPDATE_ACCURACY_THRESHOLD = 0;
     
     
     public LocationManager locationManager;
@@ -111,7 +115,7 @@ public class LocationService extends Service {
     public Location previousBestLocation = null;
     private int minDistance = UPDATE_MIN_DISTANCE;
     private long minTime = UPDATE_MIN_TIME;
-    
+    private int accuracyThreshold = UPDATE_ACCURACY_THRESHOLD;
     
     
 	
@@ -155,9 +159,12 @@ public class LocationService extends Service {
     		//We get the initialization parameters from the intent.
     		minDistance = intent.getIntExtra(LOCATION_SERVICE_PARAM_MIN_DISTANCE, UPDATE_MIN_DISTANCE);
         	minTime = intent.getLongExtra(LOCATION_SERVICE_PARAM_MIN_TIME, UPDATE_MIN_TIME);
+        	accuracyThreshold = intent.getIntExtra(LOCATION_SERVICE_PARAM_ACCURACY_THRESHOLD, UPDATE_ACCURACY_THRESHOLD);
+        	
         	//We save the initialization for later usage in case services gets rebooted.
         	ToolBox.prefs_savePreference(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_MIN_DISTANCE, Integer.class, minDistance);
         	ToolBox.prefs_savePreference(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_MIN_TIME, Long.class, minTime);
+        	ToolBox.prefs_savePreference(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_ACCURACY_THRESHOLD, Integer.class, accuracyThreshold);
     	}else{
     		//No data in the intent, we try to get from saved preferences if there is one.
     		if(ToolBox.prefs_existsPref(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_MIN_DISTANCE)) {
@@ -165,6 +172,9 @@ public class LocationService extends Service {
     		}
     		if(ToolBox.prefs_existsPref(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_MIN_TIME)) {
     			minTime = ((Long)ToolBox.prefs_readPreference(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_MIN_TIME, Long.class)).longValue();
+    		}
+    		if(ToolBox.prefs_existsPref(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_ACCURACY_THRESHOLD)) {
+    			accuracyThreshold = ((Integer)ToolBox.prefs_readPreference(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_ACCURACY_THRESHOLD, Integer.class)).intValue();
     		}
     	}
     	
@@ -178,11 +188,11 @@ public class LocationService extends Service {
             		LocationManager.GPS_PROVIDER, 
             		minTime, minDistance, listener);
             
-            Log.d(TAG, "Location service started. Parameters 'minTime': " + minTime + " / 'minDistance': " + minDistance);
+            Log.d(TAG, "Location service started. Parameters 'minTime': " + minTime + " / 'minDistance': " + minDistance + " / 'accuracyUmbral': " + accuracyThreshold);
             
             deliverBroadcast(ACTION_LOCATION_SERVICE_STARTED, null);
     	}else{
-    		Log.d(TAG, "Location service not started, permissions not granted. Parameters 'minTime': " + minTime + " / 'minDistance': " + minDistance);
+    		Log.d(TAG, "Location service not started, permissions not granted. Parameters 'minTime': " + minTime + " / 'minDistance': " + minDistance + " / 'accuracyUmbral': " + accuracyThreshold);
     	}
     	
     }
@@ -216,7 +226,10 @@ public class LocationService extends Service {
         //Check if the new location is more or less accurate
         int accuracyDelta = (int) (location.getAccuracy() - currentBestLocation.getAccuracy());
         boolean isLessAccurate = accuracyDelta > 0;
-        boolean isMoreAccurate = accuracyDelta < 0;
+        boolean isMoreAccurate = false; 
+        if(accuracyDelta < 0 && ((-1)*accuracyDelta)>=accuracyThreshold) {
+        	isMoreAccurate = true;
+        }
         boolean isSignificantlyLessAccurate = accuracyDelta > 200;
 
         //Check if the old and new location have the same provider
