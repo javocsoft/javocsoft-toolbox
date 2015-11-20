@@ -1466,9 +1466,11 @@ public final class ToolBox {
       * @param centerOnScreen	Set to TRUE to center in the middle of 
       * 						the screen.
       */
-     public static void toast_createCustomToast(Activity context, String message, TOAST_TYPE type, boolean centerOnScreen) {
+     @SuppressLint("InflateParams")
+	public static void toast_createCustomToast(Context context, String message, TOAST_TYPE type, boolean centerOnScreen) {
     	 LayoutInflater inflater = (LayoutInflater) context.getSystemService(Service.LAYOUT_INFLATER_SERVICE);
-    	 View linearLayout = inflater.inflate(R.layout.toast_view, (ViewGroup) context.findViewById(R.id.toast_layout_root));
+    	 View linearLayout = inflater.inflate(R.layout.toast_view, null);
+    	 //View linearLayout = inflater.inflate(R.layout.toast_view, (ViewGroup) context.findViewById(R.id.toast_layout_root));
     	 
     	 //Customize view of the Toast
     	 ImageView imageZone = (ImageView) linearLayout.findViewById(R.id.toastImage);    	 
@@ -1697,7 +1699,7 @@ public final class ToolBox {
 	  * @param defaultToastStyle	Set to true to use the default system Toast style.
 	  * @param customToastType		The custom toast type {@link TOAST_TYPE}
 	  */
-	 public static void dialog_showToastAlert(Activity context, String message, 
+	 public static void dialog_showToastAlert(Context context, String message, 
 			 boolean centerOnScreen, boolean defaultToastStyle, 
 			 TOAST_TYPE customToastType) {
 		 
@@ -3067,6 +3069,7 @@ public final class ToolBox {
 	 * @return The content of the request if there is one.
 	 * @throws Exception
 	 */
+	@SuppressWarnings("deprecation")
 	public static String net_httpclient_doAction(HTTP_METHOD method, String url, String jsonDataKey, String jsonData, Map<String, String> headers) throws ConnectTimeoutException, SocketTimeoutException, Exception{
     	String responseData = null;
 		
@@ -5218,8 +5221,13 @@ public final class ToolBox {
 	}
 	
 	/**
-	 * Get the device language (two letter code value)
-	 * @return
+	 * Get the device language (two letter code value).
+	 * <br><br>
+	 * See:<br>
+	 * <a href="https://en.wikipedia.org/wiki/ISO_639-1">ISO639-1</a><br>
+	 * <a href="http://developer.android.com/intl/es/reference/java/util/Locale.html">Android Locale</a>
+	 * 
+	 * @return	The language code.
 	 */
 	public static String device_getLanguage(){
 		return Locale.getDefault().getLanguage();
@@ -5228,26 +5236,11 @@ public final class ToolBox {
 	
 	/**
 	 * Get the current android API Level.
+	 * <br><br>
+	 * See:  
+	 * <a href="http://developer.android.com/intl/es/guide/topics/manifest/uses-sdk-element.html#ApiLevels">API Level</a>
 	 * 
-	 * Android 4.2        17
-	 * Android 4.1        16
-	 * Android 4.0.3      15
-	 * Android 4.0        14
-	 * Android 3.2        13
-	 * Android 3.1        12
-	 * Android 3.0        11
-	 * Android 2.3.3      10
-	 * Android 2.3        9
-	 * Android 2.2        8
-	 * Android 2.1        7
-	 * Android 2.0.1      6
-	 * Android 2.0        5
-	 * Android 1.6        4
-	 * Android 1.5        3
-	 * Android 1.1        2
-	 * Android 1.0        1
-	 * 
-	 * @return
+	 * @return	The device current Android API level.
 	 */
 	public static int device_getAPILevel(){
 		return Build.VERSION.SDK_INT;
@@ -5695,6 +5688,7 @@ public final class ToolBox {
 	 * @param hashType	{@link HASH_TYPE}
 	 * @return
 	 */
+	@SuppressWarnings("deprecation")
 	public static String crypto_getHASH(byte[] data, HASH_TYPE hashType){
 		 
 		 MessageDigest digest = null;

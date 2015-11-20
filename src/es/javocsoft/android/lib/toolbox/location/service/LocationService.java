@@ -20,7 +20,7 @@ import es.javocsoft.android.lib.toolbox.ToolBox;
  *   <li><b>LOCATION_SERVICE_SHUTDOWN</b>. Intent filter name: <i>es.javocsoft.android.lib.toolbox.location.service.intent.action.LOCATION_SERVICE_SHUTDOWN</i></li>
  *   <li><b>LOCATION_CHANGED</b>. Intent filter name: <i>es.javocsoft.android.lib.toolbox.location.service.intent.action.LOCATION_CHANGED</i></li>
  *   <li><b>LOCATION_GPS_ENABLED</b>. Intent filter name: <i>es.javocsoft.android.lib.toolbox.location.service.intent.action.LOCATION_GPS_ENABLED</i></li>
- *   <li><b>LOCATION_GPS_ENABLED</b>. Intent filter name: <i>es.javocsoft.android.lib.toolbox.location.service.intent.action.LOCATION_GPS_ENABLED</i></li>
+ *   <li><b>LOCATION_GPS_DISABLED</b>. Intent filter name: <i>es.javocsoft.android.lib.toolbox.location.service.intent.action.LOCATION_GPS_DISABLED</i></li>
  * </ul>
  * 
  * Declare the localization service in your AndroidManifest.xml:<br>
@@ -42,7 +42,7 @@ import es.javocsoft.android.lib.toolbox.ToolBox;
  *               &lt;action android:name="es.javocsoft.android.lib.toolbox.location.service.intent.action.LOCATION_SERVICE_SHUTDOWN" /&gt;
  *               &lt;action android:name="es.javocsoft.android.lib.toolbox.location.service.intent.action.LOCATION_CHANGED" /&gt;
  *               &lt;action android:name="es.javocsoft.android.lib.toolbox.location.service.intent.action.LOCATION_GPS_ENABLED" /&gt;
- *               &lt;action android:name="es.javocsoft.android.lib.toolbox.location.service.intent.action.LOCATION_GPS_ENABLED" /&gt;
+ *               &lt;action android:name="es.javocsoft.android.lib.toolbox.location.service.intent.action.LOCATION_GPS_DISABLED" /&gt;
  *           &lt;/intent-filter/&gt;            
  *	&lt;/receiver/&gt;
  * </code>
@@ -53,8 +53,8 @@ import es.javocsoft.android.lib.toolbox.ToolBox;
  * <li>The localization service can be customized when starting by setting:
  *   <ul>
  * 		<li>Time between localization changes. Default is 4 seconds (4000 milliseconds).</li>
- * 		<li>Distance between localization changes. Default is 2 meters.</li>
- * 	    <li>Accuracy change threshold (in meters). Default is 0.</li>
+ * 		<li>Distance (in meters) between localization changes. Default is 2 meters.</li>
+ * 	    <li>Accuracy change threshold (in meters). Default is 0 meters.</li>
  *   </ul>  
  *   To set these values, set them through the service starting intent by 
  *   using these keys in the bundle:
@@ -99,7 +99,7 @@ public class LocationService extends Service {
 	public static final String ACTION_LOCATION_SERVICE_SHUTDOWN = LocationService.class.getPackage().getName() + ".intent.action.LOCATION_SERVICE_SHUTDOWN";
 	public static final String ACTION_LOCATION_CHANGED = LocationService.class.getPackage().getName() + ".intent.action.LOCATION_CHANGED";
 	public static final String ACTION_LOCATION_GPS_ENABLED = LocationService.class.getPackage().getName() + ".intent.action.LOCATION_GPS_ENABLED";
-	public static final String ACTION_LOCATION_GPS_DISABLED = LocationService.class.getPackage().getName() + ".intent.action.LOCATION_GPS_ENABLED";
+	public static final String ACTION_LOCATION_GPS_DISABLED = LocationService.class.getPackage().getName() + ".intent.action.LOCATION_GPS_DISABLED";
 	
 	public static final String LOCATION_KEY = "location";
 	
@@ -107,7 +107,7 @@ public class LocationService extends Service {
     
     private static final int UPDATE_MIN_DISTANCE = 2; //meters 
     private static final long UPDATE_MIN_TIME = 4000; //Milliseconds
-    private static final int UPDATE_ACCURACY_THRESHOLD = 0;
+    private static final int UPDATE_ACCURACY_THRESHOLD = 0; //meters
     
     
     public LocationManager locationManager;
