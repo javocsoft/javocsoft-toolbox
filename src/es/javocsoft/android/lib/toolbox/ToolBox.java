@@ -5490,7 +5490,10 @@ public final class ToolBox {
 	 */
 	public static double location_distance(double latitude1, double longitude1, double latitude2, double longitude2) {
 		
-		double earthRadius = 6378137;
+		final double eartRadiusKm = 6371;
+		//final double eartRadiusMil = 3959;
+		
+		double earthRadius = eartRadiusKm * 1000; //Mts (3959 mil)
 		
 		double latitudeSin = Math.sin(Math.toRadians(latitude2 - latitude1) / 2);
 		double longitudeSin = Math.sin(Math.toRadians(longitude2 - longitude1) / 2);
