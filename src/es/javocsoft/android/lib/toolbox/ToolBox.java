@@ -5476,8 +5476,8 @@ public final class ToolBox {
     }	
 	
 	/**
-	 * Calculates the great circle distance between two points on the Earth. 
-	 * Uses the Haversine Formula.
+	 * Calculates the great circle distance (distance in meters) between 
+	 * two points on the Earth using the Haversine Formula.
 	 * 
 	 * 	http://en.wikipedia.org/wiki/Haversine_formula.
 	 * 	http://es.wikipedia.org/wiki/F%C3%B3rmula_del_Haversine
@@ -5506,6 +5506,36 @@ public final class ToolBox {
 		
 		return earthRadius * c;
 	}
+	
+	/**
+	 * Calculates the great circle distance (distance in meters) between 
+	 * two points on the Earth using:<br>
+	 * <ul>
+	 * <li>The native Android Location distanceTo. Distance is defined 
+	 * using the WGS84 ellipsoid (see <a href="https://en.wikipedia.org/wiki/World_Geodetic_System">WGS84</a>). 
+	 * </li>
+	 * <li>The Haversine Formula. See <a href="http://en.wikipedia.org/wiki/Haversine_formula">Haversine Wiki</a></li>
+	 * </ul>
+	 * 
+	 * @param locFrom	The start point
+	 * @param locTo		The end point
+	 * @param haversine	Set to TRUE to use the Haversine method.
+	 * @return	The distance in meters between the two points. If one of the points 
+	 * 			is null 0 is returned.
+	 */
+	public static float location_distance(Location locFrom, Location locTo, boolean haversine) {
+		if(locFrom==null || locTo==null) {
+			return 0f;
+		}
+		
+		if(haversine){
+			return (float) location_distance(locFrom.getLatitude(), locFrom.getLongitude(), 
+								locTo.getLatitude(), locTo.getLongitude());			
+		}else{
+			return locFrom.distanceTo(locTo);
+		}
+	}
+	
 	
 	/**
 	 * Creates a circular area, or fence, around the location of interest.
