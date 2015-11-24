@@ -63,7 +63,7 @@ public abstract class DBSQLite extends SQLiteOpenHelper {
 
 	@Override
 	public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-		doOnUpgrade(db);
+		doOnUpgrade(db, oldVersion, newVersion);
 	}
 
 	
@@ -72,6 +72,7 @@ public abstract class DBSQLite extends SQLiteOpenHelper {
 	public abstract void doOnCreate(SQLiteDatabase db);
 	
 	/** Implement this method to make changes when database 
-	 * version changes. See {@link SQLiteOpenHelper#onUpgrade}. */
-	public abstract void doOnUpgrade(SQLiteDatabase db);
+	 * version changes without loosing existing data. 
+	 * See {@link SQLiteOpenHelper#onUpgrade}. */
+	public abstract void doOnUpgrade(SQLiteDatabase db, int oldVersion, int newVersion);
 }

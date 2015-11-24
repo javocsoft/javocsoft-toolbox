@@ -106,7 +106,7 @@ public class LocationService extends Service {
 	private static final int TWO_MINUTES = (1000*60)*2;
     
     private static final int UPDATE_MIN_DISTANCE = 2; //meters 
-    private static final long UPDATE_MIN_TIME = 4000; //Milliseconds
+    private static final long UPDATE_MIN_TIME = 4000l; //Milliseconds
     private static final int UPDATE_ACCURACY_THRESHOLD = 0; //meters
     
     
@@ -188,7 +188,8 @@ public class LocationService extends Service {
             		LocationManager.GPS_PROVIDER, 
             		minTime, minDistance, listener);
             
-            Log.d(TAG, "Location service started. Parameters 'minTime': " + minTime + " / 'minDistance': " + minDistance + " / 'accuracyUmbral': " + accuracyThreshold);
+            if(ToolBox.LOG_ENABLE)
+            	Log.d(TAG, "Location service started. Parameters 'minTime': " + minTime + " / 'minDistance': " + minDistance + " / 'accuracyUmbral': " + accuracyThreshold);
             
             deliverBroadcast(ACTION_LOCATION_SERVICE_STARTED, null);
     	}else{
@@ -214,6 +215,23 @@ public class LocationService extends Service {
         boolean isSignificantlyNewer = timeDelta > TWO_MINUTES;
         boolean isSignificantlyOlder = timeDelta < -TWO_MINUTES;
         boolean isNewer = timeDelta > 0;
+        
+        if(currentBestLocation.getLatitude()==location.getLatitude() &&
+           currentBestLocation.getLongitude()==location.getLongitude()) {
+        	//Same location, new measurement is newer yes but the location is the same.
+        	isNewer = false;
+        }else{
+        	double distanceBetweenMeasurements = ToolBox.location_distance(location.getLatitude(), location.getLongitude(), 
+        			currentBestLocation.getLatitude(), currentBestLocation.getLongitude());
+        	if(ToolBox.LOG_ENABLE)
+        		Log.d(TAG, "Elapsed distance (Haversine) since last location: " + distanceBetweenMeasurements);
+        	
+        	if(distanceBetweenMeasurements<=minDistance){
+        		//New measurement is newer yes but the distance between last and new location is less
+        		//than the minimal distance.
+        		isNewer = false;
+        	}
+        }
 
         //If it's been more than two minutes since the current location, we use the 
         //new location because the user has probably moved.
@@ -278,7 +296,8 @@ public class LocationService extends Service {
     public class CustomLocationListener implements LocationListener {
     	
         public void onLocationChanged(final Location loc) {
-            Log.i(TAG, "Location changed.");
+        	if(ToolBox.LOG_ENABLE)
+        		Log.d(TAG, "Location changed.");
             if(isBetterLocation(loc, previousBestLocation)) {
             	previousBestLocation = loc;
             	
@@ -293,14 +312,16 @@ public class LocationService extends Service {
         }
 
         public void onProviderDisabled(String provider) {
-        	Log.i(TAG, "Location provider disabled [" + provider + "].");
+        	if(ToolBox.LOG_ENABLE)
+        		Log.d(TAG, "Location provider disabled [" + provider + "].");
         	if(provider.equals(LocationManager.GPS_PROVIDER)){
         		deliverBroadcast(ACTION_LOCATION_GPS_DISABLED, null);
         	}
         }
 
         public void onProviderEnabled(String provider) {
-        	Log.i(TAG, "Location provider enabled [" + provider + "].");
+        	if(ToolBox.LOG_ENABLE)
+        		Log.d(TAG, "Location provider enabled [" + provider + "].");
         	if(provider.equals(LocationManager.GPS_PROVIDER)){
         		deliverBroadcast(ACTION_LOCATION_GPS_ENABLED, null);        		
         	}

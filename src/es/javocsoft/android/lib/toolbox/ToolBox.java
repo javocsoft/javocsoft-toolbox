@@ -131,8 +131,10 @@ import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Looper;
 import android.os.Parcelable;
 import android.os.PowerManager;
+import android.os.StrictMode;
 import android.provider.Settings;
 import android.provider.Settings.Secure;
 import android.provider.Settings.SettingNotFoundException;
@@ -153,7 +155,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewConfiguration;
-import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowManager;
 import android.view.animation.Animation;
@@ -2494,18 +2495,89 @@ public final class ToolBox {
 	 * <br><br>
 	 * The generated Action also has a field {@link ToolBox#NOTIFICATION_ID} in its extra
 	 * Bundle for afterwards being able to cancel the parent notification once the
-	 * action is consumed.
+	 * action is consumed.<br><br>
 	 * 
-	 * @param iconId
-	 * @param title
-	 * @param actionIntent		
+	 * See also {@link ToolBox#notification_createActionButton}
+	 * 
+	 * @param iconId			The icon resource id for the action.
+	 * @param title				The title.
+	 * @param actionIntent		The pending intent of the action.
 	 * @param notificationId	Used to be able to cancel a notification once
 	 * 							the action is consumed.
 	 * @return
+	 * @Deprecated Use {@link ToolBox#notification_createActionButton}
 	 */
-	public static Action notification_createAction(int iconId, String title, PendingIntent actionIntent, int notificationId) {
+	public static android.support.v4.app.NotificationCompat.Action 
+		notification_createAction(int iconId, String title, PendingIntent actionIntent, 
+				int notificationId) {
+		
 		Action action = new Action(iconId, title, actionIntent);
 		action.getExtras().putInt(NOTIFICATION_ID, notificationId);
+		
+		return action;
+	}
+	
+	/** When a notification has action buttons (since Android 4.1+), these actions
+	 * can target an activity, service or receiver. */
+	public static enum NOTIFICATION_ACTION_TARGET_TYPE {RECEIVER, SERVICE, ACTIVITY};
+	
+	/**
+	 * Creates a notification action.
+	 * 
+	 * @param context				A context.
+	 * @param actiontargetType		Optional. The target type of this action. 
+	 * 								See {@link NOTIFICATION_ACTION_TARGET_TYPE}. if null,
+	 * 								BroadcastReceiver type is used.
+	 * @param actionKey				The action, an String key, of this action.
+	 * @param targetClazz			The broadcast receiver target of this action.
+	 * @param notificationIdKey		The notification Id field in extras that will contain
+	 * 								the notification id. This notification Id will be used
+	 * 								to close the notification after action is triggered. 								
+	 * @param notificationId		The notification id. Used to be able to cancel a 
+	 * 								notification once the action is consumed.
+	 * @param iconId				The icon resource Id.
+	 * @param title					The title of the action.
+	 * @param extras				Optional. Some extras of the notification.
+	 * @return		The action object, see {@link android.support.v4.app.NotificationCompat.Action}.
+	 */
+	public static android.support.v4.app.NotificationCompat.Action 
+		notification_createActionButton(Context context,
+			NOTIFICATION_ACTION_TARGET_TYPE targetType,
+			String actionKey,				
+			Class<?> targetClazz, 
+			String notificationIdKey, int notificationId,
+			int iconId, String title, Bundle extras) {
+		
+		Intent i = new Intent(context, targetClazz);
+		i.setAction(actionKey);
+		i.putExtra(notificationIdKey, notificationId);
+		
+		if(extras!=null){
+			i.putExtras(extras);
+		}
+		
+		PendingIntent pIntent = null;
+		if(targetType==null) {
+			pIntent = PendingIntent.getBroadcast(context, ToolBox.random_getRandom().nextInt(), i, PendingIntent.FLAG_UPDATE_CURRENT);
+		}else{
+			switch (targetType) {
+				case ACTIVITY:
+					pIntent = PendingIntent.getActivity(context, ToolBox.random_getRandom().nextInt(), i, PendingIntent.FLAG_UPDATE_CURRENT);
+					break;
+				case RECEIVER:
+					pIntent = PendingIntent.getBroadcast(context, ToolBox.random_getRandom().nextInt(), i, PendingIntent.FLAG_UPDATE_CURRENT);
+					break;
+				case SERVICE:
+					pIntent = PendingIntent.getService(context, ToolBox.random_getRandom().nextInt(), i, PendingIntent.FLAG_UPDATE_CURRENT);
+					break;
+				default:
+					pIntent = PendingIntent.getBroadcast(context, ToolBox.random_getRandom().nextInt(), i, PendingIntent.FLAG_UPDATE_CURRENT);
+					break;
+			}
+		}
+		
+		android.support.v4.app.NotificationCompat.Action action = 
+    			new android.support.v4.app.NotificationCompat.Action(iconId, title, pIntent);
 		
 		return action;
 	}
@@ -5751,7 +5823,67 @@ public final class ToolBox {
 			 return null;
 		 }
 	}
-	 
+	
+	//-------------------- STRICTMODE--------------------------------------------------------------------
+	
+	/**
+	 * Use this method to get warned in the logcat when an 
+	 * operation that should be done outside of the UI thread 
+	 * is done in it. A sympton of this:
+	 * <br><br>
+	 * “Choreographer(abc): Skipped xx frames! The application may be doing too much work on its main thread.”
+	 * <br><br>
+	 * It also stablishes the VmPolicy detecting leaked SQL
+	 * object and leaked closable objects with the penalty of
+	 * logging them and killing the whole process on violation.
+	 * <br><br>
+	 * See: <a href="http://developer.android.com/intl/es/reference/android/os/StrictMode.html">StricMode</a>
+	 * 
+	 * @param all	If set to TRUE, all detectable problems are watched.
+	 * 				If set to FALSE, only disk read/write and network 
+	 * 				operations are watched.
+	 */
+	public static void enableStrictMode(boolean all) {
+		
+		//ThreadPolicy tPolicy = new StrictMode.ThreadPolicy.Builder();
+		StrictMode.ThreadPolicy.Builder tPolicyBuilder = new StrictMode.ThreadPolicy.Builder();
+		if(all) {
+			tPolicyBuilder.detectAll();
+		}else{
+			tPolicyBuilder.detectDiskReads()
+				.detectDiskWrites()
+        		.detectNetwork()
+        		.penaltyLog();
+		}        
+		StrictMode.setThreadPolicy(tPolicyBuilder.build());
+		
+		StrictMode.setVmPolicy(new StrictMode.VmPolicy.Builder()
+		        .detectLeakedSqlLiteObjects()
+		        .detectLeakedClosableObjects()
+		        .penaltyLog()
+		        .penaltyDeath()
+		        .build());
+				
+		Log.i(TAG, "StrictMode enabled!");
+	}
+	
+	//-------------------- THREAD-----------------------------------------------------------------------
+	
+	/**
+	 * No long term process should be done in the main application
+	 * UI thread. This method checks if the current current thread 
+	 * is the main application UI thread.
+	 * 
+	 * @return
+	 */
+	public static boolean threadIsMainApplicationUIThread() {
+		if(Looper.getMainLooper().getThread() == Thread.currentThread()) {
+			return true;
+		}else{
+			return false;
+		}
+	}
+	
 	//-------------------- FONTS ------------------------------------------------------------------------
 	 
 	/**

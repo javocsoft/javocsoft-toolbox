@@ -441,4 +441,52 @@ public class DBHelper<T extends DBSQLite> {
 		return res;
 	}
 	
+	/**
+	 * Update rows of a table given the where clause and content to be
+	 * updated.
+	 * 
+	 * @param tableName			The table to update
+	 * @param whereColumnNames	The columns for the conditions.
+	 * @param whereValues		The values of the columns in the WHERE clause.
+	 * @param contentValues		The content to update in the table (fields and values). 
+	 * 							See {@link #ContentValues}
+	 * @return 	The number of updated rows or a negative value on error.
+	 */
+	public int updateWhere(String tableName, String[] whereColumnNames, String[] whereValues, ContentValues contentValues) {
+		if(mDatabase.isOpen()) {
+			StringBuilder sbWhere = new StringBuilder();		
+			for(String wColumn:whereColumnNames){
+				if(sbWhere.length()>0) {
+					sbWhere.append(" AND " + wColumn + "=?");
+				}else{
+					sbWhere.append(wColumn + "=?");
+				}
+			}				
+			return mDatabase.update(tableName, contentValues, sbWhere.toString(), whereValues);
+		}else{
+			Log.w(ToolBox.TAG, "Database is not opened!");
+			return DB_ERROR_CLOSED;
+		}
+	}
+	
+	/**
+	 * Update rows of a table given the where clause and content to be
+	 * updated.
+	 * 
+	 * @param tableName			The table to update
+	 * @param whereColumnNames	The where clause (use ?)
+	 * @param whereValues		The values of the WHERE clause (the values of the "?")
+	 * @param contentValues		The content to update in the table (fields and values). 
+	 * 							See {@link #ContentValues}
+	 * @return 	The number of updated rows or a negative value on error.
+	 */
+	public int updateWhere(String tableName, String whereClause, String[] whereValues, ContentValues contentValues) {
+		if(mDatabase.isOpen()) {							
+			return mDatabase.update(tableName, contentValues, whereClause, whereValues);
+		}else{
+			Log.w(ToolBox.TAG, "Database is not opened!");
+			return DB_ERROR_CLOSED;
+		}
+	}
+	
 }
