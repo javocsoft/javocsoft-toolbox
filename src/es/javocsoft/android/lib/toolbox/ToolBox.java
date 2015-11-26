@@ -215,12 +215,13 @@ public final class ToolBox {
 	public static final String NETWORK_OPERATOR_EMU = "Android";
 	public static final String NETWORK_OPERATOR_NOSIM = "NO_SIM";
 
+	/** See <a href="http://developer.android.com/intl/es/guide/topics/manifest/uses-sdk-element.html#ApiLevels">Android API Levels</a> */
 	public static enum ApiLevel {
 		
 		LEVEL_1(1), LEVEL_2(2), LEVEL_3(3), LEVEL_4(4), LEVEL_5(5), LEVEL_6(6),
 		LEVEL_7(7), LEVEL_8(8), LEVEL_9(9), LEVEL_10(10), LEVEL_11(11), LEVEL_12(12),
 		LEVEL_13(13), LEVEL_14(14), LEVEL_15(15), LEVEL_16(16), LEVEL_17(17), LEVEL_18(18),
-		LEVEL_19(19), LEVEL_20(20), LEVEL_21(21), LEVEL_22(22);
+		LEVEL_19(19), LEVEL_20(20), LEVEL_21(21), LEVEL_22(22), LEVEL_23(23);
 
 		private int value;
 
@@ -256,6 +257,8 @@ public final class ToolBox {
 	
 	/** Exit application style */
 	public static enum EXIT_CONFIRMATION_STYLE {NONE, BACK_PRESS, DIALOG};
+	
+	public static final String NOTIFICATION_FLAG = "ToolBox-Notification-Flag";
 	
 	
 	private ToolBox(){}
@@ -1611,27 +1614,30 @@ public final class ToolBox {
 		AlertDialog dialog = new AlertDialog.Builder(context).create();
 			
 		dialog.setTitle(title);			
-		dialog.setMessage(message);
+		dialog.setMessage(message);		
+		dialog.setCancelable(true);
 		
-		dialog.setCancelable(true);			
-		dialog.setButton(AlertDialog.BUTTON_NEUTRAL, neutralBtnText,
-		new DialogInterface.OnClickListener() {
+		//First Cancel button to be able to cancel.		
+		dialog.setButton(AlertDialog.BUTTON_NEGATIVE, negativeBtnText,
+			new DialogInterface.OnClickListener() {
 		    public void onClick(DialogInterface dialog, int id) {
-		    	if(neutralBtnActions!=null){
-		    		neutralBtnActions.run();
-		    	}
-		    	dialog.dismiss();		      
+		    	if(negativeBtnActions!=null)
+		    		negativeBtnActions.run();
+		    	
+		    	dialog.dismiss();
 		    }
-		});		
+		});
 		
-		if(negativeBtnActions!=null){
-			dialog.setButton(AlertDialog.BUTTON_NEGATIVE, negativeBtnText,
-			  new DialogInterface.OnClickListener() {
+		if(neutralBtnActions!=null){
+			dialog.setButton(AlertDialog.BUTTON_NEUTRAL, neutralBtnText,
+			new DialogInterface.OnClickListener() {
 			    public void onClick(DialogInterface dialog, int id) {
-			    	negativeBtnActions.run();		      
+			    	if(neutralBtnActions!=null){
+			    		neutralBtnActions.run();
+			    	}			    			      
 			    }
-			});		
-		}
+			});
+		}		
 		
 		if(positiveBtnActions!=null){
 			dialog.setButton(AlertDialog.BUTTON_POSITIVE, positiveBtnText,
@@ -1822,6 +1828,19 @@ public final class ToolBox {
 		dialog.show();	
 	}
 	
+	//STATUS BAR ------------------------------------------------------------------------------------------
+	 
+	 /**
+	  * Closes the status bar.
+	  *  
+	  * @param context
+	  */
+	 public static void statusBarClose(Context context) {
+		Intent it = new Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS);
+		context.sendBroadcast(it);
+	 }
+	 
+	 
 	//SYSTEM NOTIFICATIONS ---------------------------------------------------------------------------------------------------------------------
 	
 	/**
@@ -1958,6 +1977,10 @@ public final class ToolBox {
     /**
      * Creates and generates a new notification.<br><br>
      * 
+     * The notification has a FLAg in the extras bundle (NOTIFICATION_FLAG) that is set to 1.
+     * This class can be used afterwards to know within an app if the app was opened from
+     * a notification checking this value.<br><br>
+     * 
      * See:<br><br>
      * 							
      * 	Notification:			http://developer.android.com/design/patterns/notifications.html<br>
@@ -2060,10 +2083,13 @@ public final class ToolBox {
     		//This is the intent that runs in case the user clicks on the notification
     		Intent notificationIntent = new Intent(context, notClazz);    		
 	        notificationIntent.setAction(notClazz.getName()+"."+notAction);
+	        if(extras==null){
+	        	extras = new Bundle();	        	
+	        }
+	        //Add a flag that can be used to know if the app is opened from a notification :)
+	        extras.putInt(NOTIFICATION_FLAG, 1);
 	        //We save in the intent all the info received.
-	        if(extras!=null){
-	        	notificationIntent.putExtras(extras);
-	        }	        
+	        notificationIntent.putExtras(extras);
 	       	 
 	        if(actions!=null && actions.size()>0) {
 	        	for(Action action:actions){

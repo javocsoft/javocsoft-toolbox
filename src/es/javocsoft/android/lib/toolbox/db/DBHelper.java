@@ -64,12 +64,12 @@ public class DBHelper<T extends DBSQLite> {
     protected T mDbHelper;	
 	protected SQLiteDatabase mDatabase;
 	
-	public final int DB_OPERATION_OK = 0;
-	public final int DB_ERROR = -1;
-	public final int DB_ERROR_CLOSED = -2;
-	public final int DB_ERROR_BAD_TYPE = -3;
-	public final int DB_ERROR_BAD_DATA = -4;
-	public final int DB_ERROR_INSERT_DATA = -5;
+	public final long DB_OPERATION_OK = 0;
+	public final long DB_ERROR = -1;
+	public final long DB_ERROR_CLOSED = -2;
+	public final long DB_ERROR_BAD_TYPE = -3;
+	public final long DB_ERROR_BAD_DATA = -4;
+	public final long DB_ERROR_INSERT_DATA = -5;
 	
 	public final int DB_ERROR_UNEXPECTED = -100;
 	
@@ -93,14 +93,14 @@ public class DBHelper<T extends DBSQLite> {
 	 * 
 	 * @throws SQLException
 	 */
-	public void open() throws SQLException {
+	public synchronized  void open() throws SQLException {
 		mDatabase = mDbHelper.getWritableDatabase();
 	}
 	
 	/**
 	 * Closes a SQLiteDatabase database helper.
 	 */
-	public void close() {
+	public synchronized  void close() {
 		mDbHelper.close();		
 	}
 	
@@ -156,7 +156,7 @@ public class DBHelper<T extends DBSQLite> {
 	 * @return 	The number of deleted rows or a negative value 
 	 * 			on error.
 	 */	
-	public int deleteAll(String tableName) {		
+	public long deleteAll(String tableName) {		
 		if(mDatabase.isOpen()) {
 			//We set whereClause to "1" to remove all rows and get a count.
 			return mDatabase.delete(tableName, "1", null);			
@@ -176,7 +176,7 @@ public class DBHelper<T extends DBSQLite> {
 	 * @return 	The number of deleted rows or a negative value 
 	 * 			on error.
 	 */
-	public int deleteWhere(String tableName, String[] whereColumnNames, String[] whereValues) {
+	public long deleteWhere(String tableName, String[] whereColumnNames, String[] whereValues) {
 		if(mDatabase.isOpen()) {
 			StringBuilder sbWhere = new StringBuilder();		
 			for(String wColumn:whereColumnNames){
@@ -202,7 +202,7 @@ public class DBHelper<T extends DBSQLite> {
 	 * @return 	The number of deleted rows or a negative value 
 	 * 			on error.
 	 */
-	public int deleteById(String tableName, String idColumnName, int value) {
+	public long deleteById(String tableName, String idColumnName, int value) {
 		if(mDatabase.isOpen()) {
 			return mDatabase.delete(tableName, idColumnName + "=" + value, null);
 		}else{
@@ -221,7 +221,7 @@ public class DBHelper<T extends DBSQLite> {
 	 * @return 	The number of deleted rows or a negative value 
 	 * 			on error.
 	 */
-	public int deleteIn(String tableName, String inColumnName, List<Integer> inValues) {
+	public long deleteIn(String tableName, String inColumnName, List<Integer> inValues) {
 		if(mDatabase.isOpen()) {
 			return mDatabase.delete(tableName, getInClause(inColumnName, inValues), null);
 		}else{
@@ -240,7 +240,7 @@ public class DBHelper<T extends DBSQLite> {
 	 * @return	The number of deleted rows or a negative value 
 	 * 			on error.
 	 */
-	public int deleteIn(String tableName, String inColumnName, Integer[] inValues) {
+	public long deleteIn(String tableName, String inColumnName, Integer[] inValues) {
 		return deleteIn(tableName, inColumnName, Arrays.asList(inValues));
 	}
 	
@@ -323,8 +323,8 @@ public class DBHelper<T extends DBSQLite> {
 	 * @return	Returns {@link DB_OPERATION_OK} in case of no errors, otherwise a
 	 * 			number minor than 0 indicating the error. 
 	 */
-	protected int insert(DBTable o, String[] fieldNames) {
-		int res = -1;
+	protected long insert(DBTable o, String[] fieldNames) {
+		long res = -1;
 		
 		if(mDatabase.isOpen()) {
 			
@@ -391,10 +391,12 @@ public class DBHelper<T extends DBSQLite> {
 					        }
 						}
 						
-						if(contentValues.size()>0)
-							res = (mDatabase.insert( (DBTable.class.cast(o)).tableName, null, contentValues)!=-1?DB_OPERATION_OK:DB_ERROR);
-						else
+						if(contentValues.size()>0) {
+							long rowId = mDatabase.insert( (DBTable.class.cast(o)).tableName, null, contentValues);
+							res = (rowId!=-1?rowId:DB_ERROR);
+						}else{
 							res = DB_ERROR_INSERT_DATA;
+						}
 						
 					}catch(IllegalAccessException e){
 						Log.e(ToolBox.TAG, "Error inserting data in SQLite [" + e.getMessage() + "]", e);
@@ -420,9 +422,9 @@ public class DBHelper<T extends DBSQLite> {
 	 * @return	Returns {@link DB_OPERATION_OK} in case of no errors, otherwise a
 	 * 			number minor than 0 indicating the error. 
 	 */
-	protected int insert(List<DBTable> oList) {
+	protected long insert(List<DBTable> oList) {
 		
-		int res = DB_ERROR;
+		long res = DB_ERROR;
 		
 		mDatabase.beginTransaction();
 		for(DBTable o:oList) {
@@ -452,7 +454,7 @@ public class DBHelper<T extends DBSQLite> {
 	 * 							See {@link #ContentValues}
 	 * @return 	The number of updated rows or a negative value on error.
 	 */
-	public int updateWhere(String tableName, String[] whereColumnNames, String[] whereValues, ContentValues contentValues) {
+	public long updateWhere(String tableName, String[] whereColumnNames, String[] whereValues, ContentValues contentValues) {
 		if(mDatabase.isOpen()) {
 			StringBuilder sbWhere = new StringBuilder();		
 			for(String wColumn:whereColumnNames){
@@ -480,7 +482,7 @@ public class DBHelper<T extends DBSQLite> {
 	 * 							See {@link #ContentValues}
 	 * @return 	The number of updated rows or a negative value on error.
 	 */
-	public int updateWhere(String tableName, String whereClause, String[] whereValues, ContentValues contentValues) {
+	public long updateWhere(String tableName, String whereClause, String[] whereValues, ContentValues contentValues) {
 		if(mDatabase.isOpen()) {							
 			return mDatabase.update(tableName, contentValues, whereClause, whereValues);
 		}else{

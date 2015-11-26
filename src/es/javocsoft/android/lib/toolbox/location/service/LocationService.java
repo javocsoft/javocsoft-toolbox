@@ -220,6 +220,8 @@ public class LocationService extends Service {
            currentBestLocation.getLongitude()==location.getLongitude()) {
         	//Same location, new measurement is newer yes but the location is the same.
         	isNewer = false;
+        	if(ToolBox.LOG_ENABLE)
+        		Log.d(TAG, "isNever set to FALSE (same location).");
         }else{
         	double distanceBetweenMeasurements = ToolBox.location_distance(location.getLatitude(), location.getLongitude(), 
         			currentBestLocation.getLatitude(), currentBestLocation.getLongitude());
@@ -230,6 +232,8 @@ public class LocationService extends Service {
         		//New measurement is newer yes but the distance between last and new location is less
         		//than the minimal distance.
         		isNewer = false;
+        		if(ToolBox.LOG_ENABLE)
+            		Log.d(TAG, "isNever set to FALSE (Haversine distance less than threshold).");
         	}
         }
 
@@ -249,6 +253,8 @@ public class LocationService extends Service {
         	isMoreAccurate = true;
         }
         boolean isSignificantlyLessAccurate = accuracyDelta > 200;
+        if(ToolBox.LOG_ENABLE)
+    		Log.d(TAG, "isMore accurated? " + isMoreAccurate);
 
         //Check if the old and new location have the same provider
         boolean isFromSameProvider = 
