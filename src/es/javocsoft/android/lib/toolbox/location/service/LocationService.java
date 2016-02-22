@@ -87,7 +87,7 @@ import es.javocsoft.android.lib.toolbox.ToolBox;
  * $LastChangedBy$
  *
  */
-public class LocationService extends Service {
+public class LocationService extends Service implements LocationListener {
 
 	private static final String TAG = ToolBox.TAG + " : " + "Location Service";
 	
@@ -111,7 +111,6 @@ public class LocationService extends Service {
     
     
     public LocationManager locationManager;
-    public CustomLocationListener listener;
     public Location previousBestLocation = null;
     private int minDistance = UPDATE_MIN_DISTANCE;
     private long minTime = UPDATE_MIN_TIME;
@@ -137,15 +136,17 @@ public class LocationService extends Service {
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		Log.d(TAG, "Location service starting...");
 		doOnStart(intent);	
-		return Service.START_STICKY;		
+		return Service.START_STICKY;
 	}
 	
     @Override
     public void onDestroy() {       
     	Log.d(TAG, "Location service destroyed");
         super.onDestroy();
-        if(listener!=null)
-        	locationManager.removeUpdates((LocationListener) listener);
+        
+        previousBestLocation = null;
+        locationManager.removeUpdates(this);
+        locationManager = null;
         
         deliverBroadcast(ACTION_LOCATION_SERVICE_SHUTDOWN, null);
     }
@@ -180,13 +181,12 @@ public class LocationService extends Service {
     	
     	if(ToolBox.permission_areGranted(getApplicationContext(), ToolBox.PERMISSION_LOCATION.keySet())) {
     		locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-            listener = new CustomLocationListener();        
             locationManager.requestLocationUpdates(
             		LocationManager.NETWORK_PROVIDER, 
-            		minTime, minDistance, listener);
+            		minTime, minDistance, this);
             locationManager.requestLocationUpdates(
             		LocationManager.GPS_PROVIDER, 
-            		minTime, minDistance, listener);
+            		minTime, minDistance, this);
             
             if(ToolBox.LOG_ENABLE)
             	Log.d(TAG, "Location service started. Parameters 'minTime': " + minTime + " / 'minDistance': " + minDistance + " / 'accuracyUmbral': " + accuracyThreshold);
@@ -297,45 +297,46 @@ public class LocationService extends Service {
     
     
     
-    // AUXILIAR CLASSES
+    // LocationListener methods ---------------------------------------------
     
-    public class CustomLocationListener implements LocationListener {
-    	
-        public void onLocationChanged(final Location loc) {
-        	if(ToolBox.LOG_ENABLE)
-        		Log.d(TAG, "Location changed.");
-            if(isBetterLocation(loc, previousBestLocation)) {
-            	previousBestLocation = loc;
+    public void onLocationChanged(final Location loc) {
+      	if(ToolBox.LOG_ENABLE)
+       		Log.d(TAG, "Location changed.");
+      		if(isBetterLocation(loc, previousBestLocation)) {
+            previousBestLocation = loc;
             	
-            	//Send the change to an application receiver.
-            	Bundle extras = new Bundle(); 
-                loc.getLatitude();
-                loc.getLongitude();
-                extras.putParcelable(LOCATION_KEY, loc);
-
-                deliverBroadcast(ACTION_LOCATION_CHANGED, extras);            	
-            }                               
-        }
-
-        public void onProviderDisabled(String provider) {
-        	if(ToolBox.LOG_ENABLE)
-        		Log.d(TAG, "Location provider disabled [" + provider + "].");
-        	if(provider.equals(LocationManager.GPS_PROVIDER)){
-        		deliverBroadcast(ACTION_LOCATION_GPS_DISABLED, null);
-        	}
-        }
-
-        public void onProviderEnabled(String provider) {
-        	if(ToolBox.LOG_ENABLE)
-        		Log.d(TAG, "Location provider enabled [" + provider + "].");
-        	if(provider.equals(LocationManager.GPS_PROVIDER)){
-        		deliverBroadcast(ACTION_LOCATION_GPS_ENABLED, null);        		
-        	}
-        }
-
-        public void onStatusChanged(String provider, int status, Bundle extras) {}
+            //Send the change to an application receiver.
+            Bundle extras = new Bundle(); 
+            loc.getLatitude();
+            loc.getLongitude();
+            extras.putParcelable(LOCATION_KEY, loc);
+            deliverBroadcast(ACTION_LOCATION_CHANGED, extras);            	
+        }                               
     }
-	
+
+    public void onProviderDisabled(String provider) {
+      	if(ToolBox.LOG_ENABLE)
+       		Log.d(TAG, "Location provider disabled [" + provider + "].");
+      	if(provider.equals(LocationManager.GPS_PROVIDER)){
+       		previousBestLocation = null;
+       		deliverBroadcast(ACTION_LOCATION_GPS_DISABLED, null);
+       	}
+    }
+
+    public void onProviderEnabled(String provider) {
+      	if(ToolBox.LOG_ENABLE)
+      		Log.d(TAG, "Location provider enabled [" + provider + "].");
+       	if(provider.equals(LocationManager.GPS_PROVIDER)){
+       		previousBestLocation = null;
+       		deliverBroadcast(ACTION_LOCATION_GPS_ENABLED, null);        		
+       	}
+    }
+
+    public void onStatusChanged(String provider, int status, Bundle extras) {}
+    
+    //End LocationListener methods ---------------------------------------------
+    
+    
     /**
      * Delivers a broadcast action.
      * 

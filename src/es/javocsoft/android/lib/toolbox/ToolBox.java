@@ -5517,7 +5517,7 @@ public final class ToolBox {
 	
 	
 	/** The available latitude and longitude address information types. */
-	public static enum LOCATION_INFO_TYPE {COUNTRY, COUNTRY_CODE, CITY, POSTAL_CODE, ADDRESS, ALL}; 
+	public static enum LOCATION_INFO_TYPE {COUNTRY, COUNTRY_CODE, CITY, POSTAL_CODE, ADDRESS, ADDRESS_STREET, ADDRESS_STREET_NUMBER, ALL}; 
 	
 	/**
 	 * From a latitude and longitude, return the desired address information type
@@ -5555,14 +5555,21 @@ public final class ToolBox {
 							data = adrs.getPostalCode();
 							break;
 						case ADDRESS:
-							data = adrs.getSubThoroughfare();
+							data = adrs.getThoroughfare() + "," + adrs.getSubThoroughfare();
 							break;	
+						case ADDRESS_STREET:
+							data = adrs.getThoroughfare();
+							break;
+						case ADDRESS_STREET_NUMBER:
+							data = adrs.getSubThoroughfare();
+							break;
 						case ALL:	
 							res = adrs.toString();
 							break;
 					}                    
                     if (data != null && data.length()>0) {
-                        res = data;         
+                        res = data;
+                        break;
                     }
                 }
             }
