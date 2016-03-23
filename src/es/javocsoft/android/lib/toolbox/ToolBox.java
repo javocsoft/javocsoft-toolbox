@@ -5521,7 +5521,7 @@ public final class ToolBox {
 	
 	/**
 	 * From a latitude and longitude, return the desired address information type
-	 * or null in case of error.
+	 * or null in case of error or not found.
 	 * 
 	 * @param context
 	 * @param locationInfoType	The desired location info. See LOCATION_INFO_TYPE enum.
@@ -5532,7 +5532,7 @@ public final class ToolBox {
 	public static String location_addressInfo(Context context, LOCATION_INFO_TYPE locationInfoType, 
 			double latitude, double longitude) {
 
-        String res = "Not Found"; 
+        String res = null; 
         
         Geocoder gcd = new Geocoder(context, Locale.getDefault());
         try {
@@ -5555,7 +5555,9 @@ public final class ToolBox {
 							data = adrs.getPostalCode();
 							break;
 						case ADDRESS:
-							data = adrs.getThoroughfare() + "," + adrs.getSubThoroughfare();
+							if(adrs.getThoroughfare()!=null && adrs.getSubThoroughfare()!=null){
+								data = adrs.getThoroughfare() + "," + adrs.getSubThoroughfare();
+							}
 							break;	
 						case ADDRESS_STREET:
 							data = adrs.getThoroughfare();

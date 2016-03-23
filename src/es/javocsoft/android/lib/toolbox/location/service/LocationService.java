@@ -22,6 +22,21 @@ import es.javocsoft.android.lib.toolbox.ToolBox;
  *   <li><b>LOCATION_GPS_ENABLED</b>. Intent filter name: <i>es.javocsoft.android.lib.toolbox.location.service.intent.action.LOCATION_GPS_ENABLED</i></li>
  *   <li><b>LOCATION_GPS_DISABLED</b>. Intent filter name: <i>es.javocsoft.android.lib.toolbox.location.service.intent.action.LOCATION_GPS_DISABLED</i></li>
  * </ul>
+ * <br><br>
+ * 
+ * When a location change happens, a broadcast is sent, this broadcast will contain in its bundle:<br>
+ * <ul>
+ * <li>A {@link Location} in the bundle under the key LOCATION_KEY</li>
+ * <li>A set of extra location information:
+ * <ul>
+ * 	<li>The country, under the key LOCATION_COUNTRY_KEY</li>
+ *  <li>The country code, under the key LOCATION_COUNTRY_CODE_KEY</li>
+ *  <li>The city, under the key LOCATION_CITY_KEY</li>
+ *  <li>The address line, under the key LOCATION_ADDRESS_KEY</li>
+ *  <li>The postal code, under the key LOCATION_POSTAL_CODE_KEY</li>
+ * </ul>
+ * </li>
+ * </ul>
  * 
  * Declare the localization service in your AndroidManifest.xml:<br>
  * <code>
@@ -102,6 +117,11 @@ public class LocationService extends Service implements LocationListener {
 	public static final String ACTION_LOCATION_GPS_DISABLED = LocationService.class.getPackage().getName() + ".intent.action.LOCATION_GPS_DISABLED";
 	
 	public static final String LOCATION_KEY = "location";
+	public static final String LOCATION_COUNTRY_KEY = "location_country";
+	public static final String LOCATION_COUNTRY_CODE_KEY = "location_country_code";
+	public static final String LOCATION_CITY_KEY = "location_city";
+	public static final String LOCATION_ADDRESS_KEY = "location_address";
+	public static final String LOCATION_POSTAL_CODE_KEY = "location,postal_code";
 	
 	private static final int TWO_MINUTES = (1000*60)*2;
     
@@ -242,6 +262,8 @@ public class LocationService extends Service implements LocationListener {
         if (isSignificantlyNewer) {
             return true;
         } else if (isSignificantlyOlder) {
+        	if(ToolBox.LOG_ENABLE)
+        		Log.d(TAG, "Location is not better: isSignificantlyOlder");
             return false; //If the new location older than two minutes, should be worse
         }
 
@@ -268,6 +290,13 @@ public class LocationService extends Service implements LocationListener {
         } else if (isNewer && !isSignificantlyLessAccurate && isFromSameProvider) {
             return true;
         }
+        
+        if(ToolBox.LOG_ENABLE)
+        	Log.d(TAG, "Location is not better: isNewer: " + isNewer + 
+        			", isLessAccurate: " + isLessAccurate + 
+        			", isSignificantlyLessAccurate: " + isSignificantlyLessAccurate + 
+        			", isFromSameProvider: " + isFromSameProvider);
+        
         return false;
     }
 
@@ -302,16 +331,26 @@ public class LocationService extends Service implements LocationListener {
     public void onLocationChanged(final Location loc) {
       	if(ToolBox.LOG_ENABLE)
        		Log.d(TAG, "Location changed.");
-      		if(isBetterLocation(loc, previousBestLocation)) {
-            previousBestLocation = loc;
+      	
+      	if(isBetterLocation(loc, previousBestLocation)) {
+      		previousBestLocation = loc;
             	
-            //Send the change to an application receiver.
-            Bundle extras = new Bundle(); 
-            loc.getLatitude();
-            loc.getLongitude();
-            extras.putParcelable(LOCATION_KEY, loc);
-            deliverBroadcast(ACTION_LOCATION_CHANGED, extras);            	
-        }                               
+	        //Send the change to an application receiver.
+	        Bundle extras = new Bundle(); 
+	        loc.getLatitude();
+	        loc.getLongitude();
+	        extras.putParcelable(LOCATION_KEY, loc);
+	        //...some extra information about the location
+	        extras.putString(LOCATION_COUNTRY_KEY, ToolBox.location_addressInfo(getApplicationContext(), ToolBox.LOCATION_INFO_TYPE.COUNTRY, loc.getLatitude(), loc.getLongitude()));
+	        extras.putString(LOCATION_COUNTRY_CODE_KEY, ToolBox.location_addressInfo(getApplicationContext(), ToolBox.LOCATION_INFO_TYPE.COUNTRY_CODE, loc.getLatitude(), loc.getLongitude()));
+	        extras.putString(LOCATION_CITY_KEY, ToolBox.location_addressInfo(getApplicationContext(), ToolBox.LOCATION_INFO_TYPE.CITY, loc.getLatitude(), loc.getLongitude()));
+	        extras.putString(LOCATION_ADDRESS_KEY, ToolBox.location_addressInfo(getApplicationContext(), ToolBox.LOCATION_INFO_TYPE.ADDRESS, loc.getLatitude(), loc.getLongitude()));
+	        extras.putString(LOCATION_POSTAL_CODE_KEY, ToolBox.location_addressInfo(getApplicationContext(), ToolBox.LOCATION_INFO_TYPE.POSTAL_CODE, loc.getLatitude(), loc.getLongitude()));
+	        
+	        deliverBroadcast(ACTION_LOCATION_CHANGED, extras);
+	        if(ToolBox.LOG_ENABLE)
+	    		Log.d(TAG, "Location change broadcast message sent.");
+      	}                               
     }
 
     public void onProviderDisabled(String provider) {
