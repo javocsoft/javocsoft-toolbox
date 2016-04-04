@@ -5535,48 +5535,55 @@ public final class ToolBox {
         String res = null; 
         
         Geocoder gcd = new Geocoder(context, Locale.getDefault());
-        try {
-            List<Address> addresses = gcd.getFromLocation(latitude, longitude,10);
-
-            for (Address adrs : addresses) {
-                if (adrs != null) {                	
-                	String data = null;
-                	switch (locationInfoType) {
-						case COUNTRY_CODE:
-							data = adrs.getCountryCode();
-							break;
-						case COUNTRY:
-							data = adrs.getCountryName();
-							break;
-						case CITY:
-							data = adrs.getLocality();
-							break;
-						case POSTAL_CODE:
-							data = adrs.getPostalCode();
-							break;
-						case ADDRESS:
-							if(adrs.getThoroughfare()!=null && adrs.getSubThoroughfare()!=null){
-								data = adrs.getThoroughfare() + "," + adrs.getSubThoroughfare();
-							}
-							break;	
-						case ADDRESS_STREET:
-							data = adrs.getThoroughfare();
-							break;
-						case ADDRESS_STREET_NUMBER:
-							data = adrs.getSubThoroughfare();
-							break;
-						case ALL:	
-							res = adrs.toString();
-							break;
-					}                    
-                    if (data != null && data.length()>0) {
-                        res = data;
-                        break;
-                    }
-                }
-            }
-        } catch (IOException e) {
-            return null;
+        if(gcd!=null) {
+	        try {
+	            List<Address> addresses = gcd.getFromLocation(latitude, longitude,10);
+	
+	            for (Address adrs : addresses) {
+	                if (adrs != null) {                	
+	                	String data = null;
+	                	switch (locationInfoType) {
+							case COUNTRY_CODE:
+								data = adrs.getCountryCode();
+								break;
+							case COUNTRY:
+								data = adrs.getCountryName();
+								break;
+							case CITY:
+								data = adrs.getLocality();
+								break;
+							case POSTAL_CODE:
+								data = adrs.getPostalCode();
+								break;
+							case ADDRESS:
+								if(adrs.getThoroughfare()!=null && adrs.getSubThoroughfare()!=null){
+									data = adrs.getThoroughfare() + "," + adrs.getSubThoroughfare();
+								}
+								break;	
+							case ADDRESS_STREET:
+								data = adrs.getThoroughfare();
+								break;
+							case ADDRESS_STREET_NUMBER:
+								data = adrs.getSubThoroughfare();
+								break;
+							case ALL:	
+								res = adrs.toString();
+								break;
+						}                    
+	                    if (data != null && data.length()>0) {
+	                        res = data;
+	                        break;
+	                    }
+	                }
+	            }
+	        } catch (IOException e) {
+	            return null;
+	        } catch(Exception e) {
+	        	//Un-handled exception. Should never happen
+	        	if(LOG_ENABLE)
+					Log.e(TAG, "location_addressInfo(). Unknown exception [" + e.getMessage() + "].", e);
+	        	return null;
+	        }
         }
         
         return res;
