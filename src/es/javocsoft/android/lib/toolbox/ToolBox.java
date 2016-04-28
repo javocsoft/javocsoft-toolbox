@@ -4219,6 +4219,50 @@ public final class ToolBox {
 	}
 	
 	/**
+	 * Creates a new intent to send an e-mail.
+	 * 
+	 * @param address
+	 * @param subject
+	 * @param bodyText
+	 * @return
+	 */
+	public static Intent intent_sendMail(String address, String subject, String bodyText) {
+		Intent emailIntent = new Intent(Intent.ACTION_SEND);   
+		emailIntent.setType("plain/text");   
+		emailIntent.putExtra(Intent.EXTRA_SUBJECT, subject);
+		emailIntent.putExtra(Intent.EXTRA_EMAIL, new String[]{address});
+		emailIntent .putExtra(Intent.EXTRA_TEXT, bodyText);
+		
+		return emailIntent;
+	}
+	
+	/**
+	 * Creates a new intent to call to a phone number.
+	 * 
+	 * @param phone
+	 * @return
+	 */
+	public static Intent intent_callPhoneNumber(String phone) {
+		Intent callIntent = new Intent(Intent.ACTION_CALL);
+		callIntent.setData(Uri.parse("tel:"+phone));
+		
+		return callIntent;		 
+	}
+	
+	/**
+	 * Creates a new intent to open the browser and navigate to some address.
+	 * <br><br>
+	 * The "destiny" parameter can be an address in which all spaces must be replaced
+	 * by the "+" character or some coordinates following the format "XX.YYYYYY,XX.YYYYYY"
+	 * 
+	 * @param destiny
+	 * @return
+	 */
+	public static Intent intent_routeTo(String destiny){
+		return new Intent(Intent.ACTION_VIEW, Uri.parse("google.navigation:q="+destiny));
+	}
+	
+	/**
 	 * Checks if there is a launcher intent for the specified action
 	 * for the application package name.
 	 * 
@@ -5085,7 +5129,7 @@ public final class ToolBox {
 	* @return a UUID that may be used, in most cases, to uniquely identify your 
 	* 		  device for most.
 	*/
-	public static String device_getId(Context context) {
+	private static String device_getLikelyId(Context context) {
 		 UUID uuid = null;
 		 
 		 String androidId = Secure.getString(context.getContentResolver(), Secure.ANDROID_ID);		 
@@ -5151,6 +5195,59 @@ public final class ToolBox {
    	    return uuid;
 	 }
 	
+	/**
+	 * Returns a unique UUID for an android device.<br>
+	 * <br>
+	 * If the device IMEI and the SIM IMSI are available, these values are used
+	 * to construct an UUID that starts with "@". If these are not available, the 
+	 * UUID will be constructed by using as the base the ANDROID_ID only if is 
+	 * not null and not the some device manufacturers buggy ID 9774d56d682e549c 
+	 * for 2.2, 2.3 android version (@see http://code.google.com/p/android/issues/detail?id=10603). 
+	 * If is not available or is the buggy one, a unique UUID will be generated 
+	 * using the SERIAL property of the device and if not available, a bunch of 
+	 * device properties will be used to generated a unique UUID string. In this case,
+	 * the UUID string will begin with "#".
+	 * 
+	 * @param context
+	 * @return The UUID string or null if is not possible to get.
+	 */
+	public static String device_getId(Context context) {
+		String uuid = null;
+		
+		String imei = device_getIMEI(context);
+		String imsi = device_getSIMIMSI(context);
+		
+		if((imei!=null && imei.length()>0) &&
+		   (imsi!=null && imsi.length()>0)){
+			String uniqueIdString = imei + "/" + imsi;
+			try{
+				uuid = "@" + (UUID.nameUUIDFromBytes(uniqueIdString.getBytes("utf8"))).toString();
+			} catch (UnsupportedEncodingException e) {
+		        Log.e(TAG, "UnsupportedEncodingException (" + e.getMessage() + ").", e);
+		    }
+		}else{
+			uuid = "#" + device_getLikelyId(context);
+		}
+		
+		return uuid;
+	}
+	
+	
+	/**
+	 * Gets the SIM unique Id, IMSI.
+	 * <br><br>
+	 * Requires the permission "READ_PHONE_STATE".
+	 * 
+	 * @param context
+	 * @return The SIM subscriberId or NULL if is not available or empty if no SIM is detected.
+	 */
+	public static String device_getSIMIMSI(Context context) {
+		TelephonyManager tm = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
+		if(tm!=null)
+			return tm.getSubscriberId();
+		else
+			return null;
+	}
 	
 	/**
 	 * Gets the device screen size in pixels.
@@ -5398,7 +5495,9 @@ public final class ToolBox {
 	}
 	
 	/**
-	 * Gets the device EMEI if is available, NULL otherwise.
+	 * Gets the device unique id, IMEI, if is available, NULL otherwise.
+	 * <br><br>
+	 * Requires the permission "READ_PHONE_STATE".
 	 * 
 	 * @param context
 	 * @return
