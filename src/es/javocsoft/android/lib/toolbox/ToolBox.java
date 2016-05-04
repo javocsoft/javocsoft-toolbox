@@ -2791,20 +2791,20 @@ public final class ToolBox {
 	 * <br><br>
 	 * 
 	 * @param context	The activity context.
-	 * @param pList		The list of permissions to be granted. Format: Map of permission,permission_name
+	 * @param pList		The list of permissions to be granted. Format: Map of [permission,permission_name]
 	 * @param requestCode	The request code to be checked in onRequestPermissionsResult of the activity.
 	 * @param dialogTitle	If there are permissions to be granted, a dialog pop-ups, set here the title.
 	 * @param dialogAcceptBtnText If there are permissions to be granted, a dialog pop-ups, set here 
 	 * 							  the accept button text.
 	 * @param dialogText If there are permissions to be granted, a dialog pop-ups, set here the text that
 	 * 					 presents the permission that need to be granted.
-	 * @param showRationaleDialog By default, a rationale dialog explaining why permissions are required
-	 * 							  is only showed once user denies a permission for the application. If
-	 * 							  this parameter is set to TRUE, the dialog will always appear unless user
-	 * 							  checked "Never ask again" checkbox.
-	 * @param showRememberPermissions If set to TRUE, if user check "Never ask again" checkbox, a rationale
-	 * 								  pop-up with cusomizable text will appear (usualy used to remember to 
-	 * 								  the user that enabling permissions should be the best).
+	 * @param showRationaleDialog If set to TRUE, a rationale dialog explaining why permissions are required
+	 * 							  is showed before permission approval window. If FALSE, the permission 
+	 * 							  approval window will be presented without any explanation. 
+	 * @param showRememberPermissions If set to TRUE, if not all permission were granted but the user 
+	 * 								  checked "Never ask again" checkbox in the permission approval pop-up,
+	 * 								  a new pop-up, with customizable text, will appear (this usually can be 
+	 * 								  used to remember to the user that enabling permissions should be the best).
 	 * @param rememberPermissionsText The text to show in case showRememberPermissions parameter is TRUE.
 	 */
 	public static void permission_askFor (final Activity context, final Map<String, String> pList, 
@@ -2818,62 +2818,50 @@ public final class ToolBox {
 			return;
 		}
 				
-    	final List<String> permissionsList = new ArrayList<String>();
-    	List<String> permissionsNeeded = new ArrayList<String>();
+    	final List<String> permissionsListToAsk = new ArrayList<String>();
+    	final List<String> permissionsNamesListToAsk = new ArrayList<String>(); 
+    	final List<String> permissionsListNeeded  = new ArrayList<String>();    	
     	
-    	//Ask for permissions
+    	//Prepare the:
+    	//	- Permissions (and their labels) we need to ask for
+    	//	- Permission we need but we can not ask for (user selected "Never ask again" option)
     	Set<String> keys = pList.keySet();
     	for(String p:keys) {
-    		if (permission_add(context, permissionsList, p)) {
-    			if(!permissionsNeeded.contains(pList.get(p)))
-    				permissionsNeeded.add(pList.get(p)); //We add the name
-    		}
+    		permission_add(context, permissionsListToAsk, permissionsNamesListToAsk, permissionsListNeeded, p, pList.get(p));    			
     	}
-    	
-    	if (permissionsList.size() > 0) {
-            if (permissionsNeeded.size() > 0) {
-            	//Once the user denies some permissions, we show a dialog asking for 
-            	//them with an explanation before show Android ask dialog.
-            	//
-            	// Need Rationale (explanation before ask for permissions)
-            	showDescriptivePermissionsDialog(context, permissionsList, permissionsNeeded, 
-            			requestCode, dialogTitle, dialogAcceptBtnText, dialogDenyBtnText, dialogText);
-            	return;
-            }
-            
-            //We can choose to show always a rationale dialog explaining why we need the permissions.
-            if(showRationaleDialog) {
-            	if(permissionsNeeded.size()>0) {
-            		showDescriptivePermissionsDialog(context, permissionsList, permissionsNeeded, 
-	            			requestCode, dialogTitle, dialogAcceptBtnText, dialogDenyBtnText, dialogText);
-            	}else{
-            		//If user checked "Never ask again", we should not ask for them again.
-            		//
-            		//If we want, we show a rationale dialog with a custom text to remember 
-            		//him that enabling permissions is the best.
-            		if(showRememberPermissions) {
-            			ToolBox.dialog_showCustomActionsDialog(context, 
-            	        		dialogTitle, rememberPermissionsText, 
-            	        		"OK", new Runnable() {
-            						
-            						@Override
-            						public void run() {
-            														
-            						}
-            					}, 
-            					null, null, 
-            	        		null, null);
-            		}
-            	}
-            }else{
-	            //Show directly the permissions approval
+    	//Ask for permissions
+    	if (permissionsListToAsk.size() > 0) { 
+    		//Permissions we are able to ask for
+    		//
+    		//We can choose to show always a rationale dialog explaining why 
+    		//we need the permissions.
+    		if(showRationaleDialog) {
+    			showDescriptivePermissionsDialog(context, permissionsListToAsk, permissionsNamesListToAsk, 
+            			requestCode, dialogTitle, dialogAcceptBtnText, dialogDenyBtnText, dialogText);    			
+    		}else{
+    			//Show directly the permissions approval without any explanation
 	            ActivityCompat.requestPermissions(context, 
-	            		permissionsList.toArray(new String[permissionsList.size()]),
+	            		permissionsListToAsk.toArray(new String[permissionsListToAsk.size()]),
 	            		requestCode);
-            }
-            
-            return;
-    	}
+    		}
+    	}else if(permissionsListNeeded.size()>0){
+    		//Not all permissions are granted but user selected "Never ask again". 
+    		//If we allow a reminder, we show it.
+    		if(showRememberPermissions) {
+    			ToolBox.dialog_showCustomActionsDialog(context, 
+    	        		dialogTitle, rememberPermissionsText, 
+    	        		"OK", new Runnable() {    						
+    						@Override
+    						public void run() {
+    														
+    						}
+    					}, 
+    					null, null, 
+    	        		null, null);
+    		}
+    	}else{
+    		//No permission ask is required
+    	}    	
     }
 	
 	/**
@@ -3048,22 +3036,42 @@ public final class ToolBox {
 	}
 	
 	/**
-	 * Checks a permission list. If a permission needs to be granted, it returns TRUE.
+	 * Conforms the list of needed permissions and the list of permissions to ask. This lists
+	 * can differ because the could have answer "Never ask again" in the permission ask window.
 	 * 
 	 * @param context	An activity context
-	 * @param permissionsList	Adds to this list the processed permission for afterwards usage.
+	 * @param permissionsListToAsk	The list of permissions that need to be asked for. This list is for afterwards usage.
+	 * @param permissionsNamesListToAsk	The list of permission names that need to be asked for. This list is for afterwards usage.
+	 * @param permissionsListNeeded	The list of required permissions. This list is for afterwards usage.
 	 * @param permission	The permission to check.
-	 * @return	TRUE/FALSE
+	 * @param permissionLabel The permission label. 
 	 */
-	private static boolean permission_add(Activity context, List<String> permissionsList, String permission) {
+	private static void permission_add(Activity context, 
+			List<String> permissionsListToAsk,
+			List<String> permissionsNamesListToAsk,
+			List<String> permissionsListNeeded,
+			String permission, String permissionLabel) {
+		
 		if (ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED) {
-            permissionsList.add(permission);
-            // Check for Rationale Option. To know if we need to show a message
+			// Check for Rationale Option. To know if we need to show a message
             // telling to the user why we need this permissions.
-            if (!ActivityCompat.shouldShowRequestPermissionRationale(context, permission))
-                return false;
-        }
-        return true;
+			// 
+			// If permission denied previously, this time there will be a "Never ask again" 
+			// checkbox in the permission dialog. Call shouldShowRequestPermissionRationale 
+			// to see if user selected "Never ask again". shouldShowRequestPermissionRationale 
+			// method returns false only if user selected "Never ask again" or device policy 
+			// prohibits the app from having that permission.
+			if (ActivityCompat.shouldShowRequestPermissionRationale(context, permission)){
+				if(!permissionsListToAsk.contains(permission)) {
+					permissionsListToAsk.add(permission);
+					permissionsNamesListToAsk.add(permissionLabel);
+				}
+			}else{
+				//We can not ask but is required
+				if(!permissionsListNeeded.contains(permission))
+					permissionsListNeeded.add(permission);
+			}
+        }        
     }
 	
 	
@@ -5198,6 +5206,8 @@ public final class ToolBox {
 	/**
 	 * Returns a unique UUID for an android device.<br>
 	 * <br>
+	 * Requires the permission "READ_PHONE_STATE".<br>
+	 * <br>
 	 * If the device IMEI and the SIM IMSI are available, these values are used
 	 * to construct an UUID that starts with "@". If these are not available, the 
 	 * UUID will be constructed by using as the base the ANDROID_ID only if is 
@@ -5979,11 +5989,14 @@ public final class ToolBox {
 	 * logging them and killing the whole process on violation.
 	 * <br><br>
 	 * See: <a href="http://developer.android.com/intl/es/reference/android/os/StrictMode.html">StricMode</a>
+	 * <br><br>
+	 * <b>Note</b>: This method requires API level 11 or greater.
 	 * 
 	 * @param all	If set to TRUE, all detectable problems are watched.
 	 * 				If set to FALSE, only disk read/write and network 
 	 * 				operations are watched.
 	 */
+	@TargetApi(Build.VERSION_CODES.HONEYCOMB)
 	public static void enableStrictMode(boolean all) {
 		
 		//ThreadPolicy tPolicy = new StrictMode.ThreadPolicy.Builder();

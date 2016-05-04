@@ -256,6 +256,8 @@ public class NotificationModule {
 	
 	/**
 	 * Returns the Android device unique id.
+	 * <br><br>
+	 * Requires the permission "READ_PHONE_STATE".
 	 * 
 	 * @param context
 	 * @return	The android device unique id.
