@@ -119,6 +119,7 @@ import android.graphics.drawable.Drawable;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
+import android.location.LocationManager;
 import android.media.AudioManager;
 import android.media.ExifInterface;
 import android.media.MediaPlayer;
@@ -1730,7 +1731,10 @@ public final class ToolBox {
 	 
 	 /**
 	  * Shows an alert dialog asking to enable in system
-	  * settings the GPS.
+	  * settings the GPS. Once selected an option, the result
+	  * is returned to the activity, result can be get by using
+	  * the request code {@link ToolBox#ENABLE_GPS_REQUEST} in your
+	  * activity onActivityResult.
 	  * 
 	  * @param context	The activity that opens the dialog.
 	  * @param message	Optional.
@@ -1770,12 +1774,63 @@ public final class ToolBox {
 	 }
 		
 	/*
-	 * Opens system setting in location path.
+	 * Opens system location setting. Once selected an action, the result
+	 * is returned to the activity.
 	 */
 	 private static void showAndroidGpsOptions(final Activity context) {
 		 Intent gpsOptionsIntent = new Intent(
 	              android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS);
 	     context.startActivityForResult(gpsOptionsIntent, ENABLE_GPS_REQUEST);
+	 }
+	
+	 /**
+	  * Shows an alert dialog asking to enable in system
+	  * settings the GPS.
+	  * 
+	  * @param context	The activity that opens the dialog.
+	  * @param message	Optional.
+	  * @param okButtonText	Optional.
+	  * @param cancelButtonText	Optional.
+	  */
+	 public static void dialog_showGPSDisabledAlert(final Context context, String message, String okButtonText, String cancelButtonText) {		 
+		 
+		 if(message==null || message!=null && message.length()==0) {
+			 message = "The GPS is disabled. Application needs GPS location. ¿Do you want to enable it?";
+		 }
+		 if(okButtonText==null || okButtonText!=null && okButtonText.length()==0) {
+			 okButtonText = "Activate GPS";
+		 }
+		 if(cancelButtonText==null || cancelButtonText!=null && cancelButtonText.length()==0) {
+			 cancelButtonText = "Cancel";
+		 }
+		 
+		 AlertDialog.Builder builder = new AlertDialog.Builder(context);
+		 builder
+                .setMessage(message)
+                .setCancelable(false).setPositiveButton(okButtonText,
+                        new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int id) {
+                            	dialog.dismiss();
+                            	showAndroidGpsOptions(context);                            	
+                            }
+                        });
+        builder.setNegativeButton(cancelButtonText,
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        dialog.cancel();
+                    }
+                });
+        AlertDialog alert = builder.create();
+        alert.show();
+	 }
+	 
+	 /*
+	 * Opens system location settings.
+	 */	 
+	 private static void showAndroidGpsOptions(final Context context) {
+		 Intent gpsOptionsIntent = new Intent(
+	              android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+	     context.startActivity(gpsOptionsIntent);
 	 }
 	
 	//-------------------- GRAPHICS ----------------------------------------------------------------------
@@ -5759,6 +5814,43 @@ public final class ToolBox {
 		}
 	}
 	
+	/**
+	 * Returns TRUE if location service is enabled (GPS or WiFi/radio).
+	 * 
+	 * @param context
+	 * @return
+	 */
+	public static boolean location_checkAvalibility(Context context) {
+		LocationManager locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
+		if(locationManager!=null) {
+			boolean isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+			boolean isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);	    
+			if(isGPSEnabled || isNetworkEnabled) {
+				return true;
+			}
+		}
+		
+		return false;
+	}
+	
+	/**
+	 * Get the last known location or null if is not available.
+	 * 
+	 * @param context
+	 * @return
+	 */
+	public static Location location_getLastKnownLocation(Context context, String locationProvider) {
+		LocationManager locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
+		if(locationManager!=null) {
+			boolean isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+			boolean isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);	    
+			if(isGPSEnabled || isNetworkEnabled) {
+				return locationManager.getLastKnownLocation(locationProvider);				
+			}
+		}
+		
+		return null;
+	}
 	
 	/**
 	 * Creates a circular area, or fence, around the location of interest.

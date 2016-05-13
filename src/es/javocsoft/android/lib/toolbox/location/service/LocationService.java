@@ -76,7 +76,7 @@ import es.javocsoft.android.lib.toolbox.ToolBox;
  *   <ul>
  *     <li>LOCATION_SERVICE_PARAM_MIN_DISTANCE</li> 
  * 	   <li>LOCATION_SERVICE_PARAM_MIN_TIME</li>
- * 	   <li>LOCATION_SERVICE_PARAM_ACCURACY_THRESHOLD</li>
+ * 	   <li>LOCATION_SERVICE_PARAM_ACCURACY_THRESHOLD</li> 	   
  *   </ul>
  *  </li> 
  *  <li>If service gets stopped, it will automatically run again.</li>
@@ -201,17 +201,17 @@ public class LocationService extends Service implements LocationListener {
     	
     	if(ToolBox.permission_areGranted(getApplicationContext(), ToolBox.PERMISSION_LOCATION.keySet())) {
     		locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-            locationManager.requestLocationUpdates(
+    		locationManager.requestLocationUpdates(
             		LocationManager.NETWORK_PROVIDER, 
             		minTime, minDistance, this);
             locationManager.requestLocationUpdates(
             		LocationManager.GPS_PROVIDER, 
             		minTime, minDistance, this);
-            
-            if(ToolBox.LOG_ENABLE)
-            	Log.d(TAG, "Location service started. Parameters 'minTime': " + minTime + " / 'minDistance': " + minDistance + " / 'accuracyUmbral': " + accuracyThreshold);
-            
-            deliverBroadcast(ACTION_LOCATION_SERVICE_STARTED, null);
+	        
+	        if(ToolBox.LOG_ENABLE)
+	        	Log.d(TAG, "Location service started. Parameters 'minTime': " + minTime + " / 'minDistance': " + minDistance + " / 'accuracyUmbral': " + accuracyThreshold);	            
+	        
+	        deliverBroadcast(ACTION_LOCATION_SERVICE_STARTED, null);
     	}else{
     		Log.d(TAG, "Location service not started, permissions not granted. Parameters 'minTime': " + minTime + " / 'minDistance': " + minDistance + " / 'accuracyUmbral': " + accuracyThreshold);
     	}
