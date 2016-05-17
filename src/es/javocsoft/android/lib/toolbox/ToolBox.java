@@ -5261,7 +5261,9 @@ public final class ToolBox {
 	/**
 	 * Returns a unique UUID for an android device.<br>
 	 * <br>
-	 * Requires the permission "READ_PHONE_STATE".<br>
+	 * <b>Requires the permission "READ_PHONE_STATE"</b>. Remember to ask 
+	 * for permissions in Android 6+ (use ToolBox.PERMISSION_LOCATION and permission
+	 * related methods in ToolBox before using this).<br>
 	 * <br>
 	 * If the device IMEI and the SIM IMSI are available, these values are used
 	 * to construct an UUID that starts with "@". If these are not available, the 
@@ -5279,8 +5281,16 @@ public final class ToolBox {
 	public static String device_getId(Context context) {
 		String uuid = null;
 		
-		String imei = device_getIMEI(context);
-		String imsi = device_getSIMIMSI(context);
+		String imei = null;
+		String imsi = null;
+		try{
+			imei = device_getIMEI(context);
+			imsi = device_getSIMIMSI(context);
+		}catch(SecurityException e){
+			//In Android 6+, READ_PHONE_STATE permission must be granted.
+			if(LOG_ENABLE)
+				Log.e(TAG, "SecurityException (" + e.getMessage() + "). Remember to grant permissions if Android 6+.", e);
+		}
 		
 		if((imei!=null && imei.length()>0) &&
 		   (imsi!=null && imsi.length()>0)){
@@ -5301,7 +5311,9 @@ public final class ToolBox {
 	/**
 	 * Gets the SIM unique Id, IMSI.
 	 * <br><br>
-	 * Requires the permission "READ_PHONE_STATE".
+	 * <b>Requires the permission "READ_PHONE_STATE"</b>. Remember to ask 
+	 * for permissions in Android 6+ (use ToolBox.PERMISSION_LOCATION and permission
+	 * related methods in ToolBox before using this).
 	 * 
 	 * @param context
 	 * @return The SIM subscriberId or NULL if is not available or empty if no SIM is detected.
@@ -5562,7 +5574,9 @@ public final class ToolBox {
 	/**
 	 * Gets the device unique id, IMEI, if is available, NULL otherwise.
 	 * <br><br>
-	 * Requires the permission "READ_PHONE_STATE".
+	 * <b>Requires the permission "READ_PHONE_STATE"</b>. Remember to ask 
+	 * for permissions in Android 6+ (use ToolBox.PERMISSION_LOCATION and permission
+	 * related methods in ToolBox before using this).
 	 * 
 	 * @param context
 	 * @return
