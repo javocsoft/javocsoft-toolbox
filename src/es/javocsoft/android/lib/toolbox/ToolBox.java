@@ -5519,6 +5519,40 @@ public final class ToolBox {
 	}
 	
 	/**
+	 * Checks if the device has at least the specified API level.
+	 * <br><br>
+	 * See:  
+	 * <a href="http://developer.android.com/intl/es/guide/topics/manifest/uses-sdk-element.html#ApiLevels">API Level</a>
+	 * 
+	 * @param apiLevel
+	 * @return
+	 */
+	public static boolean device_hasAPILevel(int apiLevel){
+		if(device_getAPILevel()>=apiLevel){
+			return true;
+		}
+		
+		return false;
+	}	
+	
+	/**
+	 * Checks if the device has at least the specified API level.
+	 * <br><br>
+	 * See:  
+	 * <a href="http://developer.android.com/intl/es/guide/topics/manifest/uses-sdk-element.html#ApiLevels">API Level</a>
+	 * 
+	 * @param apiLevel See {@link ApiLevel}
+	 * @return
+	 */
+	public static boolean device_hasAPILevel(ApiLevel apiLevel){
+		if(device_getAPILevel()>=apiLevel.getValue()){
+			return true;
+		}
+		
+		return false;
+	}
+	
+	/**
 	 * Get the version number of Android.
 	 * 
 	 * @return
