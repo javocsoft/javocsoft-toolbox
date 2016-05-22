@@ -159,6 +159,8 @@ import android.view.ViewConfiguration;
 import android.view.Window;
 import android.view.WindowManager;
 import android.view.animation.Animation;
+import android.webkit.CookieManager;
+import android.webkit.ValueCallback;
 import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -4180,8 +4182,107 @@ public final class ToolBox {
 			i.setData(Uri.parse("http://play.google.com/store/apps/details?id="+appName));
 		}
 		return i;
-	} 
+	}
+	 
+	//--------------- WEBVIEW ------------------------------------------------------------------------------- 
 	
+	/**
+	 * Get a cookie value for a cookie name and site.
+	 * 
+	 * @param siteName	The site where the cookie is in.
+	 * @param cookieName	The cookie mame.
+	 * @return The cookie value or null if there is no cookie.
+	 */
+	public static String webview_getCookie(String siteName, String cookieName) {
+		String cookieValue = null;
+		
+		if(siteName!=null && siteName.length()>0){
+			CookieManager cookieManager = CookieManager.getInstance();
+			String cookiesRAW = cookieManager.getCookie(siteName);
+			String[] cookies = cookiesRAW.split(",");
+			if(cookieName!=null && cookieName.length()>0){
+				for(String ck: cookies){
+					if(ck.contains(cookieName)){
+						String[] cookieKV = ck.split("=");
+						cookieValue = cookieKV[1];
+						break;
+					}
+				}
+			}
+		}		
+		
+		return cookieValue;
+	}
+	
+	/**
+	 * Erases any cookie of any webview of an application.
+	 * 
+	 * @param callbackOk	You can provide a runnable. This will be executed
+	 * 						if cookies are successfully deleted. Can be null.
+	 * @param callbackError	You can provide a runnable. This will be executed
+	 * 						if cookies are not successfully deleted. Can be
+	 * 						null.
+	 */
+	@SuppressWarnings("deprecation")
+	@SuppressLint("NewApi")
+	public static void webview_destroyAllCookies(final Runnable callbackOk, final Runnable callbackError) {
+		CookieManager cookieManager = CookieManager.getInstance();
+		
+		if(device_hasAPILevel(ApiLevel.LEVEL_21)) {
+			cookieManager.removeAllCookies(new ValueCallback<Boolean>() {			
+				@Override
+				public void onReceiveValue(Boolean value) {
+					if(LOG_ENABLE)
+						Log.w(TAG, "Webview cookies deleted? " + value);
+					if(value){
+						if(callbackOk!=null)
+							callbackOk.run();
+					}else{
+						if(callbackError!=null)
+							callbackError.run();
+					}
+				}
+			});
+		}else{
+			cookieManager.removeAllCookie();
+		}
+    }
+	
+	/**
+	 * Erases any session cookie of any webview of an application.
+	 * 
+	 * @param callbackOk	You can provide a runnable. This will be executed
+	 * 						if session cookies are successfully deleted. Can be null.
+	 * @param callbackError	You can provide a runnable. This will be executed
+	 * 						if session cookies are not successfully deleted. Can be
+	 * 						null.
+	 */
+	@SuppressWarnings("deprecation")
+	@SuppressLint("NewApi")
+	public static void webview_destroyAllSessionCookies(final Runnable callbackOk, final Runnable callbackError) {
+		CookieManager cookieManager = CookieManager.getInstance();
+		
+		if(device_hasAPILevel(ApiLevel.LEVEL_21)) {
+			cookieManager.removeSessionCookies(new ValueCallback<Boolean>() {			
+				@Override
+				public void onReceiveValue(Boolean value) {
+					if(LOG_ENABLE)
+						Log.w(TAG, "Webview session cookies deleted? " + value);
+					if(value){
+						if(callbackOk!=null)
+							callbackOk.run();
+					}else{
+						if(callbackError!=null)
+							callbackError.run();
+					}
+				}
+			});
+		}else{
+			cookieManager.removeSessionCookie();
+		}
+    }	
+	
+	 
 	//--------------- (PENDING) INTENTS ---------------------------------------------------------------------
 	
 	/**
