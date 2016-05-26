@@ -2857,17 +2857,11 @@ public final class ToolBox {
 	 * 					 presents the permission that need to be granted.
 	 * @param showRationaleDialog If set to TRUE, a rationale dialog explaining why permissions are required
 	 * 							  is showed before permission approval window. If FALSE, the permission 
-	 * 							  approval window will be presented without any explanation. 
-	 * @param showRememberPermissions If set to TRUE, if not all permission were granted but the user 
-	 * 								  checked "Never ask again" checkbox in the permission approval pop-up,
-	 * 								  a new pop-up, with customizable text, will appear (this usually can be 
-	 * 								  used to remember to the user that enabling permissions should be the best).
-	 * @param rememberPermissionsText The text to show in case showRememberPermissions parameter is TRUE.
+	 * 							  approval window will be presented without any explanation.
 	 */
 	public static void permission_askFor (final Activity context, final Map<String, String> pList, 
 			final int requestCode, String dialogTitle, String dialogAcceptBtnText, String dialogDenyBtnText,
-			String dialogText, boolean showRationaleDialog, boolean showRememberPermissions,
-			String rememberPermissionsText) {
+			String dialogText, boolean showRationaleDialog) {
     	
 		//We only check if not all permissions are granted and we are above/equal 23 API level.
 		if(device_getAPILevel()<23 || 
@@ -2877,14 +2871,11 @@ public final class ToolBox {
 				
     	final List<String> permissionsListToAsk = new ArrayList<String>();
     	final List<String> permissionsNamesListToAsk = new ArrayList<String>(); 
-    	final List<String> permissionsListNeeded  = new ArrayList<String>();    	
     	
-    	//Prepare the:
-    	//	- Permissions (and their labels) we need to ask for
-    	//	- Permission we need but we can not ask for (user selected "Never ask again" option)
+    	//Prepare the permissions (and their labels) we need to ask for    
     	Set<String> keys = pList.keySet();
     	for(String p:keys) {
-    		permission_add(context, permissionsListToAsk, permissionsNamesListToAsk, permissionsListNeeded, p, pList.get(p));    			
+    		permission_add(context, permissionsListToAsk, permissionsNamesListToAsk, p, pList.get(p));    			
     	}
     	//Ask for permissions
     	if (permissionsListToAsk.size() > 0) { 
@@ -2900,21 +2891,6 @@ public final class ToolBox {
 	            ActivityCompat.requestPermissions(context, 
 	            		permissionsListToAsk.toArray(new String[permissionsListToAsk.size()]),
 	            		requestCode);
-    		}
-    	}else if(permissionsListNeeded.size()>0){
-    		//Not all permissions are granted but user selected "Never ask again". 
-    		//If we allow a reminder, we show it.
-    		if(showRememberPermissions) {
-    			ToolBox.dialog_showCustomActionsDialog(context, 
-    	        		dialogTitle, rememberPermissionsText, 
-    	        		"OK", new Runnable() {    						
-    						@Override
-    						public void run() {
-    														
-    						}
-    					}, 
-    					null, null, 
-    	        		null, null);
     		}
     	}else{
     		//No permission ask is required
@@ -2968,17 +2944,26 @@ public final class ToolBox {
         		null, null);
 	}
 	
+	/** The possible result after an user decides about a permission. See {@link ToolBox#permission_checkAskPermissionsresult} */
+	public static enum PermissionResult {DENIED, DENIED_NEVER_ASK_AGAIN, GRANTED};
+	
 	/**
-	 * Checks the results of an Android 6+ permissions ask. Returns TRUE only if 
-	 * all permissions are granted.
+	 * Checks the results of an Android 6+ permissions ask. Use it in the method
+	 * {@link Activity#onRequestPermissionsResult}. This method returns:<br>
+	 * <br> 
+	 * -1: DENIED_NEVER_ASK_AGAIN Denied permission and user selected "Never ask again". 
+	 * 							  If is the case, do not forget to not ask again 
+	 * 							  for permissions.  
+	 *  0: DENIED Denied permission.
+	 *  1: GRANTED if all permissions are granted. 
 	 * 
 	 * @param permissions	Permissions asked.
 	 * @param grantResults	Results of the ask.
 	 * @return TRUE/FALSE
 	 */
-	public static boolean permission_checkAskPermissionsresult(String[] permissions, int[] grantResults) {
+	public static PermissionResult permission_checkAskPermissionsresult(Activity context, String[] permissions, int[] grantResults) {
     	
-    	boolean res = false;
+		PermissionResult res = PermissionResult.DENIED;
     		
     	// Create the list with the results
     	Map<String, Integer> perms = new HashMap<String, Integer>();    		
@@ -2990,12 +2975,17 @@ public final class ToolBox {
         Set<String> pNameList = perms.keySet();
         for(String pName:pNameList) {
         	if(perms.get(pName) == PackageManager.PERMISSION_GRANTED){
-        		res = true;        		
+        		res = PermissionResult.GRANTED;
             }else{
-            	res = false;
+            	if (!ActivityCompat.shouldShowRequestPermissionRationale(context, pName)){
+            		res = PermissionResult.DENIED_NEVER_ASK_AGAIN;
+            	}else{
+            		res = PermissionResult.DENIED;
+            	}
+            	
             	break;
             }
-        }      
+        }
         
     	return res;
     }
@@ -3099,35 +3089,19 @@ public final class ToolBox {
 	 * @param context	An activity context
 	 * @param permissionsListToAsk	The list of permissions that need to be asked for. This list is for afterwards usage.
 	 * @param permissionsNamesListToAsk	The list of permission names that need to be asked for. This list is for afterwards usage.
-	 * @param permissionsListNeeded	The list of required permissions. This list is for afterwards usage.
 	 * @param permission	The permission to check.
 	 * @param permissionLabel The permission label. 
 	 */
 	private static void permission_add(Activity context, 
 			List<String> permissionsListToAsk,
 			List<String> permissionsNamesListToAsk,
-			List<String> permissionsListNeeded,
 			String permission, String permissionLabel) {
 		
 		if (ContextCompat.checkSelfPermission(context, permission) != PackageManager.PERMISSION_GRANTED) {
-			// Check for Rationale Option. To know if we need to show a message
-            // telling to the user why we need this permissions.
-			// 
-			// If permission denied previously, this time there will be a "Never ask again" 
-			// checkbox in the permission dialog. Call shouldShowRequestPermissionRationale 
-			// to see if user selected "Never ask again". shouldShowRequestPermissionRationale 
-			// method returns false only if user selected "Never ask again" or device policy 
-			// prohibits the app from having that permission.
-			if (ActivityCompat.shouldShowRequestPermissionRationale(context, permission)){
-				if(!permissionsListToAsk.contains(permission)) {
-					permissionsListToAsk.add(permission);
-					permissionsNamesListToAsk.add(permissionLabel);
-				}
-			}else{
-				//We can not ask but is required
-				if(!permissionsListNeeded.contains(permission))
-					permissionsListNeeded.add(permission);
-			}
+			if(!permissionsListToAsk.contains(permission)) {
+				permissionsListToAsk.add(permission);
+				permissionsNamesListToAsk.add(permissionLabel);
+			}			
         }        
     }
 	
