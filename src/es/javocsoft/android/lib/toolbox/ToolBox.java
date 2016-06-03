@@ -2714,14 +2714,36 @@ public final class ToolBox {
 	 *	    Do not ask for permissions and runs normally (OK)
 	 */	
 	
+	public static final String ANDROID_PERMISSION_READ_CALENDAR = "android.permission.READ_CALENDAR";
+	public static final String ANDROID_PERMISSION_WRITE_CALENDAR = "android.permission.WRITE_CALENDAR";
+	public static final String ANDROID_PERMISSION_CAMERA = "android.permission.CAMERA";
+	public static final String ANDROID_PERMISSION_ACCESS_COARSE_LOCATION = "android.permission.ACCESS_COARSE_LOCATION";
+	public static final String ANDROID_PERMISSION_ACCESS_FINE_LOCATION = "android.permission.ACCESS_FINE_LOCATION";
+	public static final String ANDROID_PERMISSION_RECORD_AUDIO = "android.permission.RECORD_AUDIO";
+	public static final String ANDROID_PERMISSION_READ_PHONE_STATE = "android.permission.READ_PHONE_STATE";
+	public static final String ANDROID_PERMISSION_CALL_PHONE = "android.permission.CALL_PHONE";
+	public static final String ANDROID_PERMISSION_READ_CALL_LOG = "android.permission.READ_CALL_LOG";
+	public static final String ANDROID_PERMISSION_WRITE_CALL_LOG = "android.permission.WRITE_CALL_LOG";
+	public static final String ANDROID_PERMISSION_ADD_VOICEMAIL = "android.permission.ADD_VOICEMAIL";
+	public static final String ANDROID_PERMISSION_USE_SIP = "android.permission.USE_SIP";
+	public static final String ANDROID_PERMISSION_PROCESS_OUTGOING_CALLS = "android.permission.PROCESS_OUTGOING_CALLS";
+	public static final String ANDROID_PERMISSION_BODY_SENSORS = "android.permission.BODY_SENSORS";
+	public static final String ANDROID_PERMISSION_SEND_SMS = "android.permission.SEND_SMS";
+	public static final String ANDROID_PERMISSION_RECEIVE_SMS = "android.permission.RECEIVE_SMS";
+	public static final String ANDROID_PERMISSION_READ_SMS = "android.permission.READ_SMS";
+	public static final String ANDROID_PERMISSION_RECEIVE_WAP_PUSH = "android.permission.RECEIVE_WAP_PUSH";
+	public static final String ANDROID_PERMISSION_RECEIVE_MMS = "android.permission.RECEIVE_MMS";
+	public static final String ANDROID_PERMISSION_READ_EXTERNAL_STORAGE = "android.permission.READ_EXTERNAL_STORAGE";
+	public static final String ANDROID_PERMISSION_WRITE_EXTERNAL_STORAGE = "android.permission.WRITE_EXTERNAL_STORAGE";
+	
 	/**
 	 * Permissions required to interact with the calendar.
 	 */
     public static final Map<String, String> PERMISSION_CALENDAR;
     static {
     	PERMISSION_CALENDAR = new HashMap<String, String>();
-    	PERMISSION_CALENDAR.put("android.permission.READ_CALENDAR", "Calendar");
-    	PERMISSION_CALENDAR.put("android.permission.WRITE_CALENDAR", "Calendar");
+    	PERMISSION_CALENDAR.put(ANDROID_PERMISSION_READ_CALENDAR, "Calendar");
+    	PERMISSION_CALENDAR.put(ANDROID_PERMISSION_WRITE_CALENDAR, "Calendar");
     }
     /** 
      * Permissions required to interact with the camera
@@ -2729,7 +2751,7 @@ public final class ToolBox {
     public static final Map<String, String> PERMISSION_CAMERA;
     static {
     	PERMISSION_CAMERA = new HashMap<String, String>();
-    	PERMISSION_CAMERA.put("android.permission.CAMERA", "Camera");    	
+    	PERMISSION_CAMERA.put(ANDROID_PERMISSION_CAMERA, "Camera");    	
     }
     /**
      * Permissions required to interact with the location services
@@ -2737,8 +2759,8 @@ public final class ToolBox {
     public static final Map<String, String> PERMISSION_LOCATION;
     static {
     	PERMISSION_LOCATION = new HashMap<String, String>();
-    	PERMISSION_LOCATION.put("android.permission.ACCESS_COARSE_LOCATION", "Location");
-    	PERMISSION_LOCATION.put("android.permission.ACCESS_FINE_LOCATION", "Location");
+    	PERMISSION_LOCATION.put(ANDROID_PERMISSION_ACCESS_COARSE_LOCATION, "Location");
+    	PERMISSION_LOCATION.put(ANDROID_PERMISSION_ACCESS_FINE_LOCATION, "Location");
     }
     /**
      * Permissions required to interact with the microphone
@@ -2746,7 +2768,7 @@ public final class ToolBox {
     public static final Map<String, String> PERMISSION_MICROPHONE;
     static {
     	PERMISSION_MICROPHONE = new HashMap<String, String>();
-    	PERMISSION_MICROPHONE.put("android.permission.RECORD_AUDIO", "Microphone");    	
+    	PERMISSION_MICROPHONE.put(ANDROID_PERMISSION_RECORD_AUDIO, "Microphone");    	
     }
     /**
      * Permissions required to interact with the phone functions like calls,
@@ -2755,13 +2777,13 @@ public final class ToolBox {
     public static final Map<String, String> PERMISSION_PHONE;
     static {
     	PERMISSION_PHONE = new HashMap<String, String>();
-    	PERMISSION_PHONE.put("android.permission.READ_PHONE_STATE", "Phone");
-    	PERMISSION_PHONE.put("android.permission.CALL_PHONE", "Phone");
-    	PERMISSION_PHONE.put("android.permission.READ_CALL_LOG", "Phone");
-    	PERMISSION_PHONE.put("android.permission.WRITE_CALL_LOG", "Phone");
-    	PERMISSION_PHONE.put("android.permission.ADD_VOICEMAIL", "Phone");
-    	PERMISSION_PHONE.put("android.permission.USE_SIP", "Phone");
-    	PERMISSION_PHONE.put("android.permission.PROCESS_OUTGOING_CALLS", "Phone");    	    	
+    	PERMISSION_PHONE.put(ANDROID_PERMISSION_READ_PHONE_STATE, "Phone");
+    	PERMISSION_PHONE.put(ANDROID_PERMISSION_CALL_PHONE, "Phone");
+    	PERMISSION_PHONE.put(ANDROID_PERMISSION_READ_CALL_LOG, "Phone");
+    	PERMISSION_PHONE.put(ANDROID_PERMISSION_WRITE_CALL_LOG, "Phone");
+    	PERMISSION_PHONE.put(ANDROID_PERMISSION_ADD_VOICEMAIL, "Phone");
+    	PERMISSION_PHONE.put(ANDROID_PERMISSION_USE_SIP, "Phone");
+    	PERMISSION_PHONE.put(ANDROID_PERMISSION_PROCESS_OUTGOING_CALLS, "Phone");    	    	
     }
     /**
      * Permissions required to interact with the device sensors
@@ -2769,7 +2791,7 @@ public final class ToolBox {
     public static final Map<String, String> PERMISSION_SENSORS;
     static {
     	PERMISSION_SENSORS = new HashMap<String, String>();
-    	PERMISSION_SENSORS.put("android.permission.BODY_SENSORS", "Sensors");    	    	    	
+    	PERMISSION_SENSORS.put(ANDROID_PERMISSION_BODY_SENSORS, "Sensors");    	    	    	
     }
     /**
      * Permissions required to interact with the SMS/WAP/MMS 
@@ -2778,11 +2800,11 @@ public final class ToolBox {
     public static final Map<String, String> PERMISSION_SMS;
     static {
     	PERMISSION_SMS = new HashMap<String, String>();
-    	PERMISSION_SMS.put("android.permission.SEND_SMS", "SMS");
-    	PERMISSION_SMS.put("android.permission.RECEIVE_SMS", "SMS");
-    	PERMISSION_SMS.put("android.permission.READ_SMS", "SMS");
-    	PERMISSION_SMS.put("android.permission.RECEIVE_WAP_PUSH", "SMS");
-    	PERMISSION_SMS.put("android.permission.RECEIVE_MMS", "SMS");    	    	    	
+    	PERMISSION_SMS.put(ANDROID_PERMISSION_SEND_SMS, "SMS");
+    	PERMISSION_SMS.put(ANDROID_PERMISSION_RECEIVE_SMS, "SMS");
+    	PERMISSION_SMS.put(ANDROID_PERMISSION_READ_SMS, "SMS");
+    	PERMISSION_SMS.put(ANDROID_PERMISSION_RECEIVE_WAP_PUSH, "SMS");
+    	PERMISSION_SMS.put(ANDROID_PERMISSION_RECEIVE_MMS, "SMS");    	    	    	
     }
     /**
      * Permissions required to interact with the storage service.
@@ -2790,8 +2812,8 @@ public final class ToolBox {
     public static final Map<String, String> PERMISSION_STORAGE;
     static {
     	PERMISSION_STORAGE = new HashMap<String, String>();
-    	PERMISSION_STORAGE.put("android.permission.READ_EXTERNAL_STORAGE", "Storage");
-    	PERMISSION_STORAGE.put("android.permission.WRITE_EXTERNAL_STORAGE", "Storage");    	    	    	    	
+    	PERMISSION_STORAGE.put(ANDROID_PERMISSION_READ_EXTERNAL_STORAGE, "Storage");
+    	PERMISSION_STORAGE.put(ANDROID_PERMISSION_WRITE_EXTERNAL_STORAGE, "Storage");    	    	    	    	
     }
     
     //Note: 
@@ -3080,6 +3102,25 @@ public final class ToolBox {
 		}
 		
 		return granted;
+	}
+	
+	/**
+	 * Checks if a permission is the specified Android permissions list.
+	 * 
+	 * @param permissions	A list of Android permissions to look in. See 
+	 * 						<a href="https://developer.android.com/guide/topics/security/permissions.html?hl=es"> Android permission</a>
+	 * @param permissionToCheck	A permission to find in the permissions list. 
+	 * 							Use ToolBox.ANDROID_PERMISSION_<permission_name>.
+	 * @return
+	 */
+	public static boolean permission_isPermissionInList(String[] permissions, String permissionToCheck){
+		for(String p:permissions){
+			if(p.equals(permissionToCheck)){
+				return true;
+			}
+		}
+		
+		return false;
 	}
 	
 	/**
@@ -4173,13 +4214,15 @@ public final class ToolBox {
 		if(siteName!=null && siteName.length()>0){
 			CookieManager cookieManager = CookieManager.getInstance();
 			String cookiesRAW = cookieManager.getCookie(siteName);
-			String[] cookies = cookiesRAW.split(",");
-			if(cookieName!=null && cookieName.length()>0){
-				for(String ck: cookies){
-					if(ck.contains(cookieName)){
-						String[] cookieKV = ck.split("=");
-						cookieValue = cookieKV[1];
-						break;
+			if(cookiesRAW!=null && cookiesRAW.length()>0) {
+				String[] cookies = cookiesRAW.split(",");
+				if(cookieName!=null && cookieName.length()>0){
+					for(String ck: cookies){
+						if(ck.contains(cookieName)){
+							String[] cookieKV = ck.split("=");
+							cookieValue = cookieKV[1];
+							break;
+						}
 					}
 				}
 			}
