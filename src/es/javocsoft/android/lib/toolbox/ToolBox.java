@@ -41,6 +41,9 @@ import java.net.MalformedURLException;
 import java.net.SocketTimeoutException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -54,6 +57,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -116,6 +120,7 @@ import android.graphics.Typeface;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
+import android.hardware.Camera.Size;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
@@ -1613,12 +1618,33 @@ public final class ToolBox {
 			 String positiveBtnText, final Runnable positiveBtnActions, 
 			 String negativeBtnText, final Runnable negativeBtnActions, 
 			 String neutralBtnText, final Runnable neutralBtnActions){
+		
+		dialog_showCustomActionsDialog(context, title, message, positiveBtnText, positiveBtnActions, negativeBtnText, negativeBtnActions, neutralBtnText, neutralBtnActions, false);
+	 }
+	 
+	 /**
+	  * Creates and shows a custom Alert dialog that will execute
+	  * the actions specified for positive, negative and 
+	  * neutral buttons.
+	  * 
+	  * @param context
+	  * @param title
+	  * @param message
+	  * @param positiveBtnActions	Can be null. When null button is not shown.
+	  * @param negativeBtnActions	Can be null. When null button is not shown.
+	  * @param neutralBtnActions	Can be null.
+	  * @param modal				If set to TRUE, dialog can not be cancelled until action is done.
+	  */
+	 public static void dialog_showCustomActionsDialog(Context context, String title, String message, 
+			 String positiveBtnText, final Runnable positiveBtnActions, 
+			 String negativeBtnText, final Runnable negativeBtnActions, 
+			 String neutralBtnText, final Runnable neutralBtnActions, boolean modal){
 		 
 		AlertDialog dialog = new AlertDialog.Builder(context).create();
 			
 		dialog.setTitle(title);			
 		dialog.setMessage(message);		
-		dialog.setCancelable(true);
+		dialog.setCancelable(!modal);
 		
 		//First Cancel button to be able to cancel.		
 		dialog.setButton(AlertDialog.BUTTON_NEGATIVE, negativeBtnText,
@@ -1863,8 +1889,48 @@ public final class ToolBox {
 		 
 		 return result;
 	}
+	
 	 
-	 
+	 /**
+	 * Make a direct NIO FloatBuffer from an array of floats.
+	 * 
+	 * @param array The float array
+	 * @return The newly created FloatBuffer
+	 */
+	 public static FloatBuffer makeFloatBuffer(float[] array) {
+	    ByteBuffer bb = ByteBuffer.allocateDirect(array.length*4);
+	    bb.order(ByteOrder.nativeOrder());
+	    FloatBuffer fb = bb.asFloatBuffer();
+	    fb.put(array);
+	    fb.position(0);
+	    return fb;
+	 }
+	  
+	 /**
+	 * Make a direct NIO ByteBuffer from an array of floats.
+	 * 
+	 * @param array The byte array
+	 * @return The newly created FloatBuffer
+	 */
+	 public static ByteBuffer makeByteBuffer(byte[] array) {
+	    ByteBuffer bb = ByteBuffer.allocateDirect(array.length);
+	    bb.order(ByteOrder.nativeOrder());
+	    bb.put(array);
+	    bb.position(0);
+	    return bb;
+	 }
+	  
+	 /**
+	  * Make a direct NIO ByteBuffer of the specified size.
+	  * 
+	  * @param size	The desired size
+	  * @return
+	  */
+	 public static ByteBuffer makeByteBuffer(int size) {
+	    ByteBuffer bb = ByteBuffer.allocateDirect(size);
+	    bb.position(0);
+	    return bb;
+	 }	 
 	 
 	 
 	//-------------------- VIEWS -------------------------------------------------------------------------
@@ -5474,7 +5540,102 @@ public final class ToolBox {
     	
     	return metrics;
 	}
-	 
+	
+	
+	/**
+	* Get the optimal preview size for the given screen size.
+	* @param sizes			The camera available sizes. See {@link android.hardware.Camera} 
+	* 						(mCamera.getParameters().getSupportedPreviewSizes())
+	* @param screenWidth		The device screen width. You can get it with {@link ToolBox#device_screenSize(Context)}.
+	* @param screenHeight	The device screen height. You can get it with {@link ToolBox#device_screenSize(Context)}.
+	* @param fasterRendering	Often there is not an adequate resolution with the correct 
+	* 							aspect ratio available. If set to TRUE, aspect ratio will be trade for  
+								for faster rendering.
+	* @return
+	*/
+	@SuppressWarnings("deprecation")
+	public static Size device_cameraGetOptimalPreviewSize(List<Size> sizes, int screenWidth, int screenHeight, boolean fasterRendering) {
+		double epsilon = 0.001;
+		if(fasterRendering)
+			epsilon = 0.17;
+		
+	    double aspectRatio = ((double)screenWidth)/screenHeight;
+	    Size optimalSize = null;
+	    for (Iterator<Size> iterator = sizes.iterator(); iterator.hasNext();) {
+	      Size currSize =  iterator.next();
+	      double curAspectRatio = ((double)currSize.width)/currSize.height;
+	      //do the aspect ratios equal?
+	      if ( Math.abs( aspectRatio - curAspectRatio ) < epsilon ) {
+	        //they do
+	        if(optimalSize!=null) {
+	          //is the current size smaller than the one before
+	          if(optimalSize.height>currSize.height && optimalSize.width>currSize.width) {
+	            optimalSize = currSize;
+	          }
+	        } else {
+	          optimalSize = currSize;
+	        }
+	      }
+	    }
+	    if(optimalSize == null) {
+	      //did not find a size with the correct aspect ratio.. let's choose the smallest instead
+	      for (Iterator<Size> iterator = sizes.iterator(); iterator.hasNext();) {
+	        Size currSize =  iterator.next();
+	        if(optimalSize!=null) {
+	          //is the current size smaller than the one before
+	          if(optimalSize.height>currSize.height && optimalSize.width>currSize.width) {
+	            optimalSize = currSize;
+	          } else {
+	            optimalSize = currSize;
+	          }
+	        }else {
+	          optimalSize = currSize;
+	        }
+	      }
+	    }
+	    return optimalSize;
+	}
+	
+	/**
+	 * Gets the smallest size of the available camera sizes.
+	 * 
+	 * @param sizes	The camera available sizes. See {@link android.hardware.Camera} 
+	* 						(mCamera.getParameters().getSupportedPreviewSizes())
+	 * @return
+	 */
+	@SuppressWarnings("deprecation")
+	public static Size device_cameraGetSmallestSize(List<Size> sizes) {
+	    Size optimalSize = null;
+	    for (Iterator<Size> iterator = sizes.iterator(); iterator.hasNext();) {
+	      Size currSize =  iterator.next();    
+	      if(optimalSize == null) {
+	        optimalSize = currSize;
+	      } else if(optimalSize.height>currSize.height && optimalSize.width>currSize.width) {
+	        optimalSize = currSize;
+	      }
+	    }
+	    return optimalSize;
+	}
+	
+	/**
+	 * Returns true if the camera has the spcified size available.
+	 * 
+	 * @param sizes	The camera available sizes. See {@link android.hardware.Camera} 
+	* 						(mCamera.getParameters().getSupportedPreviewSizes())
+	 * @param size	The size to find
+	 * @return
+	 */
+	@SuppressWarnings("deprecation")
+	public static boolean device_cameraContainsSize(List<Size> sizes, Size size) {
+	    for (Iterator<Size> iterator = sizes.iterator(); iterator.hasNext();) {
+	      Size currSize =  iterator.next();
+	      if(currSize.width == size.width && currSize.height == size.height) {
+	        return true;
+	      }      
+	    }
+	    return false;
+	}
+	
 	/**
 	 * Gets the device type from its screen properties.
 	 * 
