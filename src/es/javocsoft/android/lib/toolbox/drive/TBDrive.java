@@ -645,6 +645,7 @@ public class TBDrive implements GoogleApiClient.ConnectionCallbacks,
 		    					callback.setErrorDetails(result.getStatus().getStatusMessage());
 		    					callback.run();
 		    				}
+				            result.release();
 				            return;
 				        }
 				    
@@ -664,6 +665,7 @@ public class TBDrive implements GoogleApiClient.ConnectionCallbacks,
 				    					callback.setErrorDetails(result.getStatus().getStatusMessage());
 				    					callback.run();
 				    				}
+				    				result.release();
 				    				return;
 				    			}
 				    			
@@ -674,7 +676,9 @@ public class TBDrive implements GoogleApiClient.ConnectionCallbacks,
 								}
 				    		}
 				    		break; //Should only be one.
-				    	}						
+				    	}
+				    	
+				    	result.release();
 					}
 		};
 		
@@ -731,9 +735,10 @@ public class TBDrive implements GoogleApiClient.ConnectionCallbacks,
     	        .build();
     	
     	MetadataBufferResult result = Drive.DriveApi.query(getGoogleApiClient(), query).await();
-    		
+    	
     	if (!result.getStatus().isSuccess()) {
             Log.e(TAG, "Problem while retrieving files: '" + result.getStatus().getStatusMessage() + "'");
+            result.release();
             throw new TBDriveException("Problem while retrieving files: '" + result.getStatus().getStatusMessage() + "'");         
         }
     
@@ -747,11 +752,13 @@ public class TBDrive implements GoogleApiClient.ConnectionCallbacks,
     			if(driveFile==null) {
     				//Error getting Drive File from id. Should never happen
     				Log.e(TAG, "Problem while retrieving file with DriveId: " + mData.getDriveId());
+    				result.release();
     				throw new TBDriveException("Problem while retrieving file with DriveId: " + mData.getDriveId() + ". Not found in Drive!!");
     			}         			
     		}
     		break; //Should only be one.
     	}
+    	result.release();
     	
     	return driveFile;
     }
@@ -1296,6 +1303,7 @@ public class TBDrive implements GoogleApiClient.ConnectionCallbacks,
     					callback.setErrorDetails(result.getStatus().getStatusMessage());
     					callback.run();
     				}
+                    result.release();
                     return;
                 }
             
@@ -1318,6 +1326,8 @@ public class TBDrive implements GoogleApiClient.ConnectionCallbacks,
         			callback.setSearchResult(searchResults);
         			callback.run();
         		}
+            	
+            	result.release();
             }
         };
         
@@ -1374,6 +1384,7 @@ public class TBDrive implements GoogleApiClient.ConnectionCallbacks,
     	
     	if (!result.getStatus().isSuccess()) {
             Log.e(TAG, "Problem while retrieving files: '" + result.getStatus().getStatusMessage() + "'");
+            result.release();
             throw new TBDriveException("Problem while retrieving files: '" + result.getStatus().getStatusMessage() + "'");
         }
     	
@@ -1391,6 +1402,7 @@ public class TBDrive implements GoogleApiClient.ConnectionCallbacks,
     			searchResults.add(fInfo);
     		}
     	}
+    	result.release();
     	
     	return searchResults;
 	}

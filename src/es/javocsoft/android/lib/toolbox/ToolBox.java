@@ -1681,6 +1681,71 @@ public final class ToolBox {
 	 }
 	 
 	 /**
+	  * Creates and shows a custom Alert dialog, with the specified layout, 
+	  * that will execute some actions if specified (for positive, negative and 
+	  * neutral buttons).
+	  * 
+	  * @param context
+	  * @param title					The title of the alert.
+	  * @param layoutResourceId			The layout resource Id
+	  * @param positiveBtnResourceId	The layout positive button resource id
+	  * @param positiveBtnActions		If specified, action to launch when clicking in the positive button.
+	  * @param negativeBtnResourceId	The layout negative button resource id
+	  * @param negativeBtnActions		If specified, action to launch when clicking in the negative button.
+	  * @param neutralBtnResourceId		The layout neutral button resource id
+	  * @param neutralBtnActions		If specified, action to launch when clicking in the neutral button.
+	  * @param modal					If set to TRUE, dialog can not be cancelled until action is done.
+	  */
+	 public static void dialog_showCustomLayoutActionsDialog(Context context, String title, int layoutResourceId, 
+			 Integer positiveBtnResourceId, final Runnable positiveBtnActions, 
+			 Integer negativeBtnResourceId, final Runnable negativeBtnActions, 
+			 Integer neutralBtnResourceId, final Runnable neutralBtnActions, boolean modal){
+		
+		final AlertDialog dialog = new AlertDialog.Builder(context).create();		
+		dialog.setTitle(title);	
+		dialog.setCancelable(!modal);
+		 
+		//Create the Inflater service and load the layout
+		//LayoutInflater inflater = (LayoutInflater) context.getSystemService( Context.LAYOUT_INFLATER_SERVICE );
+		LayoutInflater inflater = LayoutInflater.from(context);
+		View dialogContent = inflater.inflate(layoutResourceId, null);
+		if(positiveBtnResourceId!=null) {
+			Button positiveButton = (Button) dialogContent.findViewById( positiveBtnResourceId );
+			positiveButton.setOnClickListener(new OnClickListener() {				
+				@Override
+				public void onClick(View v) {
+					positiveBtnActions.run();
+					dialog.dismiss();
+				}
+			});
+		}
+		if(negativeBtnResourceId!=null) {
+			Button negativeButton = (Button) dialogContent.findViewById( negativeBtnResourceId );
+			negativeButton.setOnClickListener(new OnClickListener() {				
+				@Override
+				public void onClick(View v) {
+					negativeBtnActions.run();
+					dialog.dismiss();
+				}
+			});
+		}
+		if(neutralBtnResourceId!=null) {
+			Button neutralButton = (Button) dialogContent.findViewById( neutralBtnResourceId );
+			neutralButton.setOnClickListener(new OnClickListener() {				
+				@Override
+				public void onClick(View v) {
+					neutralBtnActions.run();
+					dialog.dismiss();
+				}
+			});
+		}
+		
+		dialog.setView(dialogContent);		
+		
+		dialog.show();
+	 }
+	 
+	 /**
 	  * Opens a url in an alert dialog.
 	  * 
 	  * @param context
@@ -1770,6 +1835,24 @@ public final class ToolBox {
 	  * @param cancelButtonText	Optional.
 	  */
 	 public static void dialog_showGPSDisabledAlert(final Activity context, String message, String okButtonText, String cancelButtonText) {		 
+		 dialog_showGPSDisabledAlert(context, message, okButtonText, null, cancelButtonText, null);
+	 }
+	 
+	 /**
+	  * Shows an alert dialog asking to enable in system
+	  * settings the GPS. Once selected an option, the result
+	  * is returned to the activity, result can be get by using
+	  * the request code {@link ToolBox#ENABLE_GPS_REQUEST} in your
+	  * activity onActivityResult.
+	  * 
+	  * @param context	The activity that opens the dialog.
+	  * @param message	Optional.
+	  * @param okButtonText	Optional.
+	  * @param okRunnable	Optional.
+	  * @param cancelButtonText	Optional.
+	  * @param cancelRunnable	Optional.
+	  */
+	 public static void dialog_showGPSDisabledAlert(final Activity context, String message, String okButtonText, final Runnable okRunnable, String cancelButtonText, final Runnable cancelRunnable) {		 
 		 
 		 if(message==null || message!=null && message.length()==0) {
 			 message = "&The GPS is disabled. Application needs GPS location. ¿Do you want to enable it?";
@@ -1788,13 +1871,17 @@ public final class ToolBox {
                         new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialog, int id) {
                             	dialog.dismiss();
-                            	showAndroidGpsOptions(context);                            	
+                            	showAndroidGpsOptions(context);
+                            	if(okRunnable!=null)
+                            		okRunnable.run();
                             }
                         });
         builder.setNegativeButton(cancelButtonText,
                 new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
                         dialog.cancel();
+                        if(cancelRunnable!=null)
+                        	cancelRunnable.run();
                     }
                 });
         AlertDialog alert = builder.create();
@@ -1846,6 +1933,42 @@ public final class ToolBox {
                 new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
                         dialog.cancel();
+                    }
+                });
+        AlertDialog alert = builder.create();
+        alert.show();
+	 }
+	 
+	 public static void dialog_showGPSDisabledAlert(final Context context, String message, String okButtonText, final Runnable okRunnable, String cancelButtonText, final Runnable cancelRunnable) {		 
+		 
+		 if(message==null || message!=null && message.length()==0) {
+			 message = "The GPS is disabled. Application needs GPS location. ¿Do you want to enable it?";
+		 }
+		 if(okButtonText==null || okButtonText!=null && okButtonText.length()==0) {
+			 okButtonText = "Activate GPS";
+		 }
+		 if(cancelButtonText==null || cancelButtonText!=null && cancelButtonText.length()==0) {
+			 cancelButtonText = "Cancel";
+		 }
+		 
+		 AlertDialog.Builder builder = new AlertDialog.Builder(context);
+		 builder
+                .setMessage(message)
+                .setCancelable(false).setPositiveButton(okButtonText,
+                        new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int id) {
+                            	dialog.dismiss();
+                            	showAndroidGpsOptions(context);
+                            	if(okRunnable!=null)
+                            		okRunnable.run();
+                            }
+                        });
+        builder.setNegativeButton(cancelButtonText,
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        dialog.cancel();
+                        if(cancelRunnable!=null)
+                        	cancelRunnable.run();
                     }
                 });
         AlertDialog alert = builder.create();
@@ -4316,7 +4439,7 @@ public final class ToolBox {
 				@Override
 				public void onReceiveValue(Boolean value) {
 					if(LOG_ENABLE)
-						Log.w(TAG, "Webview cookies deleted? " + value);
+						Log.i(TAG, "Webview cookies deleted? " + value);
 					if(value){
 						if(callbackOk!=null)
 							callbackOk.run();
