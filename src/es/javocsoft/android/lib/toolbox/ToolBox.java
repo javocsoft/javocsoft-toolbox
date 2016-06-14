@@ -2742,8 +2742,16 @@ public final class ToolBox {
     }
     		
     
-    /*
+    /**
      * Gets the application Icon.
+     * <br><br>
+     * Since Android 5.0+ notification icons must follow a design guidelines,
+     * Silhouette style, to be showed correctly.<br> 
+     * See <a href="http://developer.android.com/design/style/iconography.html#notification">Silhouette icons</a>.
+     * <br><br>
+     * <b>ATTENTION</b>: This method will try to get the silhouette style icon if required. In
+     * order this to work, the application has to have an icon named "ic_stat_silhouette" in png
+     * format so it can be used. If does not exists, normal application icon will be used.
      *  
      * @param context
      * @return
@@ -2751,8 +2759,26 @@ public final class ToolBox {
      */
     private static int notification_getApplicationIcon(Context context) throws Exception{
     	try {
-			ApplicationInfo app = context.getPackageManager().getApplicationInfo(context.getPackageName(), 0);
-			return app.icon;
+    		int appIconResourceId = 0;
+    		//Since Android 5.0+ notification icons must follow a design guidelines to 
+    		//be showed correctly.
+    		//
+	        //See: http://developer.android.com/design/style/iconography.html#notification
+    		boolean useSilhouette = ToolBox.device_hasAPILevel(ApiLevel.LEVEL_21);
+    		
+    		if(useSilhouette){
+    			appIconResourceId = context.getResources().getIdentifier("ic_stat_silhouette", "drawable", context.getPackageName());
+    			if(appIconResourceId==0) {
+    				//In this case, we will have an invalid icon that is not going to be viewed well.
+    				ApplicationInfo app = context.getPackageManager().getApplicationInfo(context.getPackageName(), 0);
+        			appIconResourceId = app.icon;
+    			}	
+    		}else{
+    			ApplicationInfo app = context.getPackageManager().getApplicationInfo(context.getPackageName(), 0);
+    			appIconResourceId = app.icon;
+    		}    		
+			
+			return appIconResourceId;
 			
 		} catch (NameNotFoundException e) {
 			if(LOG_ENABLE)
