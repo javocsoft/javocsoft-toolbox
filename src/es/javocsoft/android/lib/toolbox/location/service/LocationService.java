@@ -1,3 +1,24 @@
+/*
+ * Copyright (C) 2010-2016 - JavocSoft - Javier Gonzalez Serrano
+ * http://javocsoft.es/proyectos/code-libs/android/javocsoft-toolbox-android-library
+ * 
+ * This file is part of JavocSoft Android Toolbox library.
+ *
+ * JavocSoft Android Toolbox library is free software: you can redistribute it 
+ * and/or modify it under the terms of the GNU General Public License as 
+ * published by the Free Software Foundation, either version 3 of the License, 
+ * or (at your option) any later version.
+ *
+ * JavocSoft Android Toolbox library is distributed in the hope that it will be 
+ * useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General 
+ * Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with JavocSoft Android Toolbox library.  If not, see 
+ * <http://www.gnu.org/licenses/>.
+ * 
+ */
 package es.javocsoft.android.lib.toolbox.location.service;
 
 import android.app.Service;
@@ -22,7 +43,6 @@ import es.javocsoft.android.lib.toolbox.ToolBox;
  *   <li><b>LOCATION_GPS_ENABLED</b>. Intent filter name: <i>es.javocsoft.android.lib.toolbox.location.service.intent.action.LOCATION_GPS_ENABLED</i></li>
  *   <li><b>LOCATION_GPS_DISABLED</b>. Intent filter name: <i>es.javocsoft.android.lib.toolbox.location.service.intent.action.LOCATION_GPS_DISABLED</i></li>
  * </ul>
- * <br><br>
  * 
  * When a location change happens, a broadcast is sent, this broadcast will contain in its bundle:<br>
  * <ul>
@@ -70,13 +90,26 @@ import es.javocsoft.android.lib.toolbox.ToolBox;
  * 		<li>Time between localization changes. Default is 4 seconds (4000 milliseconds).</li>
  * 		<li>Distance (in meters) between localization changes. Default is 2 meters.</li>
  * 	    <li>Accuracy change threshold (in meters). Default is 0 meters.</li>
+ * 		<li>Use also the GPS, if available, or just the Wi-Fi and Radio signals. If not set GPS is not used.</li>
+ * 		<li>The algorithm type (an String) to determine if a new location is better than 
+ * 			than the previous one. We can choose between SIMPLE or COMPLEX, 
+ * 			see {@link LOCATION_ALGORITHM_TYPE}. If not set, SIMPLE is used.
+ * 			<ul>
+ * 				<li>SIMPLE. Choose this if we want only to be alerted every time me move the
+ * 					specified distance in the parameter LOCATION_SERVICE_PARAM_MIN_DISTANCE.</li>
+ * 				<li>COMPLEX. Choose this when we want also to check the accuracy and the age 
+ * 					of locations and not only the distance.</li>
+ * 			</ul>
+ * 		</li>
  *   </ul>  
  *   To set these values, set them through the service starting intent by 
  *   using these keys in the bundle:
  *   <ul>
  *     <li>LOCATION_SERVICE_PARAM_MIN_DISTANCE</li> 
  * 	   <li>LOCATION_SERVICE_PARAM_MIN_TIME</li>
- * 	   <li>LOCATION_SERVICE_PARAM_ACCURACY_THRESHOLD</li> 	   
+ * 	   <li>LOCATION_SERVICE_PARAM_ACCURACY_THRESHOLD</li>
+ * 	   <li>LOCATION_SERVICE_PARAM_USE_GPS</li>
+ *     <li>LOCATION_SERVICE_PARAM_ALGORITHM</li>
  *   </ul>
  *  </li> 
  *  <li>If service gets stopped, it will automatically run again.</li>
@@ -96,7 +129,7 @@ import es.javocsoft.android.lib.toolbox.ToolBox;
  * 
  * 
  * @author JavocSoft 2013
- * @version 1.0<br>
+ * @version 2.0<br>
  * $Rev$<br>
  * $LastChangedDate$<br>
  * $LastChangedBy$
@@ -109,6 +142,8 @@ public class LocationService extends Service implements LocationListener {
 	public static final String LOCATION_SERVICE_PARAM_MIN_DISTANCE = "LOCATION_UPDATE_MIN_DISTANCE";
 	public static final String LOCATION_SERVICE_PARAM_MIN_TIME = "LOCATION_UPDATE_MIN_TIME";
 	public static final String LOCATION_SERVICE_PARAM_ACCURACY_THRESHOLD = "LOCATION_UPDATE_ACCURACY_THRESHOLD";
+	public static final String LOCATION_SERVICE_PARAM_USE_GPS = "LOCATION_USE_GPS";
+	public static final String LOCATION_SERVICE_PARAM_ALGORITHM =  "LOCATION_ALGORITHM";
 	
 	public static final String ACTION_LOCATION_SERVICE_STARTED = LocationService.class.getPackage().getName() + ".intent.action.LOCATION_SERVICE_STARTED";
 	public static final String ACTION_LOCATION_SERVICE_SHUTDOWN = LocationService.class.getPackage().getName() + ".intent.action.LOCATION_SERVICE_SHUTDOWN";
@@ -125,16 +160,32 @@ public class LocationService extends Service implements LocationListener {
 	
 	private static final int TWO_MINUTES = (1000*60)*2;
     
+	/**
+     * The algorithm to use to determine if the new position should rise a new location
+     * alert broadcast intent.<br>
+     * <ul>
+     * 	<li>SIMPLE. Choose this if we want only to be alerted every time me move the
+     * 		specified distance in the parameter LOCATION_SERVICE_PARAM_MIN_DISTANCE.</li>
+     * 	<li>COMPLEX. Choose this when we want also to check the accuracy, provider and the age 
+     * 		of locations and not only the distance.</li>
+     * </ul>		
+     */
+    public static enum LOCATION_ALGORITHM_TYPE {SIMPLE, COMPLEX};
+	
     private static final int UPDATE_MIN_DISTANCE = 2; //meters 
     private static final long UPDATE_MIN_TIME = 4000l; //Milliseconds
     private static final int UPDATE_ACCURACY_THRESHOLD = 0; //meters
-    
+    private static final LOCATION_ALGORITHM_TYPE LOCATION_ALGORITHM = LOCATION_ALGORITHM_TYPE.SIMPLE;
+        
     
     public LocationManager locationManager;
     public Location previousBestLocation = null;
     private int minDistance = UPDATE_MIN_DISTANCE;
     private long minTime = UPDATE_MIN_TIME;
     private int accuracyThreshold = UPDATE_ACCURACY_THRESHOLD;
+    private boolean useGPS = false;
+    private LOCATION_ALGORITHM_TYPE locAlgorithm = LOCATION_ALGORITHM;
+    
     
     
 	
@@ -181,11 +232,22 @@ public class LocationService extends Service implements LocationListener {
     		minDistance = intent.getIntExtra(LOCATION_SERVICE_PARAM_MIN_DISTANCE, UPDATE_MIN_DISTANCE);
         	minTime = intent.getLongExtra(LOCATION_SERVICE_PARAM_MIN_TIME, UPDATE_MIN_TIME);
         	accuracyThreshold = intent.getIntExtra(LOCATION_SERVICE_PARAM_ACCURACY_THRESHOLD, UPDATE_ACCURACY_THRESHOLD);
-        	
+        	useGPS = intent.getBooleanExtra(LOCATION_SERVICE_PARAM_USE_GPS, false);
+        	locAlgorithm = getLocationAlgorithmFromString(intent.getStringExtra(LOCATION_SERVICE_PARAM_ALGORITHM));
+        			
         	//We save the initialization for later usage in case services gets rebooted.
-        	ToolBox.prefs_savePreference(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_MIN_DISTANCE, Integer.class, minDistance);
-        	ToolBox.prefs_savePreference(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_MIN_TIME, Long.class, minTime);
-        	ToolBox.prefs_savePreference(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_ACCURACY_THRESHOLD, Integer.class, accuracyThreshold);
+        	Thread tSP = new Thread(new Runnable() {
+				@Override
+				public void run() {
+					ToolBox.prefs_savePreference(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_MIN_DISTANCE, Integer.class, minDistance);
+		        	ToolBox.prefs_savePreference(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_MIN_TIME, Long.class, minTime);
+		        	ToolBox.prefs_savePreference(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_ACCURACY_THRESHOLD, Integer.class, accuracyThreshold);
+		        	ToolBox.prefs_savePreference(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_USE_GPS, Boolean.class, useGPS);
+		        	ToolBox.prefs_savePreference(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_ALGORITHM, String.class, locAlgorithm.name());
+				}
+			});
+        	tSP.start();
+        	
     	}else{
     		//No data in the intent, we try to get from saved preferences if there is one.
     		if(ToolBox.prefs_existsPref(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_MIN_DISTANCE)) {
@@ -197,27 +259,64 @@ public class LocationService extends Service implements LocationListener {
     		if(ToolBox.prefs_existsPref(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_ACCURACY_THRESHOLD)) {
     			accuracyThreshold = ((Integer)ToolBox.prefs_readPreference(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_ACCURACY_THRESHOLD, Integer.class)).intValue();
     		}
+    		if(ToolBox.prefs_existsPref(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_USE_GPS)) {
+    			useGPS = ((Boolean)ToolBox.prefs_readPreference(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_USE_GPS, Boolean.class));
+    		}
+    		if(ToolBox.prefs_existsPref(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_ALGORITHM)) {
+    			String locAlg = ((String)ToolBox.prefs_readPreference(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_ALGORITHM, String.class));
+    			locAlgorithm = getLocationAlgorithmFromString(locAlg);
+    		}
     	}
     	
     	if(ToolBox.permission_areGranted(getApplicationContext(), ToolBox.PERMISSION_LOCATION.keySet())) {
     		locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
     		locationManager.requestLocationUpdates(
             		LocationManager.NETWORK_PROVIDER, 
-            		minTime, minDistance, this);
-            locationManager.requestLocationUpdates(
+            		minTime, minDistance, this);    		
+    		if(useGPS) {
+    			locationManager.requestLocationUpdates(
             		LocationManager.GPS_PROVIDER, 
             		minTime, minDistance, this);
+    		}
 	        
 	        if(ToolBox.LOG_ENABLE)
-	        	Log.d(TAG, "Location service started. Parameters 'minTime': " + minTime + " / 'minDistance': " + minDistance + " / 'accuracyUmbral': " + accuracyThreshold);	            
+	        	Log.d(TAG, "Location service started. Parameters 'minTime': " + minTime + " / 'minDistance': " + minDistance + " / 'accuracyUmbral': " + accuracyThreshold + " / 'useGPS': " + useGPS + " / 'Location Algorithm': " + locAlgorithm.name());
 	        
 	        deliverBroadcast(ACTION_LOCATION_SERVICE_STARTED, null);
     	}else{
-    		Log.d(TAG, "Location service not started, permissions not granted. Parameters 'minTime': " + minTime + " / 'minDistance': " + minDistance + " / 'accuracyUmbral': " + accuracyThreshold);
+    		Log.d(TAG, "Location service not started, permissions not granted. Parameters 'minTime': " + minTime + " / 'minDistance': " + minDistance + " / 'accuracyUmbral': " + accuracyThreshold + " / 'useGPS': " + useGPS + " / 'Location Algorithm': " + locAlgorithm.name());
     	}
     	
     }
 	
+    
+    protected LOCATION_ALGORITHM_TYPE getLocationAlgorithmFromString(String locationAlgorithm) {
+    	LOCATION_ALGORITHM_TYPE res = null;
+    	try{
+    		res = LOCATION_ALGORITHM_TYPE.valueOf(locationAlgorithm);
+    	}catch(Exception e){
+    		//We use the SIMPLE mode and log the error.
+    		res = LOCATION_ALGORITHM_TYPE.SIMPLE;
+    		if(ToolBox.LOG_ENABLE)
+    			Log.d(TAG, "Location Service: could not determine the location algorithm type [" + locationAlgorithm + "]. Using SIMPLE by default.");
+    	}
+    	
+    	return res;
+    }
+    
+    protected boolean isBetterLocation(Location location, Location currentBestLocation) {
+    	boolean res = false;
+    	
+    	switch (locAlgorithm) {
+			case SIMPLE:
+				res = isBetterLocationSimple(location, currentBestLocation);				
+			case COMPLEX:			
+				res = isBetterLocationComplex(location, currentBestLocation);			
+		}
+    	
+    	return res;
+    }
+    
     /**
      * Checks if the new location is better than the old one.
      * 
@@ -225,7 +324,7 @@ public class LocationService extends Service implements LocationListener {
      * @param currentBestLocation
      * @return
      */
-	protected boolean isBetterLocation(Location location, Location currentBestLocation) {
+	protected boolean isBetterLocationComplex(Location location, Location currentBestLocation) {
         if (currentBestLocation == null) {
             return true; //New location is better than no location
         }
@@ -241,19 +340,19 @@ public class LocationService extends Service implements LocationListener {
         	//Same location, new measurement is newer yes but the location is the same.
         	isNewer = false;
         	if(ToolBox.LOG_ENABLE)
-        		Log.d(TAG, "isNever set to FALSE (same location).");
+        		Log.d(TAG, "Location service isNever set to FALSE (same location).");
         }else{
         	double distanceBetweenMeasurements = ToolBox.location_distance(location.getLatitude(), location.getLongitude(), 
         			currentBestLocation.getLatitude(), currentBestLocation.getLongitude());
         	if(ToolBox.LOG_ENABLE)
-        		Log.d(TAG, "Elapsed distance (Haversine) since last location: " + distanceBetweenMeasurements);
+        		Log.d(TAG, "Location service Elapsed distance (Haversine) since last location: " + distanceBetweenMeasurements);
         	
         	if(distanceBetweenMeasurements<=minDistance){
         		//New measurement is newer yes but the distance between last and new location is less
         		//than the minimal distance.
         		isNewer = false;
         		if(ToolBox.LOG_ENABLE)
-            		Log.d(TAG, "isNever set to FALSE (Haversine distance less than threshold).");
+            		Log.d(TAG, "Location service isNever set to FALSE (Haversine distance less than threshold).");
         	}
         }
 
@@ -263,7 +362,7 @@ public class LocationService extends Service implements LocationListener {
             return true;
         } else if (isSignificantlyOlder) {
         	if(ToolBox.LOG_ENABLE)
-        		Log.d(TAG, "Location is not better: isSignificantlyOlder");
+        		Log.d(TAG, "Location service Location is not better: isSignificantlyOlder");
             return false; //If the new location older than two minutes, should be worse
         }
 
@@ -276,7 +375,7 @@ public class LocationService extends Service implements LocationListener {
         }
         boolean isSignificantlyLessAccurate = accuracyDelta > 200;
         if(ToolBox.LOG_ENABLE)
-    		Log.d(TAG, "isMore accurated? " + isMoreAccurate);
+    		Log.d(TAG, "Location service isMore accurated? " + isMoreAccurate);
 
         //Check if the old and new location have the same provider
         boolean isFromSameProvider = 
@@ -292,12 +391,43 @@ public class LocationService extends Service implements LocationListener {
         }
         
         if(ToolBox.LOG_ENABLE)
-        	Log.d(TAG, "Location is not better: isNewer: " + isNewer + 
+        	Log.d(TAG, "Location service is not better: isNewer: " + isNewer + 
         			", isLessAccurate: " + isLessAccurate + 
         			", isSignificantlyLessAccurate: " + isSignificantlyLessAccurate + 
         			", isFromSameProvider: " + isFromSameProvider);
         
         return false;
+    }
+	
+	protected boolean isBetterLocationSimple(Location location, Location currentBestLocation) {
+		boolean shouldAlert = true;
+		
+		if (currentBestLocation == null) {
+            return true; //New location is better than no location
+        }
+        
+        if(currentBestLocation.getLatitude()==location.getLatitude() &&
+           currentBestLocation.getLongitude()==location.getLongitude()) {
+        	//Same location, new measurement is newer yes but the location is the same.
+        	shouldAlert = false;
+        	if(ToolBox.LOG_ENABLE)
+        		Log.d(TAG, "Location Service: isNever set to FALSE (same location).");
+        }else{
+        	double distanceBetweenMeasurements = ToolBox.location_distance(location.getLatitude(), location.getLongitude(), 
+        			currentBestLocation.getLatitude(), currentBestLocation.getLongitude());
+        	if(ToolBox.LOG_ENABLE)
+        		Log.d(TAG, "Location Service: Elapsed distance (Haversine) since last location: " + distanceBetweenMeasurements);
+        	
+        	if(distanceBetweenMeasurements<=minDistance){
+        		//New measurement is newer yes but the distance between last and new location is less
+        		//than the minimal distance.
+        		shouldAlert = false;
+        		if(ToolBox.LOG_ENABLE)
+            		Log.d(TAG, "Location Service: shouldAlert set to FALSE (Haversine distance less than threshold).");
+        	}
+        }
+        
+        return shouldAlert;
     }
 
 	/** 

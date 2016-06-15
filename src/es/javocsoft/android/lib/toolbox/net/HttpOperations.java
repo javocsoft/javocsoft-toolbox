@@ -57,15 +57,19 @@ public class HttpOperations {
 		return "Basic " + new String(android.util.Base64.encodeToString(new String(user + ":" + password).getBytes(), android.util.Base64.NO_WRAP ));
 	}
 	
-
 	/**
 	 * A POST operation.
 	 * 
-	 * @param url			Url for the POST operation 
-	 * @param data			JSON data 
+	 * @param url			Url for the POST operation
+	 * @param data			JSON data
+	 * @param headersData	Optional. Headers for the request.
+	 * @param ignoreSSL		If set to TRUE, all SSL errors are ignored.
+	 * @return
+	 * @throws ConnectTimeoutException
+	 * @throws SocketTimeoutException
 	 * @throws Exception	In case of any error.
 	 */
-	public static String doPost(String url, String data, Map<String, String> headersData) throws Exception{
+	public static String doPost(String url, String data, Map<String, String> headersData, boolean ignoreSSL) throws ConnectTimeoutException, SocketTimeoutException, Exception{
 		String res;
 		
 		String theJSON = data;
@@ -75,7 +79,7 @@ public class HttpOperations {
 		URL urlPath = null;
 		try {
 			urlPath = new URL(url);
-			res = ToolBox.net_httpclient_doAction(HTTP_METHOD.POST, urlPath.toString(), theJSON, headersData);
+			res = ToolBox.net_httpclient_doAction(HTTP_METHOD.POST, urlPath.toString(), theJSON, headersData, ignoreSSL);
 
 		} catch (Exception e) {
 			if(LOG_ENABLE)
@@ -88,13 +92,31 @@ public class HttpOperations {
 	}
 	
 	/**
+	 * A POST operation.
+	 * 
+	 * @param url			Url for the POST operation 
+	 * @param data			JSON data
+	 * @return 
+	 * @throws ConnectTimeoutException
+	 * @throws SocketTimeoutException
+	 * @throws Exception	In case of any error.
+	 */
+	public static String doPost(String url, String data, Map<String, String> headersData) throws ConnectTimeoutException, SocketTimeoutException, Exception{
+		return doPost(url, data, headersData, false);
+	}
+	
+	/**
 	 * A GET operation.
 	 * 
-	 * @param url
+	 * @param url			Url for the POST operation
+	 * @param headersData	Optional. Headers for the request.
+	 * @param ignoreSSL		If set to TRUE, all SSL errors are ignored.
 	 * @return
+	 * @throws ConnectTimeoutException
+	 * @throws SocketTimeoutException
 	 * @throws Exception
 	 */
-	public static String doGet(String url, Map<String, String> headersData) throws ConnectTimeoutException, SocketTimeoutException, Exception{
+	public static String doGet(String url, Map<String, String> headersData, boolean ignoreSSL) throws ConnectTimeoutException, SocketTimeoutException, Exception{
 		String res = null;
 		
 		if(LOG_ENABLE)
@@ -103,7 +125,7 @@ public class HttpOperations {
 		URL urlPath = null;
 		try {
 			urlPath = new URL(url);
-			res = ToolBox.net_httpclient_doAction(HTTP_METHOD.GET, urlPath.toString(), null, headersData);
+			res = ToolBox.net_httpclient_doAction(HTTP_METHOD.GET, urlPath.toString(), null, headersData, ignoreSSL);
 
 		} catch (ConnectTimeoutException e) {
 			if(LOG_ENABLE)
@@ -120,6 +142,20 @@ public class HttpOperations {
 		}
 		
 		return res;
+	}
+	
+	/**
+	 * A GET operation.
+	 * 
+	 * @param url			Url for the POST operation
+	 * @param headersData	Optional. Headers for the request.
+	 * @return
+	 * @throws ConnectTimeoutException
+	 * @throws SocketTimeoutException
+	 * @throws Exception
+	 */
+	public static String doGet(String url, Map<String, String> headersData) throws ConnectTimeoutException, SocketTimeoutException, Exception{
+		return doGet(url, headersData, false);
 	}
 	
 }

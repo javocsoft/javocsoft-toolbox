@@ -74,9 +74,15 @@ import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.conn.ClientConnectionManager;
 import org.apache.http.conn.ConnectTimeoutException;
+import org.apache.http.conn.scheme.PlainSocketFactory;
+import org.apache.http.conn.scheme.Scheme;
+import org.apache.http.conn.scheme.SchemeRegistry;
+import org.apache.http.conn.ssl.SSLSocketFactory;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.conn.SingleClientConnManager;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.params.CoreConnectionPNames;
 import org.apache.http.protocol.HTTP;
@@ -2267,6 +2273,10 @@ public final class ToolBox {
      * 											content of the notification for the expandable.
      * @param bigStyleInboxSeparator			Optional. In InboxStyle Expandable notification type. It is the 
      * 											separator of each line in the received message (notMessage)
+     * @param notBackgroundColor				Optional. Since Android 5.0+ notification icons must follow a design guidelines 
+     * 											to be showed correctly and allows to set the background color for 
+     * 											the icon. The specified color must be in <b>hexadecimal<b>, for 
+     * 											example "#ff6600".
      * @param notClazz							Class to be executed
 	 * @param extras							Extra information to attach to the notification to be available
 	 * 											in the application or the destination intent class (notClazz). 
@@ -2308,6 +2318,7 @@ public final class ToolBox {
     		String bigContentSummary,
     		String bigContentImage, 
     		String bigStyleInboxContent, String bigStyleInboxSeparator,
+    		String notBackgroundColor,
     		Class<?> notClazz, Bundle extras,
     		boolean wakeUp,
     		NOTIFICATION_PRIORITY notPriority,
@@ -2459,6 +2470,8 @@ public final class ToolBox {
 			NotificationCompat.Builder notifyBuilder = new NotificationCompat.Builder(context);
 			notifyBuilder.setWhen(when);
 			notifyBuilder.setSmallIcon(iconResId);
+			if(notBackgroundColor!=null && notBackgroundColor.length()>0 && notBackgroundColor.startsWith("#"))
+				notifyBuilder.setColor(Color.parseColor(notBackgroundColor));
 			notifyBuilder.setAutoCancel(true); //Make this notification automatically dismissed when the user touches it.
 			if(notTicker!=null) {
 				notifyBuilder.setTicker(notTicker); //Text that appears for only a few seconds when notification raises.
@@ -2658,6 +2671,113 @@ public final class ToolBox {
     		if(LOG_ENABLE)
 				Log.e(TAG, "The notification could not be created (" +e.getMessage() + ")", e);
     	}
+    }
+    
+    /**
+     * Creates and generates a new notification.<br><br>
+     * 
+     * The notification has a FLAg in the extras bundle (NOTIFICATION_FLAG) that is set to 1.
+     * This class can be used afterwards to know within an app if the app was opened from
+     * a notification checking this value.<br><br>
+     * 
+     * See:<br><br>
+     * 							
+     * 	Notification:			http://developer.android.com/design/patterns/notifications.html<br>
+     * 							http://developer.android.com/guide/topics/ui/notifiers/notifications.html<br> 									
+     * 							Previous to Android 5.0 https://stuff.mit.edu/afs/sipb/project/android/docs/guide/topics/ui/notifiers/notifications.html	
+     * 	Notification.Builder:	http://developer.android.com/reference/android/app/Notification.Builder.html<br>
+     * 	PendingIntent:			http://developer.android.com/reference/android/app/PendingIntent.html<br>
+     * 	Big View Styles: 		http://developer.android.com/training/notify-user/expanded.html<br>	
+     * 							http://developer.android.com/reference/android/app/Notification.BigTextStyle.html<br>
+     * 							http://developer.android.com/reference/android/app/Notification.InboxStyle.html<br>
+     * 							http://developer.android.com/reference/android/support/v4/app/NotificationCompat.InboxStyle.html<br>
+     *  Iconografy				http://developer.android.com/design/style/iconography.html#notification
+     * 	
+     * @param context							The context of the notification.
+     * @param notSound							Set to TRUE to enable sound in the notification.
+     * @param notSoundRawId						Optional. Set one to use this sound instead the default one.
+     * @param forceSound						If enabled, sound is enabled avoiding any user setting. 
+     * @param multipleNot						Setting to True allows showing multiple notifications.
+	 * @param groupMultipleNotKey				If is set, multiple notifications can be grouped by this key.
+	 * @param notAction							Action for this notification
+     * @param notTitle							The title of the notification.
+     * @param notMessage						The message of the notification.
+     * @param notTicker							Optional. Text that appears for only a few seconds when notification 
+     * 											raises. (text which is sent to accessibility services). 
+     * @param notContentInfo					Optional. A small piece of additional information pertaining 
+     * 											to this notification. The platform template will draw this on 
+     * 											the last line of the notification, at the far right (to the 
+     * 											right of a smallIcon if it has been placed there).
+     * @param bigContentTitle					Optional. Android 4.1+. Overrides ContentTitle in the big form 
+     * 											of the template
+     * @param bigContentText					Optional. Android 4.1+. Overrides ContentMessage in the big form 
+     * 											of the template
+     * @param bigContentSummary					Optional. Android 4.1+. Adds a line at the bottom of the notification.
+     * @param bigContentImage					Optional. In BigPicture Expandable notification type. Android 4.1+.
+     * 											It is the image to show. Can be a drawable resourceId, an assets 
+     * 											resource file name or an URL to an image.
+     * @param bigStyleInboxContent				Optional. In InboxStyle Expandable notification type. It is the
+     * 											content of the notification for the expandable.
+     * @param bigStyleInboxSeparator			Optional. In InboxStyle Expandable notification type. It is the 
+     * 											separator of each line in the received message (notMessage)
+     * @param notClazz							Class to be executed
+	 * @param extras							Extra information to attach to the notification to be available
+	 * 											in the application or the destination intent class (notClazz). 
+     * @param wakeUp							Set to TRUE to wake-up the device when notification is received.
+     * @param notPriority						Optional. Select the desired notification priority. 
+     * 											See {@link NOTIFICATION_PRIORITY}
+     * @param notStyle							Select the notification style. See {@link NOTIFICATION_STYLE}
+     * @param notVisibility						Optional. The Default is PRIVATE. How and when the SystemUI reveals 
+     * 											the notification's presence and contents in untrusted situations 
+     * 											(namely, on the secure lockscreen). See {@link NOTIFICATION_LOCK_SCREEN_PRIVACY}
+     * @param largeIconResource					Optional. Set one to use a larger icon for the notification. Can be a 
+     * 											drawable resourceId, an assets/raw resource file name or an URL to an image.
+     * @param contentView						Optional. Avoid setting a background Drawable on your RemoteViews 
+     * 											object, because your text color may become unreadable. 
+     * 											See {@link RemoteViews} and How-To at 
+     * 											<a href="http://developer.android.com/guide/topics/ui/notifiers/notifications.html#CustomNotification">Information</a>
+     * @param notifyID							Optional. If set, this Id will be used instead a generated one.
+     * 											This is useful to reuse the notification in order to update the intent
+     * 											instead of generate a new one.
+     * @param progressBarStyle					Only for Android 4.0+ (API Level 14+). See {@link NOTIFICATION_PROGRESSBAR_STYLE}
+     * @param progressBarRunnable				If parameter <code>progressBarStyle</code> is other than <code>NONE</code>,
+     * 											this parameter is a {@link NotificationProgressBarRunnable} type. use it to do 
+     * 											some taks while notification progress bar is shown. 
+     * @param progressBarFinishText  			If parameter <code>progressBarStyle</code> is other than <code>NONE</code>, when
+     * 											tasks is finished, parameter <code>progressBarRunnable</code>, this text is shown
+     * 											in the notification.
+     * @param actions							Optional. For Android 4.1+ (API Level 16+). If set, such actions will be presented 
+     * 											in the notification. <b>Remember</b> that to close the notification after action is
+     * 											clicked, you should use the "notifyID" parameter and set it as an extra of your
+     * 											action to be able to close the notification from your application.
+     */
+    @Deprecated
+    public static void notification_create(Context context,
+    		boolean notSound, Integer notSoundRawId, boolean forceSound,
+    		boolean multipleNot, String groupMultipleNotKey,
+    		String notAction,
+    		String notTitle, String notMessage,
+    		String notTicker, String notContentInfo,
+    		String bigContentTitle, String bigContentText, 
+    		String bigContentSummary,
+    		String bigContentImage, 
+    		String bigStyleInboxContent, String bigStyleInboxSeparator,
+    		Class<?> notClazz, Bundle extras,
+    		boolean wakeUp,
+    		NOTIFICATION_PRIORITY notPriority,
+    		NOTIFICATION_STYLE notStyle,
+    		NOTIFICATION_LOCK_SCREEN_PRIVACY notVisibility,    		
+    		String largeIconResource,
+    		RemoteViews contentView,    		
+    		Integer notifyID,
+    		NOTIFICATION_PROGRESSBAR_STYLE progressBarStyle,
+    		NotificationProgressBarRunnable progressBarRunnable,
+    		String progressBarFinishText,
+    		List<Action> actions
+    		) {
+    	
+    	notification_create(context, notSound, notSoundRawId, forceSound, multipleNot, groupMultipleNotKey, notAction, notTitle, notMessage, notTicker, notContentInfo, bigContentTitle, bigContentText, bigContentSummary, bigContentImage, bigStyleInboxContent, bigStyleInboxSeparator, null, notClazz, extras, wakeUp, notPriority, notStyle, notVisibility, largeIconResource, contentView, notifyID, progressBarStyle, progressBarRunnable, progressBarFinishText, actions);
+    	
     }
     
     /**
@@ -3462,12 +3582,48 @@ public final class ToolBox {
 	 * @return The content of the request if there is one.
 	 * @throws Exception
 	 */
-	@SuppressWarnings("deprecation")
 	public static String net_httpclient_doAction(HTTP_METHOD method, String url, String jsonDataKey, String jsonData, Map<String, String> headers) throws ConnectTimeoutException, SocketTimeoutException, Exception{
+    	return net_httpclient_doAction(method, url, jsonDataKey, jsonData, headers, false);		
+    }
+	
+	/**
+	 * Makes a Http operation.
+	 * 
+	 * This method set a parameters to the request that avoid being waiting 
+	 * for the server response or once connected, being waiting to receive 
+	 * the data.
+	 * 
+	 * @param method		Method type to execute. @see HTTP_METHOD.
+	 * @param url			URL of the request.
+	 * @param jsonDataKey	Optional. If not null, the JSON data will be sent under
+	 * 						this key in the POST. Otherwise the JSON data will be 
+	 * 						directly all the body of the POST.
+	 * @param jsonData		Optional. The body content of the request (JSON).
+	 * @param headers		The headers to include in the request.
+	 * @param ignoreSSL		If set to TRUE, we ignore any error relative to 
+	 * 						certificates when accessing with HTTPS.
+	 * @return The content of the request if there is one.
+	 * @throws Exception
+	 */
+	@SuppressWarnings("deprecation")
+	public static String net_httpclient_doAction(HTTP_METHOD method, String url, String jsonDataKey, String jsonData, Map<String, String> headers, boolean ignoreSSL) throws ConnectTimeoutException, SocketTimeoutException, Exception{
     	String responseData = null;
 		
-		DefaultHttpClient httpclient = new DefaultHttpClient();
-    	
+		DefaultHttpClient httpclient = null;
+		
+    	if(!ignoreSSL){
+    		httpclient = new DefaultHttpClient();
+    	}else{
+    		//We allow any site with any certificate when using HTTPS
+    		SSLSocketFactory sslSocketFactory = SSLSocketFactory.getSocketFactory();
+    	    sslSocketFactory.setHostnameVerifier(SSLSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER);
+    	    SchemeRegistry schemeRegistry = new SchemeRegistry();
+    	    schemeRegistry.register(new Scheme("http", PlainSocketFactory.getSocketFactory(), 80));
+    	    schemeRegistry.register(new Scheme("https", sslSocketFactory, 443));
+    	    ClientConnectionManager cm = new SingleClientConnManager(null, schemeRegistry);
+    	    httpclient = new DefaultHttpClient(cm, null);
+    	}
+		
     	// The time it takes to open TCP connection.
 		httpclient.getParams().setParameter(CoreConnectionPNames.CONNECTION_TIMEOUT, CONNECTION_DEFAULT_TIMEOUT);
         // Timeout when server does not send data.
@@ -3534,7 +3690,7 @@ public final class ToolBox {
     	
     	return responseData;
     }
-    
+	
 	/**
 	 * Makes a Http operation.
 	 * 
@@ -3550,7 +3706,27 @@ public final class ToolBox {
 	 * @throws Exception
 	 */
 	public static String net_httpclient_doAction(HTTP_METHOD method, String url, String jsonData, Map<String, String> headers) throws ConnectTimeoutException, SocketTimeoutException, Exception{
-		return net_httpclient_doAction(method, url, null, jsonData, headers);
+		return net_httpclient_doAction(method, url, null, jsonData, headers, false);
+    }
+	
+	/**
+	 * Makes a Http operation.
+	 * 
+	 * This method set a parameters to the request that avoid being waiting 
+	 * for the server response or once connected, being waiting to receive 
+	 * the data.
+	 * 
+	 * @param method		Method type to execute. @See HTTP_METHOD.
+	 * @param url			Url of the request.
+	 * @param jsonData		The body content of the request (JSON). Can be null.
+	 * @param headers		The headers to include in the request.
+	 * @param ignoreSSL		If set to TRUE, we ignore any error relative to 
+	 * 						certificates when accessing with HTTPS.
+	 * @return The content of the request if there is one.
+	 * @throws Exception
+	 */
+	public static String net_httpclient_doAction(HTTP_METHOD method, String url, String jsonData, Map<String, String> headers, boolean ignoreSSL) throws ConnectTimeoutException, SocketTimeoutException, Exception{
+		return net_httpclient_doAction(method, url, null, jsonData, headers, ignoreSSL);
     }
 	
 	 /**
