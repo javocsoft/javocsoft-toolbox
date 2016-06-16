@@ -207,7 +207,22 @@ public class LocationService extends Service implements LocationListener {
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		Log.d(TAG, "Location service starting...");
 		doOnStart(intent);	
-		return Service.START_STICKY;
+		
+		//START_STICKY, START_NOT_STICKY and START_REDELIVER_INTENT are 
+		//only relevant when the phone runs out of memory and kills the 
+		//service before it finishes executing. Also if the user kills the
+		//application from tasks menu. See:
+		//
+		// http://android-developers.blogspot.com.au/2010/02/service-api-changes-starting-with.html
+		//
+		// - START_STICKY tells the OS to recreate the service after it 
+		//	 has enough memory and call onStartCommand() again with a 
+		//	 null intent. 
+		// - START_NOT_STICKY tells the OS to not bother recreating the 
+		//   service again. 
+		// - START_REDELIVER_INTENT that tells the OS to recreate the 
+		//   service AND re-deliver the same intent to onStartCommand().
+		return Service.START_REDELIVER_INTENT;		
 	}
 	
     @Override
@@ -239,36 +254,36 @@ public class LocationService extends Service implements LocationListener {
         	Thread tSP = new Thread(new Runnable() {
 				@Override
 				public void run() {
-					ToolBox.prefs_savePreference(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_MIN_DISTANCE, Integer.class, minDistance);
-		        	ToolBox.prefs_savePreference(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_MIN_TIME, Long.class, minTime);
-		        	ToolBox.prefs_savePreference(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_ACCURACY_THRESHOLD, Integer.class, accuracyThreshold);
-		        	ToolBox.prefs_savePreference(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_USE_GPS, Boolean.class, useGPS);
-		        	ToolBox.prefs_savePreference(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_ALGORITHM, String.class, locAlgorithm.name());
+					ToolBox.prefs_savePreference(getBaseContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_MIN_DISTANCE, Integer.class, minDistance);
+		        	ToolBox.prefs_savePreference(getBaseContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_MIN_TIME, Long.class, minTime);
+		        	ToolBox.prefs_savePreference(getBaseContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_ACCURACY_THRESHOLD, Integer.class, accuracyThreshold);
+		        	ToolBox.prefs_savePreference(getBaseContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_USE_GPS, Boolean.class, useGPS);
+		        	ToolBox.prefs_savePreference(getBaseContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_ALGORITHM, String.class, locAlgorithm.name());
 				}
 			});
         	tSP.start();
         	
     	}else{
     		//No data in the intent, we try to get from saved preferences if there is one.
-    		if(ToolBox.prefs_existsPref(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_MIN_DISTANCE)) {
-    			minDistance = ((Integer)ToolBox.prefs_readPreference(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_MIN_DISTANCE, Integer.class)).intValue();
+    		if(ToolBox.prefs_existsPref(getBaseContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_MIN_DISTANCE)) {
+    			minDistance = ((Integer)ToolBox.prefs_readPreference(getBaseContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_MIN_DISTANCE, Integer.class)).intValue();
     		}
-    		if(ToolBox.prefs_existsPref(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_MIN_TIME)) {
-    			minTime = ((Long)ToolBox.prefs_readPreference(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_MIN_TIME, Long.class)).longValue();
+    		if(ToolBox.prefs_existsPref(getBaseContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_MIN_TIME)) {
+    			minTime = ((Long)ToolBox.prefs_readPreference(getBaseContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_MIN_TIME, Long.class)).longValue();
     		}
-    		if(ToolBox.prefs_existsPref(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_ACCURACY_THRESHOLD)) {
-    			accuracyThreshold = ((Integer)ToolBox.prefs_readPreference(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_ACCURACY_THRESHOLD, Integer.class)).intValue();
+    		if(ToolBox.prefs_existsPref(getBaseContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_ACCURACY_THRESHOLD)) {
+    			accuracyThreshold = ((Integer)ToolBox.prefs_readPreference(getBaseContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_ACCURACY_THRESHOLD, Integer.class)).intValue();
     		}
-    		if(ToolBox.prefs_existsPref(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_USE_GPS)) {
-    			useGPS = ((Boolean)ToolBox.prefs_readPreference(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_USE_GPS, Boolean.class));
+    		if(ToolBox.prefs_existsPref(getBaseContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_USE_GPS)) {
+    			useGPS = ((Boolean)ToolBox.prefs_readPreference(getBaseContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_USE_GPS, Boolean.class));
     		}
-    		if(ToolBox.prefs_existsPref(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_ALGORITHM)) {
-    			String locAlg = ((String)ToolBox.prefs_readPreference(getApplicationContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_ALGORITHM, String.class));
+    		if(ToolBox.prefs_existsPref(getBaseContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_ALGORITHM)) {
+    			String locAlg = ((String)ToolBox.prefs_readPreference(getBaseContext(), ToolBox.PREF_FILE_NAME, LOCATION_SERVICE_PARAM_ALGORITHM, String.class));
     			locAlgorithm = getLocationAlgorithmFromString(locAlg);
     		}
     	}
     	
-    	if(ToolBox.permission_areGranted(getApplicationContext(), ToolBox.PERMISSION_LOCATION.keySet())) {
+    	if(ToolBox.permission_areGranted(getBaseContext(), ToolBox.PERMISSION_LOCATION.keySet())) {
     		locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
     		locationManager.requestLocationUpdates(
             		LocationManager.NETWORK_PROVIDER, 
@@ -309,7 +324,8 @@ public class LocationService extends Service implements LocationListener {
     	
     	switch (locAlgorithm) {
 			case SIMPLE:
-				res = isBetterLocationSimple(location, currentBestLocation);				
+				res = isBetterLocationSimple(location, currentBestLocation);
+				break;
 			case COMPLEX:			
 				res = isBetterLocationComplex(location, currentBestLocation);			
 		}
@@ -340,19 +356,19 @@ public class LocationService extends Service implements LocationListener {
         	//Same location, new measurement is newer yes but the location is the same.
         	isNewer = false;
         	if(ToolBox.LOG_ENABLE)
-        		Log.d(TAG, "Location service isNever set to FALSE (same location).");
+        		Log.d(TAG, "Location service (ALG - COMPLEX): isNever set to FALSE (same location).");
         }else{
         	double distanceBetweenMeasurements = ToolBox.location_distance(location.getLatitude(), location.getLongitude(), 
         			currentBestLocation.getLatitude(), currentBestLocation.getLongitude());
         	if(ToolBox.LOG_ENABLE)
-        		Log.d(TAG, "Location service Elapsed distance (Haversine) since last location: " + distanceBetweenMeasurements);
+        		Log.d(TAG, "Location service (ALG - COMPLEX): Elapsed distance (Haversine) since last location: " + distanceBetweenMeasurements);
         	
         	if(distanceBetweenMeasurements<=minDistance){
         		//New measurement is newer yes but the distance between last and new location is less
         		//than the minimal distance.
         		isNewer = false;
         		if(ToolBox.LOG_ENABLE)
-            		Log.d(TAG, "Location service isNever set to FALSE (Haversine distance less than threshold).");
+            		Log.d(TAG, "Location service (ALG - COMPLEX): isNever set to FALSE (Haversine distance less than threshold).");
         	}
         }
 
@@ -362,7 +378,7 @@ public class LocationService extends Service implements LocationListener {
             return true;
         } else if (isSignificantlyOlder) {
         	if(ToolBox.LOG_ENABLE)
-        		Log.d(TAG, "Location service Location is not better: isSignificantlyOlder");
+        		Log.d(TAG, "Location service (ALG - COMPLEX): Location is not better: isSignificantlyOlder");
             return false; //If the new location older than two minutes, should be worse
         }
 
@@ -375,7 +391,7 @@ public class LocationService extends Service implements LocationListener {
         }
         boolean isSignificantlyLessAccurate = accuracyDelta > 200;
         if(ToolBox.LOG_ENABLE)
-    		Log.d(TAG, "Location service isMore accurated? " + isMoreAccurate);
+    		Log.d(TAG, "Location service (ALG - COMPLEX): isMore accurated? " + isMoreAccurate);
 
         //Check if the old and new location have the same provider
         boolean isFromSameProvider = 
@@ -391,7 +407,7 @@ public class LocationService extends Service implements LocationListener {
         }
         
         if(ToolBox.LOG_ENABLE)
-        	Log.d(TAG, "Location service is not better: isNewer: " + isNewer + 
+        	Log.d(TAG, "Location service (ALG - COMPLEX): is not better: isNewer: " + isNewer + 
         			", isLessAccurate: " + isLessAccurate + 
         			", isSignificantlyLessAccurate: " + isSignificantlyLessAccurate + 
         			", isFromSameProvider: " + isFromSameProvider);
@@ -411,19 +427,19 @@ public class LocationService extends Service implements LocationListener {
         	//Same location, new measurement is newer yes but the location is the same.
         	shouldAlert = false;
         	if(ToolBox.LOG_ENABLE)
-        		Log.d(TAG, "Location Service: isNever set to FALSE (same location).");
+        		Log.d(TAG, "Location Service (ALG - SIMPLE): isNever set to FALSE (same location).");
         }else{
         	double distanceBetweenMeasurements = ToolBox.location_distance(location.getLatitude(), location.getLongitude(), 
         			currentBestLocation.getLatitude(), currentBestLocation.getLongitude());
         	if(ToolBox.LOG_ENABLE)
-        		Log.d(TAG, "Location Service: Elapsed distance (Haversine) since last location: " + distanceBetweenMeasurements);
+        		Log.d(TAG, "Location Service (ALG - SIMPLE): Elapsed distance (Haversine) since last location: " + distanceBetweenMeasurements);
         	
         	if(distanceBetweenMeasurements<=minDistance){
         		//New measurement is newer yes but the distance between last and new location is less
         		//than the minimal distance.
         		shouldAlert = false;
         		if(ToolBox.LOG_ENABLE)
-            		Log.d(TAG, "Location Service: shouldAlert set to FALSE (Haversine distance less than threshold).");
+            		Log.d(TAG, "Location Service (ALG - SIMPLE): shouldAlert set to FALSE (Haversine distance less than threshold).");
         	}
         }
         
@@ -471,11 +487,11 @@ public class LocationService extends Service implements LocationListener {
 	        loc.getLongitude();
 	        extras.putParcelable(LOCATION_KEY, loc);
 	        //...some extra information about the location
-	        extras.putString(LOCATION_COUNTRY_KEY, ToolBox.location_addressInfo(getApplicationContext(), ToolBox.LOCATION_INFO_TYPE.COUNTRY, loc.getLatitude(), loc.getLongitude()));
-	        extras.putString(LOCATION_COUNTRY_CODE_KEY, ToolBox.location_addressInfo(getApplicationContext(), ToolBox.LOCATION_INFO_TYPE.COUNTRY_CODE, loc.getLatitude(), loc.getLongitude()));
-	        extras.putString(LOCATION_CITY_KEY, ToolBox.location_addressInfo(getApplicationContext(), ToolBox.LOCATION_INFO_TYPE.CITY, loc.getLatitude(), loc.getLongitude()));
-	        extras.putString(LOCATION_ADDRESS_KEY, ToolBox.location_addressInfo(getApplicationContext(), ToolBox.LOCATION_INFO_TYPE.ADDRESS, loc.getLatitude(), loc.getLongitude()));
-	        extras.putString(LOCATION_POSTAL_CODE_KEY, ToolBox.location_addressInfo(getApplicationContext(), ToolBox.LOCATION_INFO_TYPE.POSTAL_CODE, loc.getLatitude(), loc.getLongitude()));
+	        extras.putString(LOCATION_COUNTRY_KEY, ToolBox.location_addressInfo(getBaseContext(), ToolBox.LOCATION_INFO_TYPE.COUNTRY, loc.getLatitude(), loc.getLongitude()));
+	        extras.putString(LOCATION_COUNTRY_CODE_KEY, ToolBox.location_addressInfo(getBaseContext(), ToolBox.LOCATION_INFO_TYPE.COUNTRY_CODE, loc.getLatitude(), loc.getLongitude()));
+	        extras.putString(LOCATION_CITY_KEY, ToolBox.location_addressInfo(getBaseContext(), ToolBox.LOCATION_INFO_TYPE.CITY, loc.getLatitude(), loc.getLongitude()));
+	        extras.putString(LOCATION_ADDRESS_KEY, ToolBox.location_addressInfo(getBaseContext(), ToolBox.LOCATION_INFO_TYPE.ADDRESS, loc.getLatitude(), loc.getLongitude()));
+	        extras.putString(LOCATION_POSTAL_CODE_KEY, ToolBox.location_addressInfo(getBaseContext(), ToolBox.LOCATION_INFO_TYPE.POSTAL_CODE, loc.getLatitude(), loc.getLongitude()));
 	        
 	        deliverBroadcast(ACTION_LOCATION_CHANGED, extras);
 	        if(ToolBox.LOG_ENABLE)

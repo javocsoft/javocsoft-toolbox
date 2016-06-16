@@ -277,6 +277,17 @@ public final class ToolBox {
 	
 	private ToolBox(){}
 	
+	//-------------- LOGGING --------------------------------------------------------------------------
+	
+	/**
+	 * Enables or disables logging for ToolBox. By default the log
+	 * is enabled.
+	 * 
+	 * @param enable	
+	 */
+	public static void logging_enableDebug(boolean enable) {
+		LOG_ENABLE = enable;
+	}
 	
 	//-------------- GSON -----------------------------------------------------------------------------
 	
@@ -6825,4 +6836,24 @@ public final class ToolBox {
         .addApi(requestedApi)
         .build();
 	}
+	
+	//---------------------- Tasks -------------------------------------------------------------------
+	
+	/**
+	 * An utility method to perform a job in a separated thread.
+	 *  
+	 * @param runnable	The job to do in a separate thread
+	 * @return
+	 */
+    public static Thread task_doInBackgroundThread(final Runnable runnable) {
+        final Thread t = new Thread() {
+            @Override
+            public void run() {
+                try { runnable.run(); } finally {}
+            }
+        };
+        t.start();
+        
+        return t;
+    }
 }
