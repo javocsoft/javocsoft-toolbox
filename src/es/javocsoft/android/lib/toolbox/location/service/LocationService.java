@@ -186,6 +186,7 @@ public class LocationService extends Service implements LocationListener {
     private boolean useGPS = false;
     private LOCATION_ALGORITHM_TYPE locAlgorithm = LOCATION_ALGORITHM;
     
+    private static boolean svcStarted = false;
     
     
 	
@@ -195,7 +196,8 @@ public class LocationService extends Service implements LocationListener {
 	@Override
     public void onCreate() {
 		super.onCreate();
-		Log.d(TAG, "Location service created.");
+		if(!svcStarted)
+			Log.d(TAG, "Location service created.");
     }
 	
 	@Override
@@ -205,8 +207,17 @@ public class LocationService extends Service implements LocationListener {
 	
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
-		Log.d(TAG, "Location service starting...");
-		doOnStart(intent);	
+		if ((flags & START_FLAG_REDELIVERY)!=0) {
+			//Service was restarted.
+			if(ToolBox.LOG_ENABLE)
+	        	Log.d(TAG, "Location proximity service re-started.");
+		}
+		
+		if(!svcStarted) {
+			Log.d(TAG, "Location service starting...");
+			doOnStart(intent);
+			svcStarted = true;
+		}
 		
 		//START_STICKY, START_NOT_STICKY and START_REDELIVER_INTENT are 
 		//only relevant when the phone runs out of memory and kills the 
@@ -233,6 +244,8 @@ public class LocationService extends Service implements LocationListener {
         previousBestLocation = null;
         locationManager.removeUpdates(this);
         locationManager = null;
+        
+        svcStarted = false;
         
         deliverBroadcast(ACTION_LOCATION_SERVICE_SHUTDOWN, null);
     }
@@ -474,6 +487,7 @@ public class LocationService extends Service implements LocationListener {
     
     // LocationListener methods ---------------------------------------------
     
+    @Override
     public void onLocationChanged(final Location loc) {
       	if(ToolBox.LOG_ENABLE)
        		Log.d(TAG, "Location changed.");
@@ -499,6 +513,7 @@ public class LocationService extends Service implements LocationListener {
       	}                               
     }
 
+    @Override
     public void onProviderDisabled(String provider) {
       	if(ToolBox.LOG_ENABLE)
        		Log.d(TAG, "Location provider disabled [" + provider + "].");
@@ -507,7 +522,8 @@ public class LocationService extends Service implements LocationListener {
        		deliverBroadcast(ACTION_LOCATION_GPS_DISABLED, null);
        	}
     }
-
+    
+    @Override
     public void onProviderEnabled(String provider) {
       	if(ToolBox.LOG_ENABLE)
       		Log.d(TAG, "Location provider enabled [" + provider + "].");
@@ -517,6 +533,7 @@ public class LocationService extends Service implements LocationListener {
        	}
     }
 
+    @Override
     public void onStatusChanged(String provider, int status, Bundle extras) {}
     
     //End LocationListener methods ---------------------------------------------

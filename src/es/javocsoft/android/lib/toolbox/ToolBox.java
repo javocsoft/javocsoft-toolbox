@@ -147,6 +147,7 @@ import android.os.Looper;
 import android.os.Parcelable;
 import android.os.PowerManager;
 import android.os.StrictMode;
+import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.provider.Settings.Secure;
 import android.provider.Settings.SettingNotFoundException;
@@ -4324,6 +4325,9 @@ public final class ToolBox {
 		SharedPreferences prefs = ctx.getSharedPreferences(
 				prefName, Context.MODE_PRIVATE);
 		
+		if(prefs==null) //In case of a Service, for example, we take the default preferences. 
+			prefs  = PreferenceManager.getDefaultSharedPreferences(ctx);
+		
 		if(value==null){
 			prefs.edit().remove(key).commit();
 		}else{
@@ -4354,6 +4358,10 @@ public final class ToolBox {
 		SharedPreferences prefs = ctx.getSharedPreferences(
 				prefName, Context.MODE_PRIVATE);
 		
+		if(prefs==null) //In case of a Service, for example, we take the default preferences. 
+			prefs  = PreferenceManager.getDefaultSharedPreferences(ctx);
+		
+		
 		if(valueType == Long.class){
 			return prefs.getLong(key, Long.valueOf(-1));
 		}else if(valueType == Boolean.class){
@@ -4383,6 +4391,9 @@ public final class ToolBox {
 	public static Boolean prefs_existsPref(Context ctx, String prefName, String key){
 		SharedPreferences prefs = ctx.getSharedPreferences(
 				prefName, Context.MODE_PRIVATE);
+		
+		if(prefs==null) //In case of a Service, for example, we take the default preferences. 
+			prefs  = PreferenceManager.getDefaultSharedPreferences(ctx);
 		
 		if(prefs.contains(key)){
 			return true;
