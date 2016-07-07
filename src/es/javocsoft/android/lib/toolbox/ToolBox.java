@@ -4319,6 +4319,58 @@ public final class ToolBox {
 	
 	//--------------- PREFS ---------------------------------------------------------------------------
 	
+	/**
+	 * Saves a prefrence. You can remove it setting its value to null.
+	 * 
+	 * @param preferences
+	 * @param prefName
+	 * @param key
+	 * @param valueType
+	 * @param value
+	 * @return
+	 */
+	public static boolean prefs_savePreference(SharedPreferences preferences, String prefName, String key, Class<?> valueType, Object value){
+		boolean res = false;
+		
+		if(preferences==null)
+			return res;
+		
+		if(value==null){
+			preferences.edit().remove(key).commit();
+		}else{
+			if(valueType == Long.class){
+				res = preferences.edit().putLong(key, (Long)value).commit();
+			}else if(valueType == Boolean.class){
+				res = preferences.edit().putBoolean(key, (Boolean)value).commit();
+			}else if(valueType == Float.class){
+				res = preferences.edit().putFloat(key, (Float)value).commit();
+			}else if(valueType == Integer.class){
+				res = preferences.edit().putInt(key, (Integer)value).commit();
+			}else if(valueType == String.class){
+				res = preferences.edit().putString(key, (String)value).commit();
+			}else if(valueType == Set.class){
+				if(((Set<String>)value).size()==0){
+					preferences.edit().remove(key).commit();
+				}else{
+					//res = prefs.edit().putStringSet(key, (Set<String>)value).commit(); //Only from 11 API level.
+					res = saveSetListAsCommaSeparatedString(preferences, prefName, key, (Set<String>)value);
+				}
+			}
+		}
+		
+		return res;
+	}
+	
+	/**
+	 * Saves a prefrence. You can remove it setting its value to null.
+	 * 
+	 * @param ctx
+	 * @param prefName
+	 * @param key
+	 * @param valueType
+	 * @param value
+	 * @return
+	 */
 	public static boolean prefs_savePreference(Context ctx, String prefName, String key, Class<?> valueType, Object value){
 		boolean res = false;
 		
@@ -4354,6 +4406,47 @@ public final class ToolBox {
 		return res;
 	}
 	
+	/**
+	 * Gets a value from given key in the preferences.
+	 * 
+	 * @param preferences
+	 * @param prefName
+	 * @param key
+	 * @param valueType
+	 * @return
+	 */
+	public static Object prefs_readPreference(SharedPreferences preferences, String prefName, String key, Class<?> valueType){
+		
+		if(preferences==null)
+			return null;		
+		
+		if(valueType == Long.class){
+			return preferences.getLong(key, Long.valueOf(-1));
+		}else if(valueType == Boolean.class){
+			return preferences.getBoolean(key, Boolean.valueOf(false));
+		}else if(valueType == Float.class){
+			return preferences.getFloat(key, Float.valueOf(-1));
+		}else if(valueType == Integer.class){
+			return preferences.getInt(key, Integer.valueOf(-1));
+		}else if(valueType == String.class){
+			return preferences.getString(key, null);
+		}else if(valueType == Set.class){
+			//return prefs.getStringSet(key, null); //Only from 11 API level.
+			return getSetListFromCommaSeparatedString(preferences, prefName, key);
+		}		
+		
+		return null;
+	}
+	
+	/**
+	 * Gets a value from given key in the preferences.
+	 * 
+	 * @param ctx
+	 * @param prefName
+	 * @param key
+	 * @param valueType
+	 * @return
+	 */
 	public static Object prefs_readPreference(Context ctx, String prefName, String key, Class<?> valueType){
 		SharedPreferences prefs = ctx.getSharedPreferences(
 				prefName, Context.MODE_PRIVATE);
@@ -4401,6 +4494,25 @@ public final class ToolBox {
 			return false;
 		}		
 	}
+	
+	/**
+	 * Tells if the preferemce exists.
+	 * 
+	 * @param preferences
+	 * @param prefName
+	 * @param key
+	 * @return
+	 */
+	public static Boolean prefs_existsPref(SharedPreferences preferences, String prefName, String key){
+		if(preferences==null)
+			return false;
+		
+		if(preferences.contains(key)){
+			return true;
+		}else{
+			return false;
+		}		
+	}
 		
 	/*
 	 * This method is for compatibility mode because SharedPreferences only works with
@@ -4414,6 +4526,25 @@ public final class ToolBox {
 	private static Set<String> getSetListFromCommaSeparatedString(Context context, String prefName, String key){
 		Set<String> res = new HashSet<String>();
 		String resString = (String)ToolBox.prefs_readPreference(context, prefName, key, String.class);
+   	 	if(resString!=null && resString.length()>0){
+	    	res = new HashSet<String>(Arrays.asList(resString.split(",")));
+   	 	}
+   	 	
+		return res;
+	}
+	
+	/*
+	 * This method is for compatibility mode because SharedPreferences only works with
+	 * Set data values starting at API Level 11.
+	 *  
+	 * @param preferences
+	 * @param prefName
+	 * @param key
+	 * @return
+	 */
+	private static Set<String> getSetListFromCommaSeparatedString(SharedPreferences preferences, String prefName, String key){
+		Set<String> res = new HashSet<String>();
+		String resString = (String)ToolBox.prefs_readPreference(preferences, prefName, key, String.class);
    	 	if(resString!=null && resString.length()>0){
 	    	res = new HashSet<String>(Arrays.asList(resString.split(",")));
    	 	}
@@ -4448,6 +4579,39 @@ public final class ToolBox {
 			String data = buff.toString();
 			if(data!=null && data.length()>0){
 				res = prefs_savePreference(context, prefName, key, String.class, data);
+			}
+		}
+		
+		return res;
+	}
+	
+	/*
+	 * This method is for compatibility mode because SharedPreferences only works with
+	 * Set data values starting at API Level 11.
+	 * 
+	 * @param preferences
+	 * @param prefName
+	 * @param key
+	 * @param value
+	 * @return
+	 */
+	private static boolean saveSetListAsCommaSeparatedString(SharedPreferences preferences, String prefName, String key, Set<String> value){
+		boolean res = false;
+		
+		if(value!=null && value.size()>0){
+			StringBuffer buff = new StringBuffer();
+			int pos = 0;
+			for(String s:value){
+				if(pos>0){
+					buff.append(",");
+				}
+				buff.append(s);
+				pos++;
+			}
+			
+			String data = buff.toString();
+			if(data!=null && data.length()>0){
+				res = prefs_savePreference(preferences, prefName, key, String.class, data);
 			}
 		}
 		
