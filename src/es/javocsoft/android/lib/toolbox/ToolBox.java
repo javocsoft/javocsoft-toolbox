@@ -3689,6 +3689,7 @@ public final class ToolBox {
     	    
     		InputStream instream = entity.getContent();
     	    responseData = IOUtils.convertStreamToString(instream);
+    	    instream.close();
     	    
     	    if(LOG_ENABLE)
     	    	Log.i(TAG, "HTTP OPERATION: Read from server - return: " + responseData);
@@ -3699,6 +3700,10 @@ public final class ToolBox {
     				response.getStatusLine().getStatusCode() + "("+ 
     				response.getStatusLine().getReasonPhrase() +")");
     	}
+    	
+    	if( response.getEntity() != null ) {
+            response.getEntity().consumeContent();
+        }
     	
     	return responseData;
     }
@@ -5005,6 +5010,21 @@ public final class ToolBox {
 		callIntent.setData(Uri.parse("tel:"+phone));
 		
 		return callIntent;		 
+	}
+	
+	/**
+	 * Returns TRUE if the intent has the specified FLAG, otherwise FALSE.
+	 * 
+	 * @param intent
+	 * @param flag
+	 * @return
+	 */
+	public static boolean intent_hasFlag(Intent intent, int flag){
+		if ((intent.getFlags() & flag) != 0){
+			return true;
+		}
+		
+		return false;
 	}
 	
 	/**
