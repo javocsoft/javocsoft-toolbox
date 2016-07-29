@@ -143,6 +143,7 @@ import android.os.Binder;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
 import android.os.Looper;
 import android.os.Parcelable;
 import android.os.PowerManager;
@@ -1048,6 +1049,20 @@ public final class ToolBox {
         context.sendBroadcast(intent);
     }
 
+    /**
+     * Allows to run code in the UI Thread.
+     * 
+     * @param activity	Optional.
+     * @param runnable	The runnable to run.
+     */
+    public static void application_runOnUIThread(Activity activity, Runnable runnable) {
+    	if(activity!=null) {
+    		activity.runOnUiThread(runnable);    		
+    	}else{
+	    	new Handler(Looper.getMainLooper()).post(runnable);
+    	}
+    }
+    
     /**
      * Disables the component status of an Activity. If the activity has the
      * android.intent.category.LAUNCHER intent, it will remove the launcher icon
@@ -4349,6 +4364,8 @@ public final class ToolBox {
 				res = preferences.edit().putBoolean(key, (Boolean)value).commit();
 			}else if(valueType == Float.class){
 				res = preferences.edit().putFloat(key, (Float)value).commit();
+			}else if (valueType == Double.class) {
+				res = preferences.edit().putLong(key, Double.doubleToRawLongBits(((Double)value))).commit();		        
 			}else if(valueType == Integer.class){
 				res = preferences.edit().putInt(key, (Integer)value).commit();
 			}else if(valueType == String.class){
@@ -4392,6 +4409,8 @@ public final class ToolBox {
 				res = prefs.edit().putLong(key, (Long)value).commit();
 			}else if(valueType == Boolean.class){
 				res = prefs.edit().putBoolean(key, (Boolean)value).commit();
+			}else if (valueType == Double.class) {
+				res = prefs.edit().putLong(key, Double.doubleToRawLongBits(((Double)value))).commit();
 			}else if(valueType == Float.class){
 				res = prefs.edit().putFloat(key, (Float)value).commit();
 			}else if(valueType == Integer.class){
@@ -4429,6 +4448,8 @@ public final class ToolBox {
 			return preferences.getLong(key, Long.valueOf(-1));
 		}else if(valueType == Boolean.class){
 			return preferences.getBoolean(key, Boolean.valueOf(false));
+		}else if (valueType == Double.class) {
+			return Double.longBitsToDouble(preferences.getLong(key, Double.doubleToRawLongBits(-1)));
 		}else if(valueType == Float.class){
 			return preferences.getFloat(key, Float.valueOf(-1));
 		}else if(valueType == Integer.class){
@@ -4464,6 +4485,8 @@ public final class ToolBox {
 			return prefs.getLong(key, Long.valueOf(-1));
 		}else if(valueType == Boolean.class){
 			return prefs.getBoolean(key, Boolean.valueOf(false));
+		}else if (valueType == Double.class) {
+			return Double.longBitsToDouble(prefs.getLong(key, Double.doubleToRawLongBits(-1)));
 		}else if(valueType == Float.class){
 			return prefs.getFloat(key, Float.valueOf(-1));
 		}else if(valueType == Integer.class){
