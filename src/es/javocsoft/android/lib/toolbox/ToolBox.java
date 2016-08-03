@@ -137,6 +137,7 @@ import android.media.MediaPlayer;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.ConnectivityManager;
+import android.net.Network;
 import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Binder;
@@ -1049,6 +1050,34 @@ public final class ToolBox {
         context.sendBroadcast(intent);
     }
 
+    /**
+     * Deletes all application data. After using this method application
+     * is closed.
+     * 
+     * @param context
+     * @return Returns TRUE if all data is sucessfully erased, otherwise FALSE.
+     */
+    @SuppressLint("NewApi")
+	public static boolean application_deleteAllData(Context context) {
+    	
+    	if (device_hasAPILevel(ApiLevel.LEVEL_19)) {
+    	    return ((ActivityManager)context.getSystemService(Context.ACTIVITY_SERVICE))
+    	            .clearApplicationUserData(); // note: it has a return value!
+    	} else {
+    		try {
+    	        //We achieve this by using a shell executing the package manager.
+    	    	//This way we do not need any permission to clear all application data.
+    	        Runtime runtime = Runtime.getRuntime();            
+    	        runtime.exec("pm clear " + application_packageName(context));
+    	        return true;
+    		} catch (Exception e) {
+    	        if(LOG_ENABLE)
+    	        	Log.e("DELETE_ALL_APP_DATA:ERROR:",e.getMessage(),e);
+    	        return false;
+    	    }
+    	}
+    }
+    
     /**
      * Allows to run code in the UI Thread.
      * 
@@ -3834,7 +3863,106 @@ public final class ToolBox {
 			}
 		}
 	}
+	
+	/** The mobile telecommunication technologies.  */
+	public static enum NETWORK_TYPE {_2G, _3G, _4G, WiFi, UNKNOWN};
+	
+	/**
+	 * Gets the network type that is consuming the device. See {@link NETWORK_TYPE}.
+	 *
+	 * @param context
+	 * @return 	The network type, see {@link NETWORK_TYPE}. UNKNOWN is returned in case of a 
+	 * 			non-recognized technology or in case TelephonyManager could not be get.
+	 */
+	public static NETWORK_TYPE net_getNetworkType(Context context) {
+	    
+		TelephonyManager mTelephonyManager = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);	    
+	    if(mTelephonyManager!=null) {
+
+	    	if(net_isWifiOn(context)) {
+	    		return NETWORK_TYPE.WiFi;
+	    	}
+	    	
+	    	int networkType = mTelephonyManager.getNetworkType();
+		    switch (networkType) {
+		        case TelephonyManager.NETWORK_TYPE_GPRS:
+		        case TelephonyManager.NETWORK_TYPE_EDGE:
+		        case TelephonyManager.NETWORK_TYPE_CDMA:
+		        case TelephonyManager.NETWORK_TYPE_1xRTT:
+		        case TelephonyManager.NETWORK_TYPE_IDEN:
+		            return NETWORK_TYPE._2G;
+		        case TelephonyManager.NETWORK_TYPE_UMTS:
+		        case TelephonyManager.NETWORK_TYPE_EVDO_0:
+		        case TelephonyManager.NETWORK_TYPE_EVDO_A:
+		            /**
+		             https://en.wikipedia.org/wiki/Evolution-Data_Optimized says that  
+		             NETWORK_TYPE_EVDO_0 & NETWORK_TYPE_EVDO_AEV-DO is an evolution 
+		             of the CDMA2000 (IS-2000) standard that supports high data rates.
+		             CDMA2000 - https://en.wikipedia.org/wiki/CDMA2000, CDMA2000 is a 
+		             family of 3G[1] mobile technology standards for sending voice, 
+		             data, and signaling data between mobile phones and cell sites.*/
+		        case TelephonyManager.NETWORK_TYPE_HSDPA:
+		        case TelephonyManager.NETWORK_TYPE_HSUPA:
+		        case TelephonyManager.NETWORK_TYPE_HSPA:
+		        case TelephonyManager.NETWORK_TYPE_EVDO_B:
+		        case TelephonyManager.NETWORK_TYPE_EHRPD:
+		        case TelephonyManager.NETWORK_TYPE_HSPAP:
+		            /**
+		             * 3g HSDPA, HSPAP(HSPA+) are main network type which are under 
+		             * the 3g Network. But from other constants, also it will be 3G, 
+		             * like HSPA, HSDPA, etc which are in 3g case.
+		             * Some other cases added after checking them.
+		             * See https://en.wikipedia.org/wiki/4G#Data_rate_comparison */
+		            return NETWORK_TYPE._3G;
+		        case TelephonyManager.NETWORK_TYPE_LTE:
+		        	/** 
+		        	 * LTE https://en.wikipedia.org/wiki/LTE_(telecommunication)
+		        	 * (marketed as 4G LTE) */		            
+		            return NETWORK_TYPE._4G;
+		        default:
+		            return NETWORK_TYPE.UNKNOWN;
+		    }
+	    }else{
+	    	if(ToolBox.LOG_ENABLE)
+	    		Log.w(TAG, "Could not access to TelephonyManager!.");
+	    }
+	    
+	    return NETWORK_TYPE.UNKNOWN;
+	}
 	 
+	/**
+	 * Returns TRUE if WiFi is ON and connected.
+	 * <br><br>
+	 * This method requires the caller to hold the permission android.Manifest.permission.ACCESS_NETWORK_STATE
+	 * 
+	 * @param context
+	 * @return
+	 */
+	@SuppressLint("NewApi")
+	public static boolean net_isWifiOn(Context context) {
+		boolean res = false;
+		
+		ConnectivityManager connManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
+		if(connManager!=null) {
+			
+			if(ToolBox.device_hasAPILevel(ApiLevel.LEVEL_21)){
+				Network[] networks = connManager.getAllNetworks();
+				for(Network n:networks) {
+					NetworkInfo nInfo = connManager.getNetworkInfo(n);
+					if( nInfo != null && nInfo.getType() == ConnectivityManager.TYPE_WIFI && nInfo.isConnected()){
+						res = true;
+						break;
+					}
+				}
+			}else{
+				NetworkInfo mWifi = connManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+				if (mWifi!=null && mWifi.isConnected()) {
+					res = true;
+				}
+			}			
+		}
+		return res;
+	}
 	
 	// Storage Related -----------------------------------------------------------------------------------------------------------------------------
 	
@@ -4784,6 +4912,17 @@ public final class ToolBox {
 		 
 		 return res;
 	 }
+	 
+	 /**
+	  * Deletes the specified folder content.
+	  * 
+	  * @param path	The desired folder.
+	  * @throws IOException
+	  */
+	 public static void io_deleteFolderContent(String path) throws IOException{
+		 Runtime.getRuntime().exec(String.format("rm -rf '%s'", path));
+	 }
+	 
 	
 	 //--------------- MARKET ---------------------------------------------------------------------------- 
 	 
