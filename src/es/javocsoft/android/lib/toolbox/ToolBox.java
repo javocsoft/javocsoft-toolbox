@@ -1055,18 +1055,20 @@ public final class ToolBox {
      * is closed.
      * 
      * @param context
-     * @return Returns TRUE if all data is sucessfully erased, otherwise FALSE.
+     * @return Returns TRUE if all data is successfully erased, otherwise FALSE.
      */
     @SuppressLint("NewApi")
 	public static boolean application_deleteAllData(Context context) {
     	
     	if (device_hasAPILevel(ApiLevel.LEVEL_19)) {
+    		//We better use the regular way.
     	    return ((ActivityManager)context.getSystemService(Context.ACTIVITY_SERVICE))
     	            .clearApplicationUserData(); // note: it has a return value!
     	} else {
     		try {
     	        //We achieve this by using a shell executing the package manager.
     	    	//This way we do not need any permission to clear all application data.
+    			//See https://developer.android.com/studio/command-line/shell.html
     	        Runtime runtime = Runtime.getRuntime();            
     	        runtime.exec("pm clear " + application_packageName(context));
     	        return true;
@@ -1075,6 +1077,44 @@ public final class ToolBox {
     	        	Log.e("DELETE_ALL_APP_DATA:ERROR:",e.getMessage(),e);
     	        return false;
     	    }
+    	}
+    }
+    
+    /**
+     * Deletes all shared preferences for the specified application context.
+     * 
+     * @param context	The application context.
+     * @param preferences	Optional. A list of shared preferences to be cleared.
+     * @return TRUE when doing without any issue, otherwise FALSE.
+     */
+    public static boolean application_deleteAllPreferences(Context context, String[] preferences) {
+    	try{
+	    	//Delete the default application preferences
+	    	PreferenceManager.getDefaultSharedPreferences(context).edit().clear().apply();    	
+	    	
+	    	//Delete any other established preference
+	    	SharedPreferences appPref = null;
+	    	if(preferences!=null && preferences.length>0){
+	    		for(String pref:preferences){
+	    			if((appPref = context.getSharedPreferences(pref, Context.MODE_PRIVATE))!=null){
+	    				appPref.edit().clear().apply();
+	    				break;
+	    			}else if((appPref = context.getSharedPreferences(pref, Context.MODE_WORLD_READABLE))!=null){
+	    				appPref.edit().clear().apply();
+	    				break;
+	    			}else if((appPref = context.getSharedPreferences(pref, Context.MODE_WORLD_WRITEABLE))!=null){
+	    				appPref.edit().clear().apply();
+	    				break;
+	    			}
+	    		}
+	    	}    	
+	    	
+	    	return true;
+    	}catch(Exception e){
+    		if(LOG_ENABLE)
+	        	Log.e("DELETE_ALL_APP_DATA:ERROR:",e.getMessage(),e);
+    		
+    		return false;
     	}
     }
     
