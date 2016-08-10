@@ -175,6 +175,7 @@ import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.webkit.CookieManager;
 import android.webkit.ValueCallback;
+import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.ImageView;
@@ -201,6 +202,7 @@ import com.google.gson.Gson;
 
 import es.javocsoft.android.lib.toolbox.encoding.Base64;
 import es.javocsoft.android.lib.toolbox.io.IOUtils;
+import es.javocsoft.android.lib.toolbox.javascript.WebviewJavascriptInterface;
 
 
 /**
@@ -5083,6 +5085,125 @@ public final class ToolBox {
 		}
     }	
 	
+	/** 
+	 * When using HTTPS, if accessing to resources not under HTTPS, Android by default
+	 * denies them. These are the options for mixed-mode.
+	 * <br><br>
+	 * <ul>
+	 * <li>ALLOW: In this mode, the WebView will allow a secure origin to load content from any 
+	 * other origin, even if that origin is insecure. This is the least secure mode of 
+	 * operation for the WebView, and where possible apps should not set this mode.</li>
+	 * <li>ALLOW_ALL: In this mode, the WebView will allow a secure origin to load content from 
+	 * any other origin, even if that origin is insecure. This is the least secure mode of 
+	 * operation for the WebView, and where possible apps should not set this mode.</li>
+	 * <li>DISALLOW: Mised content is not allowed.</li>
+	 * <ul>
+	 */	
+	public static enum WEBVIEW_MIXED_MODE_ALLOWANCE {ALLOW, ALLOW_ALL, DISALLOW};
+	
+	/**
+	 * Applies some optimizations and adjustements to the webview.
+	 * 
+	 * @param myWebview
+	 * @param sslMixedMode	When using HTTPS, if accessing to resources not under HTTPS, Android by default
+	 * denies them. Choose an option to tell Android what to do, see {@link WEBVIEW_MIXED_MODE_ALLOWANCE}
+	 * @param adjustContentToDeviceScreen	Set to TRUE to tell the webview to adjust the content to the screen.
+	 * @param useViewportHTMLTag	Set to TRUE to tell the webview to use the HTML viewport TAG.
+	 * @param userAgentSuffix Optional. If set, user-agent is modified adding at the end the specified text.
+	 */
+	@SuppressWarnings("deprecation")
+	@SuppressLint("NewApi")
+	public static void webview_applyOptimizations(WebView myWebview, WEBVIEW_MIXED_MODE_ALLOWANCE sslMixedMode, boolean adjustContentToDeviceScreen, boolean useViewportHTMLTag, String userAgentSuffix, boolean javaScriptCanOpenWindowsAutomatically) {
+		
+		if(!ToolBox.device_hasAPILevel(ApiLevel.LEVEL_18)){
+			myWebview.getSettings().setRenderPriority(WebSettings.RenderPriority.HIGH);
+        }
+		
+        if (ToolBox.device_hasAPILevel(ApiLevel.LEVEL_19)) {
+            // Chromium, enable hardware acceleration. Chromium handles well 3D
+        	myWebview.setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        } else {
+            // Older Android version, disable hardware acceleration
+        	myWebview.setLayerType(View.LAYER_TYPE_SOFTWARE, null);
+        }
+        
+        //FIX. This avoids possible flickering when loading a page under version minor to 
+        //JELLY BEAN or in KITKAT.
+        myWebview.setBackgroundColor(Color.argb(1, 0, 0, 0));
+        
+        if(ToolBox.device_hasAPILevel(ToolBox.ApiLevel.LEVEL_21)) {
+	        //When having a address with HTTPS, we have to decide what to do with
+	        //content not in HTTPS (mixed-mode)
+	        switch (sslMixedMode) {
+				case DISALLOW:
+					myWebview.getSettings().setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+					break;
+				case ALLOW:
+					myWebview.getSettings().setMixedContentMode(WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE);
+					break;
+				case ALLOW_ALL:
+					myWebview.getSettings().setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+					break;
+			}
+        }
+        
+        //See:
+        //	http://developer.android.com/reference/android/webkit/WebSettings.html#setAllowContentAccess(boolean)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB){
+        	myWebview.getSettings().setAllowContentAccess(true);
+        }  
+        
+        //Makes the content to be adjusted to the screen
+        myWebview.getSettings().setLoadWithOverviewMode(adjustContentToDeviceScreen);
+        
+        //Makes the webview to use the viewport defined tag in 
+        //the HTML instead default wide viewport
+        myWebview.getSettings().setUseWideViewPort(useViewportHTMLTag);
+        
+        //JS will be able to open new windows without asking
+        myWebview.getSettings().setJavaScriptCanOpenWindowsAutomatically(javaScriptCanOpenWindowsAutomatically);
+        
+        //This will add application info to user agent.
+        //(We could use this also to determine if web is running 
+        // inside an Android application)
+        if(userAgentSuffix!=null && userAgentSuffix.length()>0) {
+        myWebview.getSettings().setUserAgentString(
+        		myWebview.getSettings().getUserAgentString() 
+    		    + " "
+    		    + userAgentSuffix
+    		);
+        }
+	}
+	
+	/**
+	 * Established a native Android javascript interface for the web side of
+	 * the loaded pages by the webview.<br><br>
+	 * 
+	 * Tips: From the web side, you can check if the web is loaded within the
+	 * Android app by looking in web javascript:
+     * <pre>		
+     * 	if("jsInterfaceName" in window){....} 
+     *  	...where "jsInterfaceName" is the native app JS object implementation.
+	 * </pre>
+	 * Also t6o execute a native Android method within javascript using your 
+	 * specified interface just call:
+	 * <pre>
+	 * 	jsInterfaceName.some_native_method(some_args)
+	 * </pre>
+	 * @param myWebview	The webview
+	 * @param jsInterface	An instance of {@link WebviewJavascriptInterface}. This will expose 
+	 * 						Android native methods to the webview loaded pages.
+	 * @param jsInterfaceName	The desired name for the Android native interface. This is used
+	 * 							in the web side to access the native methods.
+	 */
+	@SuppressLint("SetJavaScriptEnabled")
+	public static void webview_addJavascriptInterface(WebView myWebview, WebviewJavascriptInterface jsInterface, String jsInterfaceName) {
+		
+        //This enables the JS in the webviews's content.
+        myWebview.getSettings().setJavaScriptEnabled(true);
+        //This enables to expose to webviews's web some native android app methods.
+        myWebview.addJavascriptInterface(jsInterface, jsInterfaceName);
+	}
 	 
 	//--------------- (PENDING) INTENTS ---------------------------------------------------------------------
 	
