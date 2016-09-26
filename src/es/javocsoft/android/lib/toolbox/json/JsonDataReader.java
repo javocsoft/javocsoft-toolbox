@@ -127,12 +127,12 @@ public class JsonDataReader {
 	 * @param elementName
 	 * @return
 	 */
-	public JsonObject getJsonElement(String name) throws JsonDataException {
+	public JsonElement getJsonElement(String name) throws JsonDataException {
 		if(!isNull(name)){
 			try{
 				for(Entry<String, JsonElement> entry:jsonObjectProperties){
 					if(entry.getKey().equals(name)){ //Found the element name in the list
-						return entry.getValue().getAsJsonObject();
+						return entry.getValue();
 					}
 				}
 			}catch(Exception e){
