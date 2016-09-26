@@ -43,6 +43,16 @@ public class GsonProcessor {
 	/* A Gson instance for JSON parsing. Allows to avoid fields without '@Exposed' annotation. */
 	private Gson gsonExposedFilter = null;
 
+	/**
+	 * The desired GSON processor type:<br>
+	 * <ul>
+	 * <li>GSONP. Normal GSON processor.</li>
+	 * <li>GSONP_NON_TRANSIENT. A GSON processor that only accepts properties of a class that does not have the @transient attribute.</li>
+	 * <li>GSONP_ONLY_EXPOSED. A GSON processor that only accepts properties of a class that has the @Expoxed attribute. </li>
+	 * </ul>
+	 */
+	public enum GSON_PROCESSOR_TYPE {GSONP, GSONP_NON_TRANSIENT, GSONP_ONLY_EXPOSED};
+	
 	public static GsonProcessor getInstance() {
 		if (gsonProcessor == null) {
 			gsonProcessor = new GsonProcessor();
@@ -66,20 +76,40 @@ public class GsonProcessor {
 
 	
 	/**
-	 * A normal JSON Gson processor instance.
+	 * Returns the GSON processor of the desired type.
 	 * 
 	 * @return
 	 */
+	public Gson getGson(GSON_PROCESSOR_TYPE type) {
+		
+		switch (type) {			
+			case GSONP_NON_TRANSIENT:
+				return gsonTransientFilter;
+			case GSONP_ONLY_EXPOSED:
+				return gsonExposedFilter;
+			default:			
+				return gson;
+		}
+	}
+
+	/**
+	 * Deprecated. Use {@link GsonProcessor#getGson}
+	 * @return
+	 */
+	@Deprecated
 	public Gson getGson() {
 		return gson;
 	}
-
+	
 	/**
 	 * A JSON Gson processor instance. This processor allows to avoid 
 	 * fields with 'transient' attribute.
 	 * 
+	 * Deprecated. Use {@link GsonProcessor#getGson}
+	 * 
 	 * @return
 	 */
+	@Deprecated
 	public Gson getGsonWithTransientFilter() {
 		return gsonTransientFilter;
 	}
@@ -88,8 +118,11 @@ public class GsonProcessor {
 	 * A JSON Gson processor instance. Allows to avoid fields 
 	 * without '@Exposed' annotation.
 	 * 
+	 * Deprecated. Use {@link GsonProcessor#getGson}
+	 * 
 	 * @return
 	 */
+	@Deprecated
 	public Gson getGsonWithExposedFilter() {
 		return gsonExposedFilter;
 	}
