@@ -31,6 +31,7 @@ import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
 import es.javocsoft.android.lib.toolbox.ToolBox;
+import es.javocsoft.android.lib.toolbox.ToolBox.LocationInfo;
 
 /**
  * A service that runs in background to watch for location changes.
@@ -493,6 +494,11 @@ public class LocationService extends Service implements LocationListener {
        		Log.d(TAG, "Location changed.");
       	
       	if(isBetterLocation(loc, previousBestLocation)) {
+      		//...some extra information about the location
+	        LocationInfo locInfo = ToolBox.location_addressInfo(getBaseContext(), loc.getLatitude(), loc.getLongitude());
+      		if(locInfo==null)
+      			return;
+	        
       		previousBestLocation = loc;
             	
 	        //Send the change to an application receiver.
@@ -500,12 +506,11 @@ public class LocationService extends Service implements LocationListener {
 	        loc.getLatitude();
 	        loc.getLongitude();
 	        extras.putParcelable(LOCATION_KEY, loc);
-	        //...some extra information about the location
-	        extras.putString(LOCATION_COUNTRY_KEY, ToolBox.location_addressInfo(getBaseContext(), ToolBox.LOCATION_INFO_TYPE.COUNTRY, loc.getLatitude(), loc.getLongitude()));
-	        extras.putString(LOCATION_COUNTRY_CODE_KEY, ToolBox.location_addressInfo(getBaseContext(), ToolBox.LOCATION_INFO_TYPE.COUNTRY_CODE, loc.getLatitude(), loc.getLongitude()));
-	        extras.putString(LOCATION_CITY_KEY, ToolBox.location_addressInfo(getBaseContext(), ToolBox.LOCATION_INFO_TYPE.CITY, loc.getLatitude(), loc.getLongitude()));
-	        extras.putString(LOCATION_ADDRESS_KEY, ToolBox.location_addressInfo(getBaseContext(), ToolBox.LOCATION_INFO_TYPE.ADDRESS, loc.getLatitude(), loc.getLongitude()));
-	        extras.putString(LOCATION_POSTAL_CODE_KEY, ToolBox.location_addressInfo(getBaseContext(), ToolBox.LOCATION_INFO_TYPE.POSTAL_CODE, loc.getLatitude(), loc.getLongitude()));
+	        extras.putString(LOCATION_COUNTRY_KEY, locInfo.getCountry());
+	        extras.putString(LOCATION_COUNTRY_CODE_KEY, locInfo.getCountryCode());
+	        extras.putString(LOCATION_CITY_KEY, locInfo.getCity());
+	        extras.putString(LOCATION_ADDRESS_KEY, locInfo.getAddress());
+	        extras.putString(LOCATION_POSTAL_CODE_KEY, locInfo.getPostalCode());
 	        
 	        deliverBroadcast(ACTION_LOCATION_CHANGED, extras);
 	        if(ToolBox.LOG_ENABLE)

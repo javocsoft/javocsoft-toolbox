@@ -10,6 +10,7 @@ import java.util.Set;
 import android.util.Log;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
@@ -23,7 +24,7 @@ import es.javocsoft.android.lib.toolbox.json.exception.JsonDataException;
  * A class that loads and process the JSON information. 
  * Allows to get easily a property of the JSON.
  * 
- * @author JavocSoft 2015
+ * @author JavocSoft
  * @since  2016
  */
 public class JsonDataReader {
@@ -226,6 +227,37 @@ public class JsonDataReader {
 		if(entry.getValue() instanceof JsonObject) {
 			Set<Entry<String, JsonElement>> properties = entry.getValue().getAsJsonObject().entrySet();
 			Iterator<Entry<String, JsonElement>> it = properties.iterator();
+			while( it.hasNext() ){
+				lookIntoEntry(it.next(), entries);
+			}
+		}else if(entry.getValue() instanceof JsonArray){
+			JsonArray jsonArray = entry.getValue().getAsJsonArray();
+			Iterator<JsonElement> it = jsonArray.iterator();
+			while( it.hasNext() ){
+				lookIntoEntry(it.next(), entries);
+			}
+			
+		}
+	}
+	
+	/**
+	 * This is a recursive function that looks into an entry JsonElement looking in 
+	 * it for any JsonElement child that is a JsonObject.
+	 *  
+	 * @param entry	An entry of the JSON.
+	 * @param entries	The list of entries that the JSON has.
+	 */
+	private void lookIntoEntry(JsonElement entry, List<Entry<String, JsonElement>> entries) throws Exception {
+		//Recursive
+		if(entry instanceof JsonObject) {
+			Set<Entry<String, JsonElement>> properties = entry.getAsJsonObject().entrySet();
+			Iterator<Entry<String, JsonElement>> it = properties.iterator();
+			while( it.hasNext() ){
+				lookIntoEntry(it.next(), entries);
+			}
+		}else if(entry instanceof JsonArray){
+			JsonArray jsonArray = entry.getAsJsonArray();
+			Iterator<JsonElement> it = jsonArray.iterator();
 			while( it.hasNext() ){
 				lookIntoEntry(it.next(), entries);
 			}

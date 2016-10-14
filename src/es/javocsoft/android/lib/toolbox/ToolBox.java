@@ -41,6 +41,7 @@ import java.net.MalformedURLException;
 import java.net.SocketTimeoutException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -69,6 +70,8 @@ import org.apache.commons.codec.binary.Hex;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
@@ -86,6 +89,9 @@ import org.apache.http.impl.conn.SingleClientConnManager;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.params.CoreConnectionPNames;
 import org.apache.http.protocol.HTTP;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
@@ -198,11 +204,15 @@ import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.Geofence;
 import com.google.android.gms.location.GeofencingRequest;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.maps.model.LatLng;
 import com.google.gson.Gson;
 
 import es.javocsoft.android.lib.toolbox.encoding.Base64;
 import es.javocsoft.android.lib.toolbox.io.IOUtils;
 import es.javocsoft.android.lib.toolbox.javascript.WebviewJavascriptInterface;
+import es.javocsoft.android.lib.toolbox.json.GsonProcessor;
+import es.javocsoft.android.lib.toolbox.json.JsonDataReader;
+import es.javocsoft.android.lib.toolbox.json.exception.JsonDataException;
 
 
 /**
@@ -5204,6 +5214,38 @@ public final class ToolBox {
         //This enables to expose to webviews's web some native android app methods.
         myWebview.addJavascriptInterface(jsInterface, jsInterfaceName);
 	}
+	
+	/**
+	 * This method runs the specified javascript using the KitKat asynchronous
+	 * mode if is available (Android 19+).
+	 * 
+	 * @param webView			The webview that runs the Javascript
+	 * @param javascript		The javascript to run
+	 * @param runInWebviewPOST	If set to TRUE, the javascript will be run in the 
+	 * 							UI thread of the webview.
+	 * @param callback			The callback to call after javascript runs.
+	 */
+	@SuppressLint("NewApi")
+	public static void webview_runJavascript(final WebView webView, final String javascript, boolean runInWebviewUIThread, final ValueCallback<String> callback) {
+		if(runInWebviewUIThread) {
+			webView.post(new Runnable() {				
+				@Override
+				public void run() {
+					if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
+			    		webView.evaluateJavascript(javascript, callback);
+			        } else {
+			        	webView.loadUrl(javascript);
+			        }
+				}
+			});
+		}else{		
+			if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
+				webView.evaluateJavascript(javascript, callback);
+			} else {
+				webView.loadUrl(javascript);
+			}
+		}
+    }
 	 
 	//--------------- (PENDING) INTENTS ---------------------------------------------------------------------
 	
@@ -6860,16 +6902,101 @@ public final class ToolBox {
 	
 	//-------------------- LOCATION ----------------------------------------------------------------------
 	
+	public static class LocationInfo {
+		private String country;
+		private String countryCode;
+		private String city;
+		private String postalCode;
+		private String address;
+		private String addressStreet;
+		private String addressStreetNumber;
+		
+		public LocationInfo(String country, String countryCode, String city,
+				String postalCode, String address, String addressStreet,
+				String addressStreetNumber) {			
+			this.country = country;
+			this.countryCode = countryCode;
+			this.city = city;
+			this.postalCode = postalCode;
+			this.address = address;
+			this.addressStreet = addressStreet;
+			this.addressStreetNumber = addressStreetNumber;			
+		}
+
+		public LocationInfo() {
+		}
+		
+
+		public String getCountry() {
+			return country;
+		}
+
+		public void setCountry(String country) {
+			this.country = country;
+		}
+
+		public String getCountryCode() {
+			return countryCode;
+		}
+
+		public void setCountryCode(String countryCode) {
+			this.countryCode = countryCode;
+		}
+
+		public String getCity() {
+			return city;
+		}
+
+		public void setCity(String city) {
+			this.city = city;
+		}
+
+		public String getPostalCode() {
+			return postalCode;
+		}
+
+		public void setPostalCode(String postalCode) {
+			this.postalCode = postalCode;
+		}
+
+		public String getAddress() {
+			return address;
+		}
+
+		public void setAddress(String address) {
+			this.address = address;
+		}
+
+		public String getAddressStreet() {
+			return addressStreet;
+		}
+
+		public void setAddressStreet(String addressStreet) {
+			this.addressStreet = addressStreet;
+		}
+
+		public String getAddressStreetNumber() {
+			return addressStreetNumber;
+		}
+
+		public void setAddressStreetNumber(String addressStreetNumber) {
+			this.addressStreetNumber = addressStreetNumber;
+		}
+	}
 	
 	/** The available latitude and longitude address information types. */
 	public static enum LOCATION_INFO_TYPE {COUNTRY, COUNTRY_CODE, CITY, POSTAL_CODE, ADDRESS, ADDRESS_STREET, ADDRESS_STREET_NUMBER, ALL}; 
 	
 	/**
-	 * From a latitude and longitude, return the desired address information type
+	 * From a latitude and longitude, returns the desired address information type
 	 * or null in case of error or not found.
+	 * <br><br>
+	 * <b>NOTE</b>: This method uses the Android SDK Geocoder so is an expensive, in time, 
+	 * operation so in case you need more than one property, use the versión 
+	 * of this method that returns an object with all location data.
 	 * 
 	 * @param context
-	 * @param locationInfoType	The desired location info. See LOCATION_INFO_TYPE enum.
+	 * @param locationInfoType	The desired location info. See {@link LOCATION_INFO_TYPE} enum.
 	 * @param lattitude
 	 * @param longitude
 	 * @return
@@ -6922,17 +7049,316 @@ public final class ToolBox {
 	                }
 	            }
 	        } catch (IOException e) {
-	            return null;
+	        	if(LOG_ENABLE)
+					Log.e(TAG, "location_addressInfo(). Could not get information [" + e.getMessage() + "]. Trying with Maps API.", e);
+	        	
+	        	try {
+					List<Address> addresses = location_addressInfoFromGoogleGeocodeAPI(latitude, longitude);
+					
+					for (Address adrs : addresses) {
+						if (adrs != null) {                	
+		                	String data = null;
+		                	switch (locationInfoType) {
+								case COUNTRY_CODE:
+									data = adrs.getCountryCode();
+									break;
+								case COUNTRY:
+									data = adrs.getCountryName();
+									break;
+								case CITY:
+									data = adrs.getLocality();
+									break;
+								case POSTAL_CODE:
+									data = adrs.getPostalCode();
+									break;
+								case ADDRESS:
+									if(adrs.getThoroughfare()!=null && adrs.getSubThoroughfare()!=null){
+										data = adrs.getThoroughfare() + "," + adrs.getSubThoroughfare();
+									}
+									break;	
+								case ADDRESS_STREET:
+									data = adrs.getThoroughfare();
+									break;
+								case ADDRESS_STREET_NUMBER:
+									data = adrs.getSubThoroughfare();
+									break;
+								case ALL:	
+									res = adrs.toString();
+									break;
+							}                    
+		                    if (data != null && data.length()>0) {
+		                        res = data;
+		                        break;
+		                    }
+		                }
+		            }					
+								
+				} catch (Exception e1) {
+					if(LOG_ENABLE)
+						Log.e(TAG, "location_addressInfo(). Could not get information neither through Maps API [" + e.getMessage() + "].", e);
+					
+					return null;
+				}
+	        	
 	        } catch(Exception e) {
 	        	//Un-handled exception. Should never happen
 	        	if(LOG_ENABLE)
 					Log.e(TAG, "location_addressInfo(). Unknown exception [" + e.getMessage() + "].", e);
+	        	
 	        	return null;
 	        }
         }
         
         return res;
     }	
+	
+	/**
+	 * From a latitude and longitude, returns all the address information or 
+	 * null in case of error or not found.
+	 * <br><br>
+	 * <b>NOTE</b>: This method uses the Android SDK Geocoder.
+	 * 
+	 * @param context
+	 * @param lattitude
+	 * @param longitude
+	 * @return
+	 */
+	public static LocationInfo location_addressInfo(Context context, double latitude, double longitude) {
+
+        LocationInfo res = null; 
+        
+        Geocoder gcd = new Geocoder(context, Locale.getDefault());
+        if(gcd!=null) {
+	        try {
+	            List<Address> addresses = gcd.getFromLocation(latitude, longitude,10);
+	
+	            for (Address adrs : addresses) {
+	            	if(res==null)
+	            		res = new LocationInfo();
+	            	
+	                if (adrs != null) {                	
+	                	
+	                	res.setCountryCode(adrs.getCountryCode());
+	                	res.setCountry(adrs.getCountryName());
+	                	res.setCity(adrs.getLocality());
+	                	res.setPostalCode(adrs.getPostalCode());
+	                	if(adrs.getThoroughfare()!=null && adrs.getSubThoroughfare()!=null){
+	                		res.setAddress(adrs.getThoroughfare() + "," + adrs.getSubThoroughfare());
+						}						
+						res.setAddressStreet(adrs.getThoroughfare());
+						res.setAddressStreetNumber(adrs.getSubThoroughfare());
+						
+						if((res.getAddress()!=null && res.getAddress().length()>0) && 
+							(res.getAddressStreet()!=null && res.getAddressStreet().length()>0) &&
+							(res.getAddressStreetNumber()!=null && res.getAddressStreetNumber().length()>0) &&
+							(res.getCity()!=null && res.getCity().length()>0) && 
+							(res.getCountry()!=null && res.getCountry().length()>0)	&&
+							(res.getCountryCode()!=null && res.getCountryCode().length()>0) && 
+							(res.getPostalCode()!=null && res.getPostalCode().length()>0)){
+							//If we have all data we stop iterating
+							break;
+						}
+	                }
+	            }
+	        } catch (IOException e) {
+	        	if(LOG_ENABLE)
+					Log.e(TAG, "location_addressInfo(). Could not get information [" + e.getMessage() + "]. Trying with Maps API.", e);
+	        	
+	        	try {
+					List<Address> addresses = location_addressInfoFromGoogleGeocodeAPI(latitude, longitude);
+					
+					for (Address adrs : addresses) {
+		            	if(res==null)
+		            		res = new LocationInfo();
+		            	
+		                if (adrs != null) {
+		                	res.setCountryCode(adrs.getCountryCode());
+		                	res.setCountry(adrs.getCountryName());
+		                	res.setCity(adrs.getLocality());
+		                	res.setPostalCode(adrs.getPostalCode());
+		                	if(adrs.getThoroughfare()!=null && adrs.getSubThoroughfare()!=null){
+		                		res.setAddress(adrs.getThoroughfare() + "," + adrs.getSubThoroughfare());
+							}						
+							res.setAddressStreet(adrs.getThoroughfare());
+							res.setAddressStreetNumber(adrs.getSubThoroughfare());
+							
+							if((res.getAddress()!=null && res.getAddress().length()>0) && 
+								(res.getAddressStreet()!=null && res.getAddressStreet().length()>0) &&
+								(res.getAddressStreetNumber()!=null && res.getAddressStreetNumber().length()>0) &&
+								(res.getCity()!=null && res.getCity().length()>0) && 
+								(res.getCountry()!=null && res.getCountry().length()>0)	&&
+								(res.getCountryCode()!=null && res.getCountryCode().length()>0) && 
+								(res.getPostalCode()!=null && res.getPostalCode().length()>0)){
+								//If we have all data we stop iterating
+								break;
+							}
+		                }
+		            }					
+										
+				} catch (Exception e1) {
+					if(LOG_ENABLE)
+						Log.e(TAG, "location_addressInfo(). Could not get information neither through Maps API [" + e.getMessage() + "].", e);
+					
+					return null;
+				}
+	            
+	        } catch(Exception e) {
+	        	//Un-handled exception. Should never happen
+	        	if(LOG_ENABLE)
+					Log.e(TAG, "location_addressInfo(). Unknown exception [" + e.getMessage() + "].", e);
+	        	
+	        	return null;
+	        }
+        }
+        
+        return res;
+    }
+	
+	/**
+	 * From a latitude and longitude, returns all the address information or 
+	 * null in case not found.
+	 * <br><br>
+	 * <b>NOTE</b>: This method uses the Google Geocoding API. In some devices, the normal
+	 * Android SDK Geocoder can fail. Any method "location_addressInfo" uses internally the
+	 * Android SDK geocoder but in case of fail it will try to use this method to get data.
+	 * 
+	 * @param lattitude
+	 * @param longitude
+	 * @throws Exception In case of error.
+	 * @return 
+	 */
+	@SuppressWarnings("deprecation")
+	public static List<Address> location_addressInfoFromGoogleGeocodeAPI(double lattitude, double longitude) throws Exception {
+
+		List<Address> retList = null;
+		
+		try{
+		    String address = String
+		            .format(Locale.ENGLISH, "http://maps.googleapis.com/maps/api/geocode/json?latlng=%1$f,%2$f&sensor=true&language="
+		                            + Locale.getDefault().getCountry(), lattitude, longitude);
+		    HttpGet httpGet = new HttpGet(address);
+		    HttpClient client = new DefaultHttpClient();
+		    HttpResponse response;
+		    StringBuilder stringBuilder = new StringBuilder();
+	
+		    response = client.execute(httpGet);
+		    HttpEntity entity = response.getEntity();
+		    InputStream stream = entity.getContent();
+		    int b;
+		    while ((b = stream.read()) != -1) {
+		        stringBuilder.append((char) b);
+		    }
+		    
+		    JSONObject jsonObject = new JSONObject(stringBuilder.toString());
+	
+		    if ("OK".equalsIgnoreCase(jsonObject.getString("status"))) {
+		    	retList = new ArrayList<Address>();
+		    	
+		        JSONArray results = jsonObject.getJSONArray("results");
+		        String indiStr = null;
+		        String dLongName = null;
+		        String dShortName = null;
+		        String dType = null;
+		        for (int i = 0; i < results.length(); i++) {
+		            JSONObject result = results.getJSONObject(i);
+		            
+		            //Get parts of the information
+		            indiStr = result.getString("formatted_address");
+		            
+		            Address addr = new Address(Locale.getDefault());
+		            addr.setAddressLine(0, indiStr);
+		            addr.setLatitude(lattitude);
+		            addr.setLongitude(longitude);
+		            
+		            JSONArray addComponents = result.getJSONArray("address_components");
+		            for (int j = 0; j < addComponents.length(); j++) {
+		            	JSONObject addComponentData = addComponents.getJSONObject(j);
+		            	dLongName = addComponentData.getString("long_name");
+	            		dShortName = addComponentData.getString("short_name");
+	            		JSONArray addComponentDataTypes = addComponentData.getJSONArray("types");
+		            	for (int k = 0; k < addComponentDataTypes.length();) {
+		            		dType = addComponentDataTypes.getString(k);
+		            		break;
+		            	}
+		            	
+		            	if(dType.equalsIgnoreCase("street_number")) {
+			            	 addr.setSubThoroughfare(dLongName);
+			            }else if(dType.equalsIgnoreCase("route")) {
+			            	addr.setThoroughfare(dLongName);
+			            }else if(dType.equalsIgnoreCase("locality")) {
+			            	addr.setLocality(dLongName);
+			            }else if(dType.equalsIgnoreCase("administrative_area_level_2")) {
+			            	addr.setSubAdminArea(dLongName);
+			            }else if(dType.equalsIgnoreCase("administrative_area_level_1")) {
+			            	addr.setAdminArea(dLongName);
+			            }else if(dType.equalsIgnoreCase("country")) {
+			            	addr.setCountryCode(dShortName);
+			            	addr.setCountryName(dLongName);
+			            }else if(dType.equalsIgnoreCase("postal_code")) {
+			            	addr.setPostalCode(dLongName);
+			            }
+		            }
+		            
+		            retList.add(addr);
+		        }
+		    }
+		    
+		}catch(Exception e){
+			Log.e(TAG, "Error (location_addressInfoFromGoogleGeocodeAPI). Could not get data [" + e.getMessage() + "]", e);
+			throw new Exception("Error (location_addressInfoFromGoogleGeocodeAPI). Could not get data [" + e.getMessage() + "]", e);
+		}
+		
+		 return retList;
+	}
+	
+	/**
+	 * Gets the coordinates given an address or null if not found.
+	 * <br><br>
+	 * <b>NOTE</b>: This method uses the Google Geocoding API.
+	 * 
+	 * @param address
+	 * @return
+	 * @throws Exception In case of error.
+	 */
+	@SuppressWarnings("deprecation")
+	public static LatLng location_addressLatLngFromGoogleGeocodeAPI(String address) throws Exception {
+		try{
+			HttpGet httpGet = new HttpGet(
+		            "http://maps.google.com/maps/api/geocode/json?address="
+		                    + URLEncoder.encode(address, "UTF-8") + "&ka&sensor=false");
+		    
+			HttpClient client = new DefaultHttpClient();
+		    HttpResponse response;
+		    StringBuilder stringBuilder = new StringBuilder();
+		    
+		    response = client.execute(httpGet);
+		    HttpEntity entity = response.getEntity();
+		    InputStream stream = entity.getContent();
+		    int b;
+		    while ((b = stream.read()) != -1) {
+		    	stringBuilder.append((char) b);
+		    }
+		    
+		    JSONObject jsonObject = new JSONObject(stringBuilder.toString());	
+		    
+		    if ("OK".equalsIgnoreCase(jsonObject.getString("status"))) {
+		    	double lng = ((JSONArray) jsonObject.get("results")).getJSONObject(0)
+			            .getJSONObject("geometry").getJSONObject("location")
+			            .getDouble("lng");	
+			    double lat = ((JSONArray) jsonObject.get("results")).getJSONObject(0)
+			            .getJSONObject("geometry").getJSONObject("location")
+			            .getDouble("lat");
+			    
+			    return new LatLng(lat, lng);
+		    }else{
+		    	return null;
+		    }
+		    
+		}catch(Exception e) {
+			Log.e(TAG, "Error (location_addressLatLngFromGoogleGeocodeAPI). Could not get data [" + e.getMessage() + "]", e);
+			throw new Exception("Error (location_addressLatLngFromGoogleGeocodeAPI). Could not get data [" + e.getMessage() + "]", e);
+		}				
+	}
 	
 	/**
 	 * Calculates the great circle distance (distance in meters) between 
