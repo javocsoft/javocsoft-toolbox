@@ -23,6 +23,7 @@ package es.javocsoft.android.lib.toolbox;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -33,11 +34,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
+import java.net.ProtocolException;
 import java.net.SocketTimeoutException;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -319,6 +322,160 @@ public final class ToolBox {
 	    return jsonObjectList;
 	}
 	
+	//--------------- URL Shortener ---------------------------------------------------------------------
+	
+	/**
+	 * Generates a shortened URL for a specified URL using Google shortening API.
+	 * <br><br>
+	 * See <a href="https://developers.google.com/url-shortener/v1/getting_started">Google Shortener API</a>
+	 * 
+	 * @param apiKey	The Google Shortener API Key. Required in order to work.
+	 * @param longURL	The URL that we need to get shortened
+	 * @return	The shortened URL or null in case of error.
+	 */
+	public static String shortener_gooShortURL(String apiKey, String longURL) {
+		String shortenedURL = null;
+		
+		String GOOGLE_API_SHORTENER_URL = "https://www.googleapis.com/urlshortener/v1/url?key=%s";
+		URL url = null;
+		String response=null;
+        try {
+        	BufferedReader reader;
+            StringBuffer buffer;
+            
+            //Prepare the connection
+            url = new URL(String.format(GOOGLE_API_SHORTENER_URL, apiKey));
+            HttpURLConnection con = (HttpURLConnection) url.openConnection();
+            con.setReadTimeout(40000);
+            con.setConnectTimeout(40000);
+            con.setRequestMethod("POST");
+            con.setRequestProperty("Content-Type", "application/json");
+            con.setDoOutput(true);
+            OutputStream os = con.getOutputStream();
+            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(os, "UTF-8"));
+            //Prepare the JSON to send
+            String json = "{\"longUrl\": \""+longURL+"\"}";
+            //Write the JSON
+            writer.write(json);
+            writer.flush();
+            writer.close();
+            os.close();
+
+            //Get response
+            int status=con.getResponseCode();
+            InputStream inputStream;
+            if(status==HttpURLConnection.HTTP_OK)
+            	inputStream=con.getInputStream();
+            else
+                inputStream = con.getErrorStream();
+
+            reader= new BufferedReader(new InputStreamReader(inputStream));
+
+            //Convert response to an String
+            buffer= new StringBuffer();
+            String line=null;
+            while((line=reader.readLine())!=null) {
+                buffer.append(line);
+            }
+            response= buffer.toString();
+            if(LOG_ENABLE)
+            	Log.d(TAG, "Shortening API RAW response: " + response);
+            
+            //Parse the response
+            JSONObject jsonObject=new JSONObject(response);
+            shortenedURL = jsonObject.getString("id");
+            //"OK" for most URLs. If Google believes that the URL is fishy, status may be something else, such as "MALWARE".
+            String urlStatus = jsonObject.getString("status");
+            
+            if(LOG_ENABLE)
+            	Log.d(TAG, "Shortened URL: [" + shortenedURL + "], status: " + urlStatus);            	
+
+        } catch (MalformedURLException e) {
+        	Log.e(TAG, "Invalid shortening URL: [" + GOOGLE_API_SHORTENER_URL + "] for apiKey: " + apiKey + " for URL: " + longURL, e);
+        } catch (ProtocolException e) {
+        	Log.e(TAG, "Invalid protocol when shortening URL: [" + GOOGLE_API_SHORTENER_URL + "] for apiKey: " + apiKey + " for URL: " + longURL, e);
+        } catch (IOException e) {
+        	Log.e(TAG, "Error shortening URL: [" + GOOGLE_API_SHORTENER_URL + "] for apiKey: " + apiKey + " for URL: " + longURL + ", message: " + e.getMessage(), e);
+        } catch (JSONException e) {
+        	Log.e(TAG, "Error parsing shortening response for URL: [" + GOOGLE_API_SHORTENER_URL + "] for apiKey: " + apiKey + " for URL: " + longURL, e);
+        } catch (Exception e) {
+        	Log.e(TAG, "Unexpected error shortening URL for URL: [" + GOOGLE_API_SHORTENER_URL + "] for apiKey: " + apiKey + " for URL: " + longURL, e);
+        } 
+        
+        return shortenedURL;
+    }
+	
+	/**
+	 * Expands a Google shortened URL for a specified shortened URL 
+	 * using Google shortening API.
+	 * <br><br>
+	 * See <a href="https://developers.google.com/url-shortener/v1/getting_started">Google Shortener API</a>
+	 * 
+	 * @param apiKey	The Google Shortener API Key. Required in order to work.
+	 * @param shortURL	The URL that we need to get shortened
+	 * @return	The expanded URL or null in case of error.
+	 */
+	public static String shortener_gooExpandURL(String apiKey, String shortURL) {
+		String expandedURL = null;
+		
+		String GOOGLE_API_SHORTENER_EXPAND_URL = "https://www.googleapis.com/urlshortener/v1/url?key=%s&shortUrl=%s";
+		URL url = null;
+		String response=null;
+        try {
+        	BufferedReader reader;
+            StringBuffer buffer;
+            
+            //Prepare the connection
+            url = new URL(String.format(GOOGLE_API_SHORTENER_EXPAND_URL, apiKey, shortURL));
+            HttpURLConnection con = (HttpURLConnection) url.openConnection();
+            con.setReadTimeout(40000);
+            con.setConnectTimeout(40000);
+            con.setRequestMethod("GET");
+            con.setDoInput(true);
+          
+            //Get response
+            int status=con.getResponseCode();
+            InputStream inputStream;
+            if(status==HttpURLConnection.HTTP_OK)
+            	inputStream=con.getInputStream();
+            else
+                inputStream = con.getErrorStream();
+
+            reader= new BufferedReader(new InputStreamReader(inputStream));
+
+            //Convert response to an String
+            buffer= new StringBuffer();
+            String line=null;
+            while((line=reader.readLine())!=null) {
+                buffer.append(line);
+            }
+            response= buffer.toString();
+            if(LOG_ENABLE)
+            	Log.d(TAG, "Shortening API RAW response: " + response);
+            
+            //Parse the response
+            JSONObject jsonObject=new JSONObject(response);
+            expandedURL = jsonObject.getString("longUrl");
+            //"OK" for most URLs. If Google believes that the URL is fishy, status may be something else, such as "MALWARE".
+            String urlStatus = jsonObject.getString("status");
+            
+            if(LOG_ENABLE)
+            	Log.d(TAG, "Shortened URL: [" + expandedURL + "], status: " + urlStatus);            	
+
+        } catch (MalformedURLException e) {
+        	Log.e(TAG, "Invalid expand URL: [" + GOOGLE_API_SHORTENER_EXPAND_URL + "] for apiKey: " + apiKey + " for URL: " + shortURL, e);
+        } catch (ProtocolException e) {
+        	Log.e(TAG, "Invalid protocol when expanding URL: [" + GOOGLE_API_SHORTENER_EXPAND_URL + "] for apiKey: " + apiKey + " for URL: " + shortURL, e);
+        } catch (IOException e) {
+        	Log.e(TAG, "Error expanding URL: [" + GOOGLE_API_SHORTENER_EXPAND_URL + "] for apiKey: " + apiKey + " for URL: " + shortURL + ", message: " + e.getMessage(), e);
+        } catch (JSONException e) {
+        	Log.e(TAG, "Error parsing expanded URL response for URL: [" + GOOGLE_API_SHORTENER_EXPAND_URL + "] for apiKey: " + apiKey + " for URL: " + shortURL, e);
+        } catch (Exception e) {
+        	Log.e(TAG, "Unexpected error expanding URL for URL: [" + GOOGLE_API_SHORTENER_EXPAND_URL + "] for apiKey: " + apiKey + " for URL: " + shortURL, e);
+        }
+        
+        return expandedURL;
+    }
 	
 	//--------------- ANIMATIONS ------------------------------------------------------------------------
 	
@@ -6369,7 +6526,7 @@ public final class ToolBox {
 		}catch(SecurityException e){
 			//In Android 6+, READ_PHONE_STATE permission must be granted.
 			if(LOG_ENABLE)
-				Log.e(TAG, "SecurityException (" + e.getMessage() + "). Remember to grant permissions if Android 6+.", e);
+				Log.w(TAG, "SecurityException (" + e.getMessage() + "). Remember to grant permissions if Android 6+.");
 		}
 		
 		if((imei!=null && imei.length()>0) &&

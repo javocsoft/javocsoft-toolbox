@@ -494,27 +494,36 @@ public class LocationService extends Service implements LocationListener {
        		Log.d(TAG, "Location changed.");
       	
       	if(isBetterLocation(loc, previousBestLocation)) {
-      		//...some extra information about the location
-	        LocationInfo locInfo = ToolBox.location_addressInfo(getBaseContext(), loc.getLatitude(), loc.getLongitude());
-      		if(locInfo==null)
-      			return;
-	        
-      		previousBestLocation = loc;
-            	
-	        //Send the change to an application receiver.
-	        Bundle extras = new Bundle(); 
-	        loc.getLatitude();
-	        loc.getLongitude();
-	        extras.putParcelable(LOCATION_KEY, loc);
-	        extras.putString(LOCATION_COUNTRY_KEY, locInfo.getCountry());
-	        extras.putString(LOCATION_COUNTRY_CODE_KEY, locInfo.getCountryCode());
-	        extras.putString(LOCATION_CITY_KEY, locInfo.getCity());
-	        extras.putString(LOCATION_ADDRESS_KEY, locInfo.getAddress());
-	        extras.putString(LOCATION_POSTAL_CODE_KEY, locInfo.getPostalCode());
-	        
-	        deliverBroadcast(ACTION_LOCATION_CHANGED, extras);
-	        if(ToolBox.LOG_ENABLE)
-	    		Log.d(TAG, "Location change broadcast message sent.");
+      		
+      		Thread t = new Thread(new Runnable() {
+				
+				@Override
+				public void run() {
+					//...some extra information about the location
+			        LocationInfo locInfo = ToolBox.location_addressInfo(getBaseContext(), loc.getLatitude(), loc.getLongitude());
+		      		if(locInfo==null)
+		      			return;
+			        
+		      		previousBestLocation = loc;
+		            	
+			        //Send the change to an application receiver.
+			        Bundle extras = new Bundle(); 
+			        loc.getLatitude();
+			        loc.getLongitude();
+			        extras.putParcelable(LOCATION_KEY, loc);
+			        extras.putString(LOCATION_COUNTRY_KEY, locInfo.getCountry());
+			        extras.putString(LOCATION_COUNTRY_CODE_KEY, locInfo.getCountryCode());
+			        extras.putString(LOCATION_CITY_KEY, locInfo.getCity());
+			        extras.putString(LOCATION_ADDRESS_KEY, locInfo.getAddress());
+			        extras.putString(LOCATION_POSTAL_CODE_KEY, locInfo.getPostalCode());
+			        
+			        deliverBroadcast(ACTION_LOCATION_CHANGED, extras);
+			        if(ToolBox.LOG_ENABLE)
+			    		Log.d(TAG, "Location change broadcast message sent.");
+				}
+			});
+      		
+      		t.start();
       	}                               
     }
 
