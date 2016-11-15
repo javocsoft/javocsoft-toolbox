@@ -44,6 +44,7 @@ import java.net.ProtocolException;
 import java.net.SocketTimeoutException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -62,6 +63,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -5533,6 +5536,119 @@ public final class ToolBox {
 		
 		return callIntent;		 
 	}
+	
+	/**
+	 * Extracts the parameters of an intent open application URI. This kind of URL looks:
+	 * 
+	 * market://details?id=com.colectivosvip.orange.porserorange&url=serdeorange://serdeorange.orange.es?param1=https%3A%2F%2Fprogramaserdeorange.orange.es%2Fprivada%2Foffer-details.action%3Fo%3D403
+	 * 
+	 * @param intent	The intent to extract its URI parameters from.
+	 * @return	A Map with the parameters and values.
+	 * @throws Exception
+	 */
+	public static Map<String, List<String>> intent_getURIParameters(Intent intent) throws Exception {
+		Uri uri = intent.getData();
+		return intent_getURIParameters(uri);        
+	}
+	
+	/**
+	 * Extracts the parameters of an intent open application URI. This kind of URL looks like:
+	 * <br><br>
+	 * market://details?id=com.colectivosvip.orange.porserorange&url=serdeorange://serdeorange.orange.es?param1=https%3A%2F%2Fprogramaserdeorange.orange.es%2Fprivada%2Foffer-details.action%3Fo%3D403
+	 * 
+	 * @param uri	The URI to extract parameters from.
+	 * @return	A Map with the parameters and values.
+	 * @throws Exception
+	 */
+	public static Map<String, List<String>> intent_getURIParameters(Uri uri) throws Exception {
+		Map<String, List<String>> query_pairs = null;
+		
+        if(uri!=null) {
+        	query_pairs = new LinkedHashMap<String, List<String>>();
+	    	final String[] pairs = uri.getEncodedQuery().split("&");
+	    	for (String pair : pairs) {
+	    		final int idx = pair.indexOf("=");
+	    		final String key = idx > 0 ? URLDecoder.decode(pair.substring(0, idx), "UTF-8") : pair;
+	    		if (!query_pairs.containsKey(key)) {
+	    			query_pairs.put(key, new LinkedList<String>());
+	    		}
+	    		final String value = idx > 0 && pair.length() > idx + 1 ? URLDecoder.decode(pair.substring(idx + 1), "UTF-8") : null;
+	    		query_pairs.get(key).add(value);
+	    	}
+        }
+		
+    	return query_pairs;
+	}
+	
+	/**
+	 * Generates an application link URL that when loaded from a mobile, makes the application 
+	 * to start if is installed, otherwise, opens the market so user can install the app. 
+	 * This method also allows to stablish some parameters to this URL.<br><br>
+	 * 
+	 * The URL should looks like:
+	 * <br>
+	 * market://details?id=com.application.package&url=protocol://specific.domain.app?param1=param1value&param2=param2value
+	 * <br><br>
+	 * See: <a href="https://developer.android.com/training/app-links/index.html">Application links</a>
+	 * <br><br>
+	 * 
+	 * <b>Note</b><br><br>
+	 * To enable link handling verification for your app:
+	 * <ul>
+	 * 	<li>In your app manifest, set the launchMode to "singleTask" on the activity you want to handle these URLs.</li>
+	 * 	<li>Configure the intent-filter of this activity setting the scheme and host to respond to.</li>
+	 * 	<li>Set intent filter action to android.intent.action.VIEW and add categories android.intent.category.DEFAULT, android.intent.category.BROWSABLE and android.intent.category.VIEW</li>
+	 * </ul> 
+	 * 
+	 * See the following manifest code snippet:<br><br>
+	 * 
+	 * <pre>
+	 * {@code
+	 * 	<intent-filter>
+	 *      <action android:name="android.intent.action.VIEW" />
+	 *      <category android:name="android.intent.category.DEFAULT" />
+	 *      <category android:name="android.intent.category.BROWSABLE" />
+	 *      <category android:name="android.intent.category.VIEW" />
+	 *          
+	 *      <data android:scheme="http" android:host="host.com" />
+	 *      <data android:scheme="https" android:host="host.com" />
+	 *      <data android:host="host.com"
+     *            android:pathPattern=".*"                    
+     *            android:scheme="appscheme">
+     *      </data>
+	 *      
+	 *  </intent-filter>
+	 * }</pre>
+	 * 
+	 * Also, handle these URLs in both methods, "onCreate" and "onNewIntent" events of 
+	 * the activity. You can get parameters with {@link ToolBox#intent_getURIParameters(Intent)}.
+	 * <br><br>
+	 * 
+	 * @param appPkgName	The application package.
+	 * @param appProtocol	The application protocol.
+	 * @param appURL		The application specific URL
+	 * @param params		Optional. Some parameters to add to the URL.
+	 * @return
+	 */
+	public static String intent_generateOpenInstallURL(String appPkgName, String appScheme, String appHost, Map<String,String> params) throws Exception {
+		String url = "market://details?id=%s&url=%s://%s";
+		
+		String paramsString = "";
+		if(params!=null && params.size()>0){
+			paramsString = "?";
+			Set<String> keys = params.keySet();
+			for(String k:keys){
+				if(paramsString.length()>=1)
+					paramsString+="&";
+					
+				paramsString+=k+"="+ URLEncoder.encode(params.get(k), "UTF-8");
+			}
+		}
+		
+		url = String.format(url, appPkgName, appScheme, appHost);		
+		return (url+paramsString);
+	}
+	
 	
 	/**
 	 * Returns TRUE if the intent has the specified FLAG, otherwise FALSE.
