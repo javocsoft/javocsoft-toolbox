@@ -76,7 +76,6 @@ import org.apache.commons.codec.binary.Hex;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.NameValuePair;
-import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpDelete;
@@ -138,6 +137,7 @@ import android.graphics.Typeface;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
+import android.hardware.Camera;
 import android.hardware.Camera.Size;
 import android.location.Address;
 import android.location.Geocoder;
@@ -146,6 +146,7 @@ import android.location.LocationManager;
 import android.media.AudioManager;
 import android.media.ExifInterface;
 import android.media.MediaPlayer;
+import android.media.MediaPlayer.OnCompletionListener;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
 import android.net.ConnectivityManager;
@@ -161,6 +162,7 @@ import android.os.Looper;
 import android.os.Parcelable;
 import android.os.PowerManager;
 import android.os.StrictMode;
+import android.os.Vibrator;
 import android.preference.PreferenceManager;
 import android.provider.Settings;
 import android.provider.Settings.Secure;
@@ -179,6 +181,7 @@ import android.util.Log;
 import android.view.Display;
 import android.view.Gravity;
 import android.view.LayoutInflater;
+import android.view.Surface;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewConfiguration;
@@ -216,9 +219,6 @@ import com.google.gson.Gson;
 import es.javocsoft.android.lib.toolbox.encoding.Base64;
 import es.javocsoft.android.lib.toolbox.io.IOUtils;
 import es.javocsoft.android.lib.toolbox.javascript.WebviewJavascriptInterface;
-import es.javocsoft.android.lib.toolbox.json.GsonProcessor;
-import es.javocsoft.android.lib.toolbox.json.JsonDataReader;
-import es.javocsoft.android.lib.toolbox.json.exception.JsonDataException;
 
 
 /**
@@ -6518,6 +6518,12 @@ public final class ToolBox {
 	        MediaPlayer player = new MediaPlayer();
 	        player.setDataSource(afd.getFileDescriptor(),afd.getStartOffset(),afd.getLength());
 	        player.prepare();
+	        player.setOnCompletionListener(new OnCompletionListener() {
+				@Override
+				public void onCompletion(MediaPlayer mp) {
+					mp.release();
+				}
+			});
 	        player.start();
 	        
 	    } catch (Exception e) {
@@ -6527,6 +6533,56 @@ public final class ToolBox {
 	    }
 	 }
 	 
+	 /**
+	  * Plays the specified sound.
+	  * 
+	  * @param context
+	  * @param soundId	The resource to play.
+	  */
+	 public static void media_soundPlay(Context context, int soundId){
+		try {
+			//int fileResourceId = context.getResources().getIdentifier(rawSoundPath,"raw", context.getPackageName());
+			MediaPlayer player = MediaPlayer.create(context, soundId);
+			player.setOnCompletionListener(new OnCompletionListener() {
+				@Override
+				public void onCompletion(MediaPlayer mp) {
+					mp.release();
+				}
+			});
+	        player.start();
+	        
+	    } catch (Exception e) {
+	    	if(LOG_ENABLE){
+	    		Log.e(TAG, "Error playing sound (" + e.getMessage() + ")", e);
+	    	}
+	    }
+	 }
+	 
+	 /**
+	  * Plays the specified filename of the RAW Android folder.
+	  * 
+	  * @param context
+	  * @param rawSoundName	The filename without the extension in the raw folder.
+	  */
+	 public static void media_soundPlayFromRawFolder(Context context, String rawSoundName){
+			try {
+				int fileResourceId = context.getResources().getIdentifier(rawSoundName,"raw", context.getPackageName());
+				MediaPlayer player = MediaPlayer.create(context, fileResourceId);
+				player.setOnCompletionListener(new OnCompletionListener() {
+					@Override
+					public void onCompletion(MediaPlayer mp) {
+						mp.release();
+					}
+				});
+		        player.start();
+		        
+		    } catch (Exception e) {
+		    	if(LOG_ENABLE){
+		    		Log.e(TAG, "Error playing sound (" + e.getMessage() + ")", e);
+		    	}
+		    }
+		 }
+	 	 
 	 // Device Related -----------------------------------------------------------------------------------------------------------------------------
 	 
    /**
@@ -6710,6 +6766,56 @@ public final class ToolBox {
     	return metrics;
 	}
 	
+	/**
+	 * Makes the device to vibrate for a specified period of time.
+	 * <br><br>
+	 * <b>Note</b>: requires the permission android.permission.VIBRATE.
+	 * 
+	 * @param context
+	 * @param millis	The time to vibrate (milliseconds)
+	 */
+	public static void device_vibrate(Context context, long millis) {
+		try{		
+			Vibrator v = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+			v.vibrate(millis);
+			
+		}catch(Exception e){
+			if(LOG_ENABLE)
+				Log.w(TAG, "Vibration exception (" + e.getMessage() + "). Remember to set permission android.permission.VIBRATE in your manifest application file.");
+		}
+	}
+	
+	/**
+	 * Makes the device to vibrate for a specified pattern. A pattern is a set
+	 * of periods, in milliseconds.
+	 * <br><br>
+	 * <b>Note</b>: requires the permission android.permission.VIBRATE.
+	 * 
+	 * @param context
+	 * @param pattern	The pattern to use when device vibrates
+	 * @param indefinitely	If set to TRUE, vibration never ends.
+	 * @return The vibrator object, just in case "indefinitely" parameter is set to TRUE,
+	 *         to be able to stop the vibration.
+	 */
+	public static Vibrator device_vibrate(Context context, long[] pattern, boolean indefinitely) {
+		try{
+			Vibrator v = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+			
+			int vibrateIndefinitely = -1;		
+			if(indefinitely)
+				vibrateIndefinitely = 0;
+			
+			v.vibrate(pattern, vibrateIndefinitely);
+			
+			return v;
+			
+		}catch(Exception e){
+			if(LOG_ENABLE)
+				Log.w(TAG, "Vibration exception (" + e.getMessage() + "). Remember to set permission android.permission.VIBRATE in your manifest application file.");
+		}
+		
+		return null;
+	}	
 	
 	/**
 	* Get the optimal preview size for the given screen size.
@@ -6784,6 +6890,36 @@ public final class ToolBox {
 	      }
 	    }
 	    return optimalSize;
+	}
+	
+	/**
+	 * Properly rotates the camera to match the device orientation.
+	 * 
+	 * @param context
+	 * @param camera
+	 */
+	@SuppressWarnings("deprecation")
+	public static void device_cameraAlignRotationWithDeviceOrientation(Context context, final Camera camera) {
+		android.hardware.Camera.CameraInfo info = new android.hardware.Camera.CameraInfo();
+        android.hardware.Camera.getCameraInfo(0, info);
+        final int rotation = ((WindowManager) context.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay().getOrientation();
+        
+        int degrees = 0;
+        switch (rotation) {
+          case Surface.ROTATION_0: degrees = 0; break;
+          case Surface.ROTATION_90: degrees = 90; break;
+          case Surface.ROTATION_180: degrees = 180; break;
+          case Surface.ROTATION_270: degrees = 270; break;
+        }
+
+        int result;
+        if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+          result = (info.orientation + degrees) % 360;
+          result = (360 - result) % 360;  // compensate the mirror
+        } else {  // back-facing
+          result = (info.orientation - degrees + 360) % 360;
+        }
+        camera.setDisplayOrientation(result);
 	}
 	
 	/**
