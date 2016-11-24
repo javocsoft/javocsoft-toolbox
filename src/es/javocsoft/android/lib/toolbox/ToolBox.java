@@ -6774,14 +6774,25 @@ public final class ToolBox {
 	 * @param context
 	 * @param millis	The time to vibrate (milliseconds)
 	 */
+	@SuppressLint("NewApi")
 	public static void device_vibrate(Context context, long millis) {
 		try{		
 			Vibrator v = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
-			v.vibrate(millis);
+			
+			boolean canVibrate = true;
+			if(device_hasAPILevel(11)){
+				canVibrate = v.hasVibrator(); 
+			}
+			if (canVibrate) {
+				v.vibrate(millis);
+			}else{
+				if(LOG_ENABLE)
+					Log.i(TAG, "Device can not vibrate.");
+			}
 			
 		}catch(Exception e){
 			if(LOG_ENABLE)
-				Log.w(TAG, "Vibration exception (" + e.getMessage() + "). Remember to set permission android.permission.VIBRATE in your manifest application file.");
+				Log.e(TAG, "Vibration exception (" + e.getMessage() + "). Remember to set permission android.permission.VIBRATE in your manifest application file.");
 		}
 	}
 	
@@ -6797,6 +6808,7 @@ public final class ToolBox {
 	 * @return The vibrator object, just in case "indefinitely" parameter is set to TRUE,
 	 *         to be able to stop the vibration.
 	 */
+	@SuppressLint("NewApi")
 	public static Vibrator device_vibrate(Context context, long[] pattern, boolean indefinitely) {
 		try{
 			Vibrator v = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
@@ -6805,13 +6817,23 @@ public final class ToolBox {
 			if(indefinitely)
 				vibrateIndefinitely = 0;
 			
-			v.vibrate(pattern, vibrateIndefinitely);
+			boolean canVibrate = true;
+			if(device_hasAPILevel(11)){
+				canVibrate = v.hasVibrator(); 
+			}
+			
+			if (canVibrate) {
+				v.vibrate(pattern, vibrateIndefinitely);
+			}else{
+				if(LOG_ENABLE)
+					Log.i(TAG, "Device can not vibrate.");
+			}
 			
 			return v;
 			
 		}catch(Exception e){
 			if(LOG_ENABLE)
-				Log.w(TAG, "Vibration exception (" + e.getMessage() + "). Remember to set permission android.permission.VIBRATE in your manifest application file.");
+				Log.e(TAG, "Vibration exception (" + e.getMessage() + "). Remember to set permission android.permission.VIBRATE in your manifest application file.");
 		}
 		
 		return null;
