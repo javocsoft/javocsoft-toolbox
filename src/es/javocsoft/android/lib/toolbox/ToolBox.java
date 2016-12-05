@@ -6892,6 +6892,30 @@ public final class ToolBox {
 	    }
 	    return optimalSize;
 	}
+
+	/**
+	 * Set camera to continuous focus if supported, otherwise use software
+	 * auto-focus.
+	 * 
+	 * @param camera	The camera.
+	 * @return	The camera parameters
+	 */
+	@SuppressLint("InlinedApi")
+	@SuppressWarnings("deprecation")
+	public static Camera.Parameters device_cameraSetFocusMode(Camera camera) {
+		Camera.Parameters parameters = camera.getParameters();
+		List<String> supportedFocusModes = parameters.getSupportedFocusModes();
+	    if (ToolBox.device_hasAPILevel(ToolBox.ApiLevel.LEVEL_14) &&
+	        supportedFocusModes.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE)) {
+	        parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
+	    }else if (supportedFocusModes.contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO)) {
+	        parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_VIDEO);
+	    }else if (supportedFocusModes.contains(Camera.Parameters.FOCUS_MODE_AUTO)) {
+	        parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
+	    }
+	    
+	    return parameters;
+	}
 	
 	/**
 	 * Gets the smallest size of the available camera sizes.
