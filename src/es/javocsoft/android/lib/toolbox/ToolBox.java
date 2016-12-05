@@ -5387,6 +5387,10 @@ public final class ToolBox {
 	 */
 	@SuppressLint("NewApi")
 	public static void webview_runJavascript(final WebView webView, final String javascript, boolean runInWebviewUIThread, final ValueCallback<String> callback) {
+		if(LOG_ENABLE){
+			Log.d("ToolBox","Javascript to run: ["+javascript+"].");
+		}
+		
 		if(runInWebviewUIThread) {
 			webView.post(new Runnable() {				
 				@Override
@@ -5395,7 +5399,7 @@ public final class ToolBox {
 			    		webView.evaluateJavascript(javascript, callback);
 			        } else {
 			        	webView.loadUrl(javascript);
-			        }
+			        }					
 				}
 			});
 		}else{		
@@ -5403,7 +5407,7 @@ public final class ToolBox {
 				webView.evaluateJavascript(javascript, callback);
 			} else {
 				webView.loadUrl(javascript);
-			}
+			}			
 		}
     }
 	 
@@ -7483,8 +7487,8 @@ public final class ToolBox {
 								data = adrs.getPostalCode();
 								break;
 							case ADDRESS:
-								if(adrs.getThoroughfare()!=null && adrs.getSubThoroughfare()!=null){
-									data = adrs.getThoroughfare() + "," + adrs.getSubThoroughfare();
+								if(adrs.getThoroughfare()!=null){
+									data = adrs.getThoroughfare() + ((adrs.getSubThoroughfare()!=null && adrs.getSubThoroughfare().trim().length()>0)?("," + adrs.getSubThoroughfare()):"");
 								}
 								break;	
 							case ADDRESS_STREET:
@@ -7527,8 +7531,8 @@ public final class ToolBox {
 									data = adrs.getPostalCode();
 									break;
 								case ADDRESS:
-									if(adrs.getThoroughfare()!=null && adrs.getSubThoroughfare()!=null){
-										data = adrs.getThoroughfare() + "," + adrs.getSubThoroughfare();
+									if(adrs.getThoroughfare()!=null){
+										data = adrs.getThoroughfare() + ((adrs.getSubThoroughfare()!=null && adrs.getSubThoroughfare().trim().length()>0)?("," + adrs.getSubThoroughfare()):"");
 									}
 									break;	
 								case ADDRESS_STREET:
@@ -7598,7 +7602,7 @@ public final class ToolBox {
 	                	res.setCity(adrs.getLocality());
 	                	res.setPostalCode(adrs.getPostalCode());
 	                	if(adrs.getThoroughfare()!=null && adrs.getSubThoroughfare()!=null){
-	                		res.setAddress(adrs.getThoroughfare() + "," + adrs.getSubThoroughfare());
+	                		res.setAddress(adrs.getThoroughfare() + ((adrs.getSubThoroughfare()!=null && adrs.getSubThoroughfare().trim().length()>0)?("," + adrs.getSubThoroughfare()):""));
 						}						
 						res.setAddressStreet(adrs.getThoroughfare());
 						res.setAddressStreetNumber(adrs.getSubThoroughfare());
@@ -7632,7 +7636,7 @@ public final class ToolBox {
 		                	res.setCity(adrs.getLocality());
 		                	res.setPostalCode(adrs.getPostalCode());
 		                	if(adrs.getThoroughfare()!=null && adrs.getSubThoroughfare()!=null){
-		                		res.setAddress(adrs.getThoroughfare() + "," + adrs.getSubThoroughfare());
+		                		res.setAddress(adrs.getThoroughfare() + ((adrs.getSubThoroughfare()!=null && adrs.getSubThoroughfare().trim().length()>0)?("," + adrs.getSubThoroughfare()):""));
 							}						
 							res.setAddressStreet(adrs.getThoroughfare());
 							res.setAddressStreetNumber(adrs.getSubThoroughfare());
