@@ -2497,7 +2497,7 @@ public final class ToolBox {
     /**
      * Creates and generates a new notification.<br><br>
      * 
-     * The notification has a FLAg in the extras bundle (NOTIFICATION_FLAG) that is set to 1.
+     * The notification has a Flag in the extras bundle (NOTIFICATION_FLAG) that is set to 1.
      * This class can be used afterwards to know within an app if the app was opened from
      * a notification checking this value.<br><br>
      * 
@@ -2543,7 +2543,7 @@ public final class ToolBox {
      * 											separator of each line in the received message (notMessage)
      * @param notBackgroundColor				Optional. Since Android 5.0+ notification icons must follow a design guidelines 
      * 											to be showed correctly and allows to set the background color for 
-     * 											the icon. The specified color must be in <b>hexadecimal<b>, for 
+     * 											the icon. The specified color must be in <b>hexadecimal</b>, for 
      * 											example "#ff6600".
      * @param notClazz							Class to be executed
 	 * @param extras							Extra information to attach to the notification to be available
@@ -2575,6 +2575,7 @@ public final class ToolBox {
      * 											in the notification. <b>Remember</b> that to close the notification after action is
      * 											clicked, you should use the "notifyID" parameter and set it as an extra of your
      * 											action to be able to close the notification from your application.
+     * @param vibrate							<b>Note</b>: requires the permission android.permission.VIBRATE.
      */
     public static void notification_create(Context context,
     		boolean notSound, Integer notSoundRawId, boolean forceSound,
@@ -2598,7 +2599,7 @@ public final class ToolBox {
     		NOTIFICATION_PROGRESSBAR_STYLE progressBarStyle,
     		NotificationProgressBarRunnable progressBarRunnable,
     		String progressBarFinishText,
-    		List<Action> actions
+    		List<Action> actions, boolean vibrate
     		) {
     	
     	try{
@@ -2932,6 +2933,10 @@ public final class ToolBox {
 		        }
 		        amanager.setRingerMode(previousAudioMode);
 	        }
+	        
+	        if(vibrate){
+	        	device_vibrate(context, 700);	        	
+	        }
 			
 	        Log.d(TAG, "Android Notification created.");
 	        
@@ -3044,7 +3049,7 @@ public final class ToolBox {
     		List<Action> actions
     		) {
     	
-    	notification_create(context, notSound, notSoundRawId, forceSound, multipleNot, groupMultipleNotKey, notAction, notTitle, notMessage, notTicker, notContentInfo, bigContentTitle, bigContentText, bigContentSummary, bigContentImage, bigStyleInboxContent, bigStyleInboxSeparator, null, notClazz, extras, wakeUp, notPriority, notStyle, notVisibility, largeIconResource, contentView, notifyID, progressBarStyle, progressBarRunnable, progressBarFinishText, actions);
+    	notification_create(context, notSound, notSoundRawId, forceSound, multipleNot, groupMultipleNotKey, notAction, notTitle, notMessage, notTicker, notContentInfo, bigContentTitle, bigContentText, bigContentSummary, bigContentImage, bigStyleInboxContent, bigStyleInboxSeparator, null, notClazz, extras, wakeUp, notPriority, notStyle, notVisibility, largeIconResource, contentView, notifyID, progressBarStyle, progressBarRunnable, progressBarFinishText, actions, false);
     	
     }
     

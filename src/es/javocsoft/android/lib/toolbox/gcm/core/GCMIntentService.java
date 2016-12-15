@@ -170,14 +170,15 @@ public class GCMIntentService extends IntentService {
 			
 			
 	        ToolBox.notification_create(context, 
-	    			true, null, false,
-	    			NotificationModule.multipleNot, NotificationModule.groupMultipleNotKey, 
-	    			NotificationModule.NOTIFICATION_ACTION_KEY, 
-	    			(notTitle!=null?notTitle:NotificationModule.NOTIFICATION_TITLE), notMessage, 
+	        		true, null, false,
+	        		NotificationModule.multipleNot, NotificationModule.groupMultipleNotKey, 
+	        		NotificationModule.NOTIFICATION_ACTION_KEY, 
+	        		(notTitle!=null?notTitle:NotificationModule.NOTIFICATION_TITLE), notMessage, 
 	    			notTicker, notContentInfo, 
 	    			notBigStyleTitle, notBigStyleContent,
 	    			notBigStyleSummary, notBigStyleImage, 
 	    			notBigStyleInboxContent, notBigStyleInboxLineSeparator, 
+	    			NotificationModule.notBackgroundColor,
 	    			NotificationModule.NOTIFICATION_ACTIVITY_TO_CALL, 
 	    			i.getExtras(), false, 
 	    			ToolBox.NOTIFICATION_PRIORITY.DEFAULT, 
@@ -188,7 +189,8 @@ public class GCMIntentService extends IntentService {
 	    			null,
 	    			ToolBox.NOTIFICATION_PROGRESSBAR_STYLE.NONE, 
 	    			null, null,
-					null);
+					null, NotificationModule.vibrate);
+	        
 	    	
 	    	if(NotificationModule.LOG_ENABLE)
 	    		Log.d(NotificationModule.TAG, "Notification created for the recieve PUSH message.");

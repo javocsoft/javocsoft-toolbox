@@ -123,8 +123,9 @@ public class NotificationModule {
     public static OnNewNotificationCallback doWhenNotificationRunnable;
     
     public static boolean multipleNot;
-    public static String groupMultipleNotKey;
-    
+    public static String groupMultipleNotKey;    
+    public static String notBackgroundColor;
+    public static boolean vibrate;
     
     ExecutorService executorService = Executors.newFixedThreadPool(1);
     
@@ -132,7 +133,8 @@ public class NotificationModule {
     protected NotificationModule(Context context, EnvironmentType environmentType, String appSenderId,  
     		OnRegistrationCallback registerRunnable, OnAckCallback ackRunnable, OnUnregistrationCallback unregisterRunnable,
     		OnNewNotificationCallback doWhenNotificationRunnable,
-			boolean multipleNot, String groupMultipleNotKey) {
+			boolean multipleNot, String groupMultipleNotKey, String notBackgroundColor,
+			boolean vibrate) {
 		APPLICATION_CONTEXT = context;
 		if(environmentType!=null){
 			ENVIRONMENT_TYPE = environmentType;
@@ -148,6 +150,9 @@ public class NotificationModule {
 		
 		NotificationModule.multipleNot = multipleNot;
 		NotificationModule.groupMultipleNotKey = groupMultipleNotKey;
+		
+		NotificationModule.notBackgroundColor = notBackgroundColor;
+		NotificationModule.vibrate = vibrate;
 		
 		//Required, when application is closed, for the service that processes the notification 
 		//to be able to create the notification for the app.
@@ -172,19 +177,26 @@ public class NotificationModule {
      * @param multipleNot 						Setting to True allows showing multiple notifications.
 	 * @param groupMultipleNotKey 				If is set, multiple notifications can be grupped by 
 	 * 											this key.
+	 * @param notBackgroundColor				Optional. Since Android 5.0+ notification icons must 
+	 * 											follow a design guidelines to be showed correctly and allows to set the background 
+	 * 											color for the icon. The specified color must be in hexadecimal, 
+	 * 											for example "#ff6600".
+	 * @param vibrate							Set to TRUE to enable vibration when notification arrives.
+	 * 											Requires the permission android.permission.VIBRATE.
 	 *
      * @return
      */
 	public static NotificationModule getInstance(Context context, EnvironmentType environmentType, String appSenderId,  
 			OnRegistrationCallback registerRunnable, OnAckCallback ackRunnable, OnUnregistrationCallback unregisterRunnable,
 			OnNewNotificationCallback doWhenNotificationRunnable,
-			boolean multipleNot, String groupMultipleNotKey) {
+			boolean multipleNot, String groupMultipleNotKey, String notBackgroundColor,
+			boolean vibrate) {
 
 		if (instance == null) {
 			instance = new NotificationModule(context, environmentType, appSenderId,  
 						registerRunnable, ackRunnable, unregisterRunnable, 
 						doWhenNotificationRunnable,
-						multipleNot, groupMultipleNotKey);			
+						multipleNot, groupMultipleNotKey, notBackgroundColor, vibrate);
 		}
 		return instance;
 	}
