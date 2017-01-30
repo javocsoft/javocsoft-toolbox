@@ -297,7 +297,7 @@ public class NotificationModule {
 		
 		Log.i(NotificationModule.TAG, "onNewIntent - " + intent.getAction());
 		
-		if(intent!=null && intent.getAction()!=null && 
+		if(intent!=null && intent.getAction()!=null && NOTIFICATION_ACTIVITY_TO_CALL.getName()!=null && 
 			intent.getAction().equals(NotificationModule.NOTIFICATION_ACTIVITY_TO_CALL.getName()+"."+NotificationModule.NOTIFICATION_ACTION_KEY)){
 			//The event is a PUSH notification from GCM
 			if(LOG_ENABLE)
