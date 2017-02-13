@@ -5163,6 +5163,23 @@ public final class ToolBox {
 	//--------------- WEBVIEW ------------------------------------------------------------------------------- 
 	
 	/**
+	 * Deletes web local storage. This prevents any page cache.
+	 * <br><br>
+	 * See Javascript "localStorage" object.
+	 *   
+	 * @param webview
+	 */
+	@SuppressLint("NewApi")
+	public static void webview_deleteLocalWebStorage(WebView webview) {
+		//This ensures HTML local storage is deleted before load any page.
+    	if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
+    		webview.evaluateJavascript("javascript:localStorage.clear()", null);		    		
+        } else {
+        	webview.loadUrl("javascript:localStorage.clear()");
+        }
+	}
+	 
+	/**
 	 * Get a cookie value for a cookie name and site.
 	 * 
 	 * @param siteName	The site where the cookie is in.
