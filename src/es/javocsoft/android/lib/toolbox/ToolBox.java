@@ -139,6 +139,8 @@ import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.hardware.Camera;
 import android.hardware.Camera.Size;
+import android.hardware.Sensor;
+import android.hardware.SensorManager;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
@@ -176,6 +178,7 @@ import android.support.v7.app.ActionBarActivity;
 import android.telephony.TelephonyManager;
 import android.text.Html;
 import android.text.TextUtils;
+import android.text.format.DateUtils;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Display;
@@ -189,6 +192,7 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.webkit.CookieManager;
+import android.webkit.CookieSyncManager;
 import android.webkit.ValueCallback;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -256,7 +260,7 @@ public final class ToolBox {
 		LEVEL_1(1), LEVEL_2(2), LEVEL_3(3), LEVEL_4(4), LEVEL_5(5), LEVEL_6(6),
 		LEVEL_7(7), LEVEL_8(8), LEVEL_9(9), LEVEL_10(10), LEVEL_11(11), LEVEL_12(12),
 		LEVEL_13(13), LEVEL_14(14), LEVEL_15(15), LEVEL_16(16), LEVEL_17(17), LEVEL_18(18),
-		LEVEL_19(19), LEVEL_20(20), LEVEL_21(21), LEVEL_22(22), LEVEL_23(23);
+		LEVEL_19(19), LEVEL_20(20), LEVEL_21(21), LEVEL_22(22), LEVEL_23(23), LEVEL_24(24) ;
 
 		private int value;
 
@@ -1220,6 +1224,66 @@ public final class ToolBox {
         } catch (URISyntaxException e) {}
         intent.setAction("com.android.launcher.action.UNINSTALL_SHORTCUT");
         context.sendBroadcast(intent);
+    }
+    
+    /**
+	 * Given the application folder, it recursively deletes any file or folder
+	 * in it returning the number of deleted files.
+	 *  
+	 * @param appFolder	The folder to clean. Check in documentation permissions to write
+	 * 					in these folders.
+	 * @param numDays	Delete the files older than numDays days from the application cache, 
+	 * 					0 means all files. 
+	 * @return The number of deleted files
+	 */
+    private static int application_clearFolder(final File appFolder, final int numDays) {
+
+      int deletedFiles = 0;
+      if (appFolder!= null && appFolder.isDirectory()) {
+          try {
+              for (File child:appFolder.listFiles()) {
+                  //First delete subdirectories recursively
+                  if (child.isDirectory()) {
+                      deletedFiles += application_clearFolder(child, numDays);
+                  }
+                  //Then delete the files and subdirectories in this dir,
+                  //only empty directories can be deleted, so subdirs have been done first.
+                  if (child.lastModified() < new Date().getTime() - numDays * DateUtils.DAY_IN_MILLIS) {
+                	  if(LOG_ENABLE)
+                		  Log.i(TAG, String.format("Deleting app cache file %s", child.getAbsolutePath()));
+                      if (child.delete()) {
+                          deletedFiles++;
+                      }
+                  }
+              }
+          }
+          catch(Exception e) {        	  
+              Log.e(TAG, String.format("Failed to clean app cache folder, error %s", e.getMessage()));
+          }
+      }
+      
+      return deletedFiles;
+  	}
+    
+    /**
+     * Given the application context, deletes recursively any file or folder
+	 * in the application cache folder returning the number of deleted files.
+	 *  
+     * @param context	
+     * @param numDays	Delete the files older than numDays days from the application cache, 
+	 * 					0 means all files.
+	 * @return The number of deleted files
+     */
+    public static int application_clearCache(final Context context, final int numDays) {
+    	if(LOG_ENABLE)
+    		Log.i(TAG, String.format("Starting application cache prune, deleting files older than %d days", numDays));
+    	
+        int numDeletedFiles = application_clearFolder(context.getCacheDir(), numDays);
+        
+        if(LOG_ENABLE)
+        	Log.i(TAG, String.format("Application cache pruning completed, %d files deleted", numDeletedFiles));
+        
+        return numDeletedFiles;
     }
 
     /**
@@ -5221,12 +5285,13 @@ public final class ToolBox {
 	@SuppressWarnings("deprecation")
 	@SuppressLint("NewApi")
 	public static void webview_destroyAllCookies(final Runnable callbackOk, final Runnable callbackError) {
-		CookieManager cookieManager = CookieManager.getInstance();
 		
 		if(device_hasAPILevel(ApiLevel.LEVEL_21)) {
-			cookieManager.removeAllCookies(new ValueCallback<Boolean>() {			
+			CookieManager.getInstance().removeAllCookies(new ValueCallback<Boolean>() {			
 				@Override
 				public void onReceiveValue(Boolean value) {
+					CookieManager.getInstance().flush();
+					
 					if(LOG_ENABLE)
 						Log.i(TAG, "Webview cookies deleted? " + value);
 					if(value){
@@ -5239,7 +5304,8 @@ public final class ToolBox {
 				}
 			});
 		}else{
-			cookieManager.removeAllCookie();
+			CookieManager.getInstance().removeAllCookie();
+			CookieManager.getInstance().flush();
 		}
     }
 	
@@ -5368,6 +5434,33 @@ public final class ToolBox {
 	}
 	
 	/**
+	 * Disables the webview cache.
+	 * 
+	 * @param myWebview
+	 */
+	@SuppressWarnings("deprecation")
+	public static void webview_disabledCache(WebView myWebview) {
+		myWebview.getSettings().setAppCacheEnabled(false);
+		myWebview.getSettings().setCacheMode(WebSettings.LOAD_NO_CACHE); //Webview is faster this way
+		if(device_getAPILevel()<(ApiLevel.LEVEL_18.value))
+			myWebview.getSettings().setAppCacheMaxSize(0);
+	}
+	
+	/**
+	 * Deletes the application webview databases ("webview.db" and "webviewCache.db") 
+	 * if they exists.
+	 * 
+	 * @param context
+	 */
+	public static void webview_deleteWebViewDatabases(final Context context) {
+		if(context.deleteDatabase("webview.db") && LOG_ENABLE)
+			Log.i(TAG, "webview.db erased");
+			
+		if(context.deleteDatabase("webviewCache.db") && LOG_ENABLE)
+			Log.i(TAG, "webviewCache.db erased");
+	}
+	
+	/**
 	 * Established a native Android javascript interface for the web side of
 	 * the loaded pages by the webview.<br><br>
 	 * 
@@ -5396,6 +5489,110 @@ public final class ToolBox {
         //This enables to expose to webviews's web some native android app methods.
         myWebview.addJavascriptInterface(jsInterface, jsInterfaceName);
 	}
+	
+	/**
+	 * Use this method when overriding the webview "shouldOverrideUrlLoading()" 
+	 * to handle and parse an Android Intent for Chrome. One scenario is launching
+	 * an app when the user lands on a page. <b>NOTE</b> Only for Chrome for 
+	 * Android, versions 25 and later. Only activities that have the category filter, 
+	 * android.intent.category.BROWSABLE are able to be invoked using this method 
+	 * as it indicates that the application is safe to open from the Browser<br><br>
+	 * 
+	 * Possibilities when using this method are:
+	 * <ul>
+	 * <li>Load normally the page if is not an application Android intent.</li>
+	 * <li>Open an application that responds to the URI</li>
+	 * <li>Open the application of the URI intent schema</li>
+	 * <li>Open a fallback URL in the system navigator (if parameter called "browser_fallback_url" is present in the schema).</li>
+	 * <li>Open the playstore so user can install the application if the intent schema is valid but
+	 * there is no fallback url neither application to be opened installed yet.</li>
+	 * </ul>
+	 * 
+	 * You can also pass parameters in such intent schema. To se type use:<br>
+	 * <pre>{@code<type>.<parameter_name>=<url_encoded_value>}</pre>
+	 * ...where types are:
+	 * <pre>{@code
+	 * String => 'S'
+	 * Boolean =>'B'
+	 * Byte => 'b'
+	 * Character => 'c'
+	 * Double => 'd'
+	 * Float => 'f'
+	 * Integer => 'i'
+	 * Long => 'l'
+	 * Short => 's'
+	 * }</pre>
+	 * 
+	 * Example: 
+	 * 
+	 * <pre>
+	 * intent://whatever/#Intent;scheme=myapp;package=com.what.ever.myapp;S.name=Mi%20Nombre%20Largo%20aqui;i.age=41;end
+	 * </pre>
+	 *  
+	 * See more:
+	 * <ul>
+	 * <li><a href="https://developer.chrome.com/multidevice/android/intents">Android Intents with Chrome</a></li> 
+	 * <li><a href="https://stackoverflow.com/questions/16738276/how-do-i-pass-parameters-to-android-intent-in-new-scheme-on-chrome">How to pass parameters to android Intent in new scheme on chrome.</a></li>
+	 * </ul>
+	 * 
+	 * <br>
+	 * If you only need to parse the Android URI intent schema to get the intent, use {@link ToolBox#intent_parseChromeAndroidIntentSchema(Context, String)}
+	 * instead this method.
+	 *             
+	 * @param context
+	 * @param webView
+	 * @param url
+	 * @return
+	 */
+    public boolean webview_shouldOverrideUrlLoading_ChromeIntentSchema(Context context, WebView webView, String url) {
+        
+    	if (url.startsWith("http")){
+        	//Open web links as usual
+        	return false;
+        }
+        
+        //Try to find browse activity to handle uri
+        Uri parsedUri = Uri.parse(url);
+        PackageManager packageManager = context.getPackageManager();
+        Intent browseIntent = new Intent(Intent.ACTION_VIEW).setData(parsedUri);
+        if (browseIntent.resolveActivity(packageManager) != null) {
+        	context.startActivity(browseIntent);
+            return true;
+        }
+        
+        //If not activity found, try to parse "intent://..."
+        if (url.startsWith("intent:")) {
+            try {
+                Intent intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME);
+                if (intent.resolveActivity(context.getPackageManager()) != null) {
+                	context.startActivity(intent);
+                    return true;
+                }
+                
+                //Try to find fallback url
+                String fallbackUrl = intent.getStringExtra("browser_fallback_url");
+                if (fallbackUrl != null) {
+                    webView.loadUrl(fallbackUrl);
+                    return true;
+                }
+                
+                //Invite to install
+                Intent marketIntent = new Intent(Intent.ACTION_VIEW).setData(
+                        Uri.parse("market://details?id=" + intent.getPackage()));
+                if (marketIntent.resolveActivity(packageManager) != null) {
+                	context.startActivity(marketIntent);
+                    return true;
+                }
+                
+            } catch (URISyntaxException e) {
+                //not an intent uri
+            	if(LOG_ENABLE)
+            		Log.w(TAG, "Not a valid Android Chrome intent schema (" + e.getMessage() + ").");
+            }
+        }
+        
+        return true; //do nothing in other cases
+    }
 	
 	/**
 	 * This method runs the specified javascript using the KitKat asynchronous
@@ -5432,6 +5629,27 @@ public final class ToolBox {
 			}			
 		}
     }
+	
+	/**
+	 * Loads an URL in the specified webview.
+	 * 
+	 * @param webview	The webview to load the URL
+	 * @param url	The URL to load
+	 * @param nocache	Set to TRUE to avoid caching of the loaded page. It will
+	 * 					set "Pragma" and "Cache-Control" to "no-cache". This only
+	 * 					works for Android API 8+.
+	 */
+	public static void webview_loadURL(WebView webview, String url, boolean nocache) {
+		if(device_getAPILevel()>=ApiLevel.LEVEL_8.value){
+			Map<String, String> noCacheHeaders = new HashMap<String, String>(2);
+	        noCacheHeaders.put("Pragma", "no-cache");
+	        noCacheHeaders.put("Cache-Control", "no-cache");
+	        
+	        webview.loadUrl(url, noCacheHeaders);
+		}else{
+			webview.loadUrl(url);
+		}
+	}
 	 
 	//--------------- (PENDING) INTENTS ---------------------------------------------------------------------
 	
@@ -5561,6 +5779,115 @@ public final class ToolBox {
 		callIntent.setData(Uri.parse("tel:"+phone));
 		
 		return callIntent;		 
+	}
+	
+	/**
+	 * Parses an Android Intent for Chrome. One scenario is launching an 
+	 * app when the user lands on a page. <b>NOTE</b> Only for Chrome for 
+	 * Android, versions 25 and later. Only activities that have the 
+	 * category filter, android.intent.category.BROWSABLE are able to be 
+	 * invoked using this method as it indicates that the application is 
+	 * safe to open from the Browser<br><br>
+	 * 
+	 * If is a valid scheme, it will return an intent so you can execute 
+	 * "startActivity" with it, otherwise null. The possibilities with a 
+	 * given intent schema are:
+	 * <ul>
+	 * <li>Intent that opens the application if is already installed.</li>
+	 * <li>Intent that opens the system navigator to a given url in a scheme parameter called "browser_fallback_url".</li>
+	 * <li>Intent that opens the playstore so user can install the application.</li>
+	 * </ul>
+	 * 
+	 * You can also pass parameters in such intent schema. To se type use:<br>
+	 * <pre>{@code<type>.<parameter_name>=<url_encoded_value>}</pre>
+	 * ...where types are:
+	 * <pre>{@code
+	 * String => 'S'
+	 * Boolean =>'B'
+	 * Byte => 'b'
+	 * Character => 'c'
+	 * Double => 'd'
+	 * Float => 'f'
+	 * Integer => 'i'
+	 * Long => 'l'
+	 * Short => 's'
+	 * }</pre>
+	 * 
+	 * Example: 
+	 * 
+	 * <pre>
+	 * intent://whatever/#Intent;scheme=myapp;package=com.what.ever.myapp;S.name=Mi%20Nombre%20Largo%20aqui;i.age=41;end
+	 * </pre>
+	 *  
+	 * See more:
+	 * <ul>
+	 * <li><a href="https://developer.chrome.com/multidevice/android/intents">Android Intents with Chrome</a></li> 
+	 * <li><a href="https://stackoverflow.com/questions/16738276/how-do-i-pass-parameters-to-android-intent-in-new-scheme-on-chrome">How to pass parameters to android Intent in new scheme on chrome.</a></li>
+	 * </ul>
+	 * 
+	 * 
+	 * @param context
+	 * @param url
+	 * @return
+	 */
+	public static Intent intent_parseChromeAndroidIntentSchema(Context context, String url) {
+		Intent i = null;
+		
+		if (url.startsWith("http")){
+			if(LOG_ENABLE)
+        		Log.i(TAG, "Not an Android Chrome intent schema.");
+		}else{
+	        //Try to find browse activity to handle uri
+	        Uri parsedUri = Uri.parse(url);
+	        PackageManager packageManager = context.getPackageManager();
+	        Intent browseIntent = new Intent(Intent.ACTION_VIEW).setData(parsedUri);
+	        if (browseIntent.resolveActivity(packageManager) != null) {
+	        	i = browseIntent;
+	        	if(LOG_ENABLE)
+	        		Log.i(TAG, "Browseable activity found for URI.");
+	        }
+	        
+	        //If not activity found, try to parse intent://
+	        if (url.startsWith("intent:")) {
+	            try {
+	                Intent intent = Intent.parseUri(url, Intent.URI_INTENT_SCHEME);
+	                if (intent.resolveActivity(context.getPackageManager()) != null) {
+	                	i = intent;
+	                	if(LOG_ENABLE)
+	    	        		Log.i(TAG, "Browseable activity found for URI intent schema.");
+	                }
+	                
+	                //Try to find a fallback url
+	                String fallbackUrl = intent.getStringExtra("browser_fallback_url");
+	                if (fallbackUrl != null) {
+	                	i = new Intent(Intent.ACTION_VIEW);
+	                	i.setData(Uri.parse(fallbackUrl));
+	                	if(LOG_ENABLE)
+	    	        		Log.i(TAG, "fallback URL found (" + fallbackUrl + ")");
+	                }
+	                
+	                //Invite to install
+	                Intent marketIntent = new Intent(Intent.ACTION_VIEW).setData(
+	                        Uri.parse("market://details?id=" + intent.getPackage()));
+	                if (marketIntent.resolveActivity(packageManager) != null) {
+	                	i = marketIntent;	                    
+	                	if(LOG_ENABLE)
+	    	        		Log.i(TAG, "No URI intent schema browseable activity found neither fallback URL found. Going to playstore.");
+	                }
+	                
+	            } catch (URISyntaxException e) {
+	            	//not a valid intent uri. We do nothing
+	            	if(LOG_ENABLE)
+	            		Log.w(TAG, "Not a valid Android Chrome intent schema (" + e.getMessage() + ").");	                
+	            }
+	        }else{
+	        	//do nothing in other cases
+		        if(LOG_ENABLE)
+	        		Log.i(TAG, "Not an Android Chrome intent schema.");
+	        }	        
+		}
+		
+		return i;
 	}
 	
 	/**
@@ -6566,23 +6893,25 @@ public final class ToolBox {
 	  * @param soundId	The resource to play.
 	  */
 	 public static void media_soundPlay(Context context, int soundId){
-		try {
-			//int fileResourceId = context.getResources().getIdentifier(rawSoundPath,"raw", context.getPackageName());
-			MediaPlayer player = MediaPlayer.create(context, soundId);
-			player.setOnCompletionListener(new OnCompletionListener() {
-				@Override
-				public void onCompletion(MediaPlayer mp) {
-					mp.release();
-				}
-			});
-	        player.start();
-	        
-	    } catch (Exception e) {
-	    	if(LOG_ENABLE){
-	    		Log.e(TAG, "Error playing sound (" + e.getMessage() + ")", e);
-	    	}
-	    }
-	 }
+			try {
+				//int fileResourceId = context.getResources().getIdentifier(rawSoundPath,"raw", context.getPackageName());
+				MediaPlayer player = MediaPlayer.create(context, soundId);
+				player.setOnCompletionListener(new OnCompletionListener() {
+					@Override
+					public void onCompletion(MediaPlayer mp) {
+						mp.reset();
+						mp.release();
+						mp = null;
+					}
+				});
+		        player.start();
+		        
+		    } catch (Exception e) {
+		    	if(LOG_ENABLE){
+		    		Log.e(TAG, "Error playing sound (" + e.getMessage() + ")", e);
+		    	}
+		    }
+		 }
 	 
 	 /**
 	  * Plays the specified filename of the RAW Android folder.
@@ -7241,6 +7570,33 @@ public final class ToolBox {
 						"/" + android.os.Build.PRODUCT;
 						
 		return extra;
+	}
+	
+	/**
+	 * Gets a sensor given its type.<br><br>
+	 * 
+	 * For example sensorType = Sensor.TYPE_MAGNETIC_FIELD.
+	 * 
+	 * @param context
+	 * @param sensorType See {@link Sensor}
+	 * @param wakeUp If set to TRUE, devices awakes when sensor is get.
+	 * @return The sensor.
+	 */
+	public static Sensor device_getSensor(Context context, int sensorType, boolean wakeUp) {
+		Sensor sensor = null;
+		SensorManager mSensorManager;
+		
+		mSensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
+		sensor = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+		if(sensor!=null){
+			// Success! There's a magnetometer.
+		}else{
+		  // Failure! No magnetometer.
+			if(LOG_ENABLE)
+				Log.w(TAG, "device_getSensor(). Could not get sensor of type [" + sensorType + "]. Sensor not available.");
+		}
+		
+		return sensor;
 	}
 	
 	
