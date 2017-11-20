@@ -1,4 +1,4 @@
-javocsoft-toolbox
+javocsoft-toolbox (<strong>DEPRECATED</strong> See <a href="https://github.com/javocsoft/JavocsoftToolboxAS">JavocSoft Toolbox AS</a>)
 =================
 
 It is an Android commons utility library. For <b>HowTo</b> and <b>usage</b> see the [WiKi](https://github.com/javocsoft/javocsoft-toolbox/wiki).
